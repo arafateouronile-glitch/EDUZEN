@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Plus, DollarSign, Calendar, FileText, CheckCircle, XCircle, Clock, CreditCard, Building2, Download, Receipt, Mail, PenTool, Send, Pencil } from 'lucide-react'
+import { ArrowLeft, Plus, DollarSign, Calendar, FileText, CheckCircle, XCircle, Clock, CreditCard, Building2, Download, Receipt, Mail, PenTool, Send, Pencil, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { useState } from 'react'
@@ -377,6 +377,34 @@ export default function InvoiceDetailPage() {
       addToast({ type: 'success', title: 'Validation annulée' })
     },
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await invoiceService.remove(invoiceId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      addToast({ type: 'success', title: 'Devis supprimé' })
+      router.push('/dashboard/payments')
+    },
+    onError: (error: unknown) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Impossible de supprimer ce devis.',
+      })
+    },
+  })
+
+  const handleDelete = () => {
+    if (!invoice) return
+    const warning = invoice.validated_at || invoice.status !== 'draft'
+      ? '\n\nCe devis n\'est plus à l\'état brouillon (statut ou validation déjà avancés) — la suppression restera définitive.'
+      : ''
+    const ok = window.confirm(`Supprimer définitivement le devis ${invoice.invoice_number || ''} ? Cette action est irréversible.${warning}`)
+    if (!ok) return
+    deleteMutation.mutate()
+  }
 
   if (isLoading) {
     return (
@@ -825,6 +853,17 @@ export default function InvoiceDetailPage() {
                 {validateMutation.isPending ? 'Validation...' : 'Marquer comme validé'}
               </Button>
             )
+          )}
+          {invoice.document_type === 'quote' && (
+            <Button
+              variant="outline"
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+            </Button>
           )}
         </div>
       </div>

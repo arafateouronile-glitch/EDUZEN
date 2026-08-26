@@ -120,6 +120,7 @@ export function GestionFinances({
   const [isEmailSending, setIsEmailSending] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
   const [convertingQuoteId, setConvertingQuoteId] = useState<string | null>(null)
+  const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null)
   const [showCharges, setShowCharges] = useState(true)
   const [showCreditNoteForm, setShowCreditNoteForm] = useState(false)
   const [creditNoteInvoice, setCreditNoteInvoice] = useState<InvoiceWithRelations | null>(null)
@@ -1169,6 +1170,35 @@ export function GestionFinances({
     },
   })
 
+  const deleteQuoteMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      return invoiceService.remove(quoteId)
+    },
+    onMutate: async (quoteId: string) => {
+      setDeletingQuoteId(quoteId)
+    },
+    onSuccess: () => {
+      addToast({ type: 'success', title: 'Devis supprimé' })
+      queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
+    },
+    onError: (error: unknown) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Impossible de supprimer ce devis.',
+      })
+    },
+    onSettled: () => {
+      setDeletingQuoteId(null)
+    },
+  })
+
+  const handleDeleteQuote = (quote: InvoiceWithRelations) => {
+    const ok = window.confirm(`Supprimer définitivement le devis ${quote.invoice_number || ''} ? Cette action est irréversible.`)
+    if (!ok) return
+    deleteQuoteMutation.mutate(quote.id)
+  }
+
   // Mutation pour enregistrer un paiement
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
@@ -1973,6 +2003,14 @@ export function GestionFinances({
                                     >
                                       <Edit className="h-3 w-3" />
                                     </Link>
+                                    <button
+                                      onClick={() => handleDeleteQuote(quote)}
+                                      disabled={deletingQuoteId === quote.id}
+                                      className="text-gray-400 hover:text-red-600 transition-colors"
+                                      title="Supprimer le devis"
+                                    >
+                                      {deletingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <Trash2 className="h-3 w-3" />}
+                                    </button>
                                   </div>
                                 </div>
                                 {renderDocStatusBadges(quote)}
@@ -2273,6 +2311,14 @@ export function GestionFinances({
                                     >
                                       <Edit className="h-3 w-3" />
                                     </Link>
+                                    <button
+                                      onClick={() => handleDeleteQuote(quote as InvoiceWithRelations)}
+                                      disabled={deletingQuoteId === quote.id}
+                                      className="text-gray-400 hover:text-red-600 transition-colors"
+                                      title="Supprimer le devis"
+                                    >
+                                      {deletingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <Trash2 className="h-3 w-3" />}
+                                    </button>
                                   </div>
                                 </div>
                                 {renderDocStatusBadges(quote as InvoiceWithRelations)}

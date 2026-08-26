@@ -402,6 +402,71 @@ export class InvoiceService {
   }
 
   /**
+   * Supprime définitivement un devis (document_type='quote' uniquement — la
+   * suppression d'une facture n'est pas exposée dans l'UI pour préserver la
+   * traçabilité comptable). Bloque si des paiements ont déjà été enregistrés
+   * dessus (payments a une FK ON DELETE CASCADE sur invoices : sans ce
+   * garde-fou, supprimer le devis effacerait aussi silencieusement ces
+   * paiements).
+   */
+  async remove(id: string) {
+    try {
+      const { data: invoice, error: fetchError } = await this.supabase
+        .from('invoices')
+        .select('id, document_type')
+        .eq('id', id)
+        .single()
+
+      if (fetchError || !invoice) {
+        throw errorHandler.handleError(fetchError, {
+          code: ErrorCode.DB_NOT_FOUND,
+          operation: 'remove',
+          id,
+        })
+      }
+
+      if (invoice.document_type !== 'quote') {
+        throw errorHandler.createValidationError(
+          'Seuls les devis peuvent être supprimés depuis cette action.',
+          'document_type'
+        )
+      }
+
+      const { count: paymentsCount } = await this.supabase
+        .from('payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('invoice_id', id)
+
+      if (paymentsCount && paymentsCount > 0) {
+        throw errorHandler.createValidationError(
+          'Ce devis a des paiements enregistrés et ne peut pas être supprimé.',
+          'id'
+        )
+      }
+
+      const { error } = await this.supabase.from('invoices').delete().eq('id', id)
+
+      if (error) {
+        if (error.code === '42501') {
+          throw errorHandler.handleError(error, {
+            code: ErrorCode.DB_RLS_POLICY_VIOLATION,
+            operation: 'remove',
+            id,
+          })
+        }
+        throw errorHandler.handleError(error, { operation: 'remove', id })
+      }
+
+      logger.info('Devis supprimé avec succès', { id })
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error
+      }
+      throw errorHandler.handleError(error, { operation: 'remove', id })
+    }
+  }
+
+  /**
    * Génère des factures en masse pour une classe
    */
   async generateForClass(
