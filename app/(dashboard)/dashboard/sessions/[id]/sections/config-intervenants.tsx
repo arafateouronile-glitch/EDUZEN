@@ -10,6 +10,16 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/lib/hooks/use-auth'
+import { documentTemplateService } from '@/lib/services/document-template.service.client'
+import { extractTeacherConventionVariables } from '@/lib/utils/teacher-convention/extract-variables'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { SessionFormData } from '../hooks/use-session-detail'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import {
@@ -46,6 +56,7 @@ export function ConfigIntervenants({
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { addToast } = useToast()
+  const { user } = useAuth()
 
   const [interventionDays, setInterventionDays] = useState('')
   const [dailyRate, setDailyRate] = useState('')
@@ -53,6 +64,48 @@ export function ConfigIntervenants({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [isSendingSignature, setIsSendingSignature] = useState(false)
+  const [selectedConventionTemplateId, setSelectedConventionTemplateId] = useState<string>('')
+
+  // Modèles de convention formateur disponibles pour l'organisation — même
+  // principe que le sélecteur "Modèle" des devis/factures.
+  const { data: conventionTemplates } = useQuery({
+    queryKey: ['convention-formateur-templates', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return documentTemplateService.getAllTemplates(user.organization_id, {
+        type: 'convention_formateur',
+        isActive: true,
+      })
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  const { data: org } = useQuery({
+    queryKey: ['organization', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+      const { data } = await supabase.from('organizations').select('*').eq('id', user.organization_id).single()
+      return data
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Fiche formateur (statut indépendant/salarié, SIRET, spécialité) — table
+  // teachers, distincte de users (identité) et absente du prop `users`.
+  const { data: teacherProfile } = useQuery({
+    queryKey: ['teacher-profile', formData.teacher_id, user?.organization_id],
+    queryFn: async () => {
+      if (!formData.teacher_id || !user?.organization_id) return null
+      const { data } = await supabase
+        .from('teachers')
+        .select('statut, siret, specialization')
+        .eq('user_id', formData.teacher_id)
+        .eq('organization_id', user.organization_id)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!formData.teacher_id && !!user?.organization_id,
+  })
 
   const selectedTeacher = users.find((u) => u.id === formData.teacher_id)
   const totalCost =
@@ -115,6 +168,53 @@ export function ConfigIntervenants({
 
   async function generatePdf(): Promise<Blob | null> {
     if (!selectedTeacher) return null
+
+    // Convention formateur : passe par le pipeline générique de modèles
+    // (document_templates + /api/documents/generate-pdf), comme devis/facture
+    // — permet de choisir le modèle. Ordre de mission reste sur l'ancien
+    // générateur ci-dessous (aucun modèle personnalisable pour l'instant).
+    if (docType === 'convention_formateur') {
+      if (!user?.organization_id) throw new Error('Organisation manquante')
+
+      const template = selectedConventionTemplateId
+        ? await documentTemplateService.getTemplateById(selectedConventionTemplateId)
+        : await documentTemplateService.getDefaultTemplate(user.organization_id, 'convention_formateur')
+
+      if (!template) throw new Error('Aucun modèle de convention formateur trouvé')
+
+      const variables = extractTeacherConventionVariables({
+        organization: org ?? undefined,
+        teacherUser: {
+          first_name: (selectedTeacher as any).first_name,
+          last_name: (selectedTeacher as any).last_name,
+          full_name: selectedTeacher.full_name,
+          email: (selectedTeacher as any).email,
+          phone: (selectedTeacher as any).phone,
+        },
+        teacherProfile,
+        convention: {
+          period_start: formData.start_date,
+          period_end: formData.end_date,
+          intervention_days: interventionDays ? parseFloat(interventionDays) : null,
+          daily_rate: dailyRate ? parseFloat(dailyRate) : null,
+          location: formData.location,
+          custom_notes: null,
+        },
+      })
+
+      const res = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template,
+          variables,
+          organizationId: user.organization_id,
+        }),
+      })
+      if (!res.ok) throw new Error('Erreur génération PDF')
+      return res.blob()
+    }
+
     const endpoint = docType === 'ordre_de_mission'
       ? '/api/teacher-documents/generate-ordre-de-mission'
       : '/api/teacher-documents/generate-convention'
@@ -164,8 +264,12 @@ export function ConfigIntervenants({
       a.download = `${prefix}-${(selectedTeacher.full_name ?? 'formateur').replace(/\s+/g, '-')}.pdf`
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      addToast({ title: 'Erreur lors de la génération du PDF', type: 'error' })
+    } catch (error) {
+      addToast({
+        title: 'Erreur lors de la génération du PDF',
+        description: error instanceof Error ? error.message : undefined,
+        type: 'error',
+      })
     } finally {
       setIsGeneratingPdf(false)
     }
@@ -435,6 +539,25 @@ export function ConfigIntervenants({
                 </button>
               </div>
             </div>
+
+            {docType === 'convention_formateur' && (
+              <div>
+                <Label className="text-sm mb-2 block">Modèle</Label>
+                <Select value={selectedConventionTemplateId} onValueChange={setSelectedConventionTemplateId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Modèle par défaut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Modèle par défaut</SelectItem>
+                    {conventionTemplates?.filter((t) => !!t).map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <Separator />
 

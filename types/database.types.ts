@@ -20304,7 +20304,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           organization_id: string
+          siret: string | null
           specialization: string | null
+          statut: string
           updated_at: string
           user_id: string
         }
@@ -20316,7 +20318,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           organization_id: string
+          siret?: string | null
           specialization?: string | null
+          statut?: string
           updated_at?: string
           user_id: string
         }
@@ -20328,7 +20332,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           organization_id?: string
+          siret?: string | null
           specialization?: string | null
+          statut?: string
           updated_at?: string
           user_id?: string
         }
