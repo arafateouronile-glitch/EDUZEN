@@ -24,7 +24,7 @@ import { DocumentSettings } from './components/document-settings'
 import { DocxTemplateUploader } from '@/components/document-templates/DocxTemplateUploader'
 import { getDocumentTypeConfig } from './utils/document-type-config'
 import { getDefaultTemplateContent } from '@/lib/utils/document-template-defaults'
-import { validateLoopBlocks } from '@/lib/utils/document-generation/loop-processor'
+import { validateLoopBlocks, repairLoopBlocks } from '@/lib/utils/document-generation/loop-processor'
 import { cn } from '@/lib/utils'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -418,15 +418,31 @@ export default function DocumentTemplateEditPage() {
     // Détecte les boucles {FOR:...}{ENDFOR} cassées (vides, ou variables
     // {module_...} etc. qui ont fini en dehors du bloc en éditant un
     // tableau) — cf. incidents des 25 et 26/08/2026 sur les modèles de
-    // devis, où le tableau "Prix de la formation" restait vide. Un simple
-    // avertissement s'est révélé trop facile à ignorer (récidive sur le
-    // même modèle moins d'1h après une première alerte) : on bloque
-    // désormais l'enregistrement tant que l'utilisateur ne confirme pas
-    // explicitement vouloir enregistrer malgré le problème.
+    // devis, où le tableau "Prix de la formation" restait vide. On tente
+    // d'abord une réparation automatique (même logique que celle appliquée
+    // en filet de secours au rendu PDF) : sur un modèle déjà correct c'est
+    // un no-op, et dans le cas connu (balises séparées de la ligne du
+    // tableau) l'utilisateur n'a même plus à s'en apercevoir. L'avertissement
+    // bloquant reste en secours pour une structure trop inhabituelle pour
+    // être réparée avec confiance.
+    const headerRepair = repairLoopBlocks(template.header?.content || '')
+    const contentRepair = repairLoopBlocks(template.content?.html || '')
+    const footerRepair = repairLoopBlocks(template.footer?.content || '')
+    const wasRepaired = headerRepair.repaired || contentRepair.repaired || footerRepair.repaired
+
+    const templateToSave: DocumentTemplate = wasRepaired
+      ? {
+          ...template,
+          header: template.header ? { ...template.header, content: headerRepair.html } : template.header,
+          content: template.content ? { ...template.content, html: contentRepair.html } : template.content,
+          footer: template.footer ? { ...template.footer, content: footerRepair.html } : template.footer,
+        }
+      : template
+
     const loopWarnings = [
-      ...validateLoopBlocks(template.header?.content || ''),
-      ...validateLoopBlocks(template.content?.html || ''),
-      ...validateLoopBlocks(template.footer?.content || ''),
+      ...validateLoopBlocks(templateToSave.header?.content || ''),
+      ...validateLoopBlocks(templateToSave.content?.html || ''),
+      ...validateLoopBlocks(templateToSave.footer?.content || ''),
     ]
     if (loopWarnings.length > 0) {
       const details = loopWarnings.map((w) => `• ${w}`).join('\n')
@@ -441,9 +457,16 @@ export default function DocumentTemplateEditPage() {
         })
         return
       }
+    } else if (wasRepaired) {
+      setTemplate(templateToSave)
+      addToast({
+        type: 'success',
+        title: 'Tableau corrigé automatiquement',
+        description: 'Le lien entre la boucle {FOR:...}{ENDFOR} et la ligne du tableau a été rétabli avant l\'enregistrement.',
+      })
     }
 
-    saveMutation.mutate(template)
+    saveMutation.mutate(templateToSave)
   }
 
   const handlePreview = () => {

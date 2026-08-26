@@ -12,7 +12,7 @@ import type {
 } from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { evaluateConditionalContent } from './conditional-processor'
-import { processLoops } from './loop-processor'
+import { processLoops, repairLoopBlocks } from './loop-processor'
 import { processCalculatedVariables } from './calculated-variables'
 import { processDynamicTables } from './dynamic-table-processor'
 import { processElementVisibility } from './element-visibility-processor'
@@ -686,6 +686,25 @@ export async function generateHTML(
   processedHeader = processDynamicTables(processedHeader, flattenedVariables)
   processedContent = processDynamicTables(processedContent, flattenedVariables)
   processedFooter = processDynamicTables(processedFooter, flattenedVariables)
+
+  // 1bis. Filet de sécurité : si un modèle a une boucle {FOR:...}{ENDFOR}
+  // cassée (balises séparées de la ligne de tableau qu'elles répètent —
+  // incidents des 25 et 26/08/2026 sur les devis), la réparer avant le
+  // rendu plutôt que de générer un PDF avec un tableau vide. No-op si le
+  // modèle est déjà correct.
+  try {
+    const headerRepair = repairLoopBlocks(processedHeader)
+    const contentRepair = repairLoopBlocks(processedContent)
+    const footerRepair = repairLoopBlocks(processedFooter)
+    if (headerRepair.repaired || contentRepair.repaired || footerRepair.repaired) {
+      logger.warn('[HTML Generator] Boucle {FOR:...}{ENDFOR} cassée détectée et réparée automatiquement avant le rendu')
+    }
+    processedHeader = headerRepair.html
+    processedContent = contentRepair.html
+    processedFooter = footerRepair.html
+  } catch (repairError) {
+    logger.error('[HTML Generator] Erreur lors de la réparation automatique des boucles:', repairError)
+  }
 
   // 2. Traiter les boucles (FOR/WHILE)
   processedHeader = processLoops(processedHeader, flattenedVariables)

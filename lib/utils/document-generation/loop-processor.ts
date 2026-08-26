@@ -49,6 +49,88 @@ export function processLoops(
   })
 }
 
+/** Préfixes de boucle connus, et le nom de tableau qu'ils désignent */
+const KNOWN_LOOPS: { prefix: string; arrayName: string }[] = [
+  { prefix: 'module_', arrayName: 'modules' },
+]
+
+/**
+ * Répare automatiquement une boucle {FOR:tableau}...{ENDFOR} cassée par une
+ * manipulation du tableau dans l'éditeur visuel (balises supprimées, ou
+ * séparées de la ligne <tr> qu'elles étaient censées répéter — cf. incidents
+ * des 25 et 26/08/2026 sur les modèles de devis).
+ *
+ * Ne modifie le HTML que si un problème est détecté (`validateLoopBlocks`
+ * non vide) : sur un template déjà correct, c'est un no-op garanti, donc
+ * cette fonction ne peut pas dégrader un modèle qui fonctionne. Si la
+ * structure est trop inhabituelle pour être réparée avec confiance (pas de
+ * <tr> repérable), elle abandonne sans rien changer et laisse l'appelant
+ * gérer le cas (avertissement bloquant à l'enregistrement).
+ */
+export function repairLoopBlocks(html: string): { html: string; repaired: boolean } {
+  let result = html
+  let anyChange = false
+
+  for (let pass = 0; pass < 5; pass++) {
+    if (validateLoopBlocks(result).length === 0) break
+
+    let changedThisPass = false
+
+    for (const { prefix, arrayName } of KNOWN_LOOPS) {
+      if (!result.includes(`{${prefix}`)) continue
+
+      // 1) Supprime toute boucle {FOR:arrayName}...{ENDFOR} qui ne contient
+      // aucune variable {prefix...} (boucle vide/orpheline laissée derrière).
+      const forRegex = new RegExp(`\\{FOR:${arrayName}\\}([\\s\\S]*?)\\{ENDFOR\\}`, 'g')
+      const purged = result.replace(forRegex, (full: string, block: string) =>
+        block.includes(`{${prefix}`) ? full : ''
+      )
+      if (purged !== result) {
+        result = purged
+        changedThisPass = true
+      }
+
+      // 2) Repère la première variable {prefix...} qui traîne hors de toute
+      // boucle {FOR:arrayName} restante, et entoure son <tr> englobant.
+      const loopSpans: Array<[number, number]> = []
+      const scanRe = new RegExp(`\\{FOR:${arrayName}\\}[\\s\\S]*?\\{ENDFOR\\}`, 'g')
+      let m: RegExpExecArray | null
+      while ((m = scanRe.exec(result))) loopSpans.push([m.index, m.index + m[0].length])
+
+      const varRe = new RegExp(`\\{${prefix}\\w+\\}`, 'g')
+      let vm: RegExpExecArray | null
+      let orphanIndex = -1
+      while ((vm = varRe.exec(result))) {
+        const inside = loopSpans.some(([s, e]) => vm!.index >= s && vm!.index < e)
+        if (!inside) {
+          orphanIndex = vm.index
+          break
+        }
+      }
+
+      if (orphanIndex !== -1) {
+        const trStart = result.lastIndexOf('<tr>', orphanIndex)
+        const trEndTagIdx = result.indexOf('</tr>', orphanIndex)
+        if (trStart !== -1 && trEndTagIdx !== -1) {
+          const trEnd = trEndTagIdx + '</tr>'.length
+          result =
+            result.slice(0, trStart) +
+            `{FOR:${arrayName}}` +
+            result.slice(trStart, trEnd) +
+            '{ENDFOR}' +
+            result.slice(trEnd)
+          changedThisPass = true
+        }
+      }
+    }
+
+    if (!changedThisPass) break
+    anyChange = true
+  }
+
+  return { html: result, repaired: anyChange }
+}
+
 /**
  * Vérifie qu'un template n'a pas de boucle {FOR:tableau}...{ENDFOR} cassée :
  * soit vide (aucune variable {prefixe_...} à l'intérieur — elle ne
@@ -70,8 +152,7 @@ export function validateLoopBlocks(html: string): string[] {
   // document (ex: {ENDFOR}/{FOR:modules} entièrement supprimés en éditant le
   // tableau — les variables {module_...} restent alors seules, sans aucune
   // boucle nulle part à repérer via le regex ci-dessous).
-  const KNOWN_LOOP_PREFIXES = ['module_']
-  for (const prefix of KNOWN_LOOP_PREFIXES) {
+  for (const { prefix } of KNOWN_LOOPS) {
     if (html.includes(`{${prefix}`)) prefixes.add(prefix)
   }
 
