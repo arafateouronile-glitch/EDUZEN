@@ -278,19 +278,8 @@ export default function NewStudentPage() {
         status: 'active',
       }
 
-      if (data.entity_id && companyMode === 'existing') {
-        // Le rattachement sera créé après la création de l'étudiant
-      } else if (data.company_name || data.company_address || data.company_phone || data.company_email || data.company_siret) {
-        studentData.custom_fields = {
-          company: {
-            name: data.company_name || null,
-            address: data.company_address || null,
-            phone: data.company_phone || null,
-            email: data.company_email || null,
-            siret: data.company_siret || null,
-          },
-        }
-      }
+      // Le rattachement entreprise (existante ou nouvelle) est créé après la
+      // création de l'étudiant, cf. plus bas.
 
       let student: { id: string }
       try {
@@ -334,6 +323,64 @@ export default function NewStudentPage() {
         if (entityError) {
           logger.error('Entity link error:', entityError)
           logger.warn('L\'élève a été créé mais le rattachement à l\'entité a échoué')
+        }
+      } else if (companyMode === 'new' && data.company_name && user?.id) {
+        // "Nouvelle entreprise" : créer réellement l'entité (ou réutiliser
+        // celle qui porte déjà ce nom dans l'organisation — external_entities
+        // a une contrainte unique (organization_id, name)) et la rattacher à
+        // l'élève, plutôt que de stocker ces infos sans lien nulle part.
+        try {
+          const { data: existingEntity } = await supabase
+            .from('external_entities')
+            .select('id')
+            .eq('organization_id', targetOrganizationId)
+            .eq('name', data.company_name)
+            .maybeSingle()
+
+          let newEntityId = existingEntity?.id as string | undefined
+
+          if (!newEntityId) {
+            const { data: createdEntity, error: entityCreateError } = await supabase
+              .from('external_entities')
+              .insert({
+                organization_id: targetOrganizationId,
+                name: data.company_name,
+                type: 'company',
+                email: data.company_email || null,
+                phone: data.company_phone || null,
+                address: data.company_address || null,
+                siret: data.company_siret || null,
+                created_by: user.id,
+              })
+              .select('id')
+              .single()
+
+            if (entityCreateError) {
+              logger.error('Entity creation error:', entityCreateError)
+              logger.warn('L\'élève a été créé mais la création de l\'entreprise a échoué')
+            } else {
+              newEntityId = createdEntity.id
+            }
+          }
+
+          if (newEntityId) {
+            const { error: newEntityLinkError } = await supabase
+              .from('student_entities')
+              .insert({
+                student_id: student.id,
+                entity_id: newEntityId,
+                relationship_type: 'apprenticeship',
+                is_current: true,
+                created_by: user.id,
+              })
+
+            if (newEntityLinkError) {
+              logger.error('Entity link error:', newEntityLinkError)
+              logger.warn('L\'élève a été créé mais le rattachement à l\'entreprise a échoué')
+            }
+          }
+        } catch (entityFlowError) {
+          logger.error('Nouvelle entreprise — erreur non bloquante:', entityFlowError)
         }
       }
 
