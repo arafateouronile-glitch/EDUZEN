@@ -415,21 +415,32 @@ export default function DocumentTemplateEditPage() {
   const handleSave = () => {
     if (!template) return
 
-    // Alerte non bloquante : détecte les boucles {FOR:...}{ENDFOR} cassées
-    // (vides, ou variables {module_...} etc. qui ont fini en dehors du bloc
-    // en éditant un tableau) — cf. incident du 25/08/2026 sur les modèles
-    // de devis, où le tableau "Prix de la formation" restait vide.
+    // Détecte les boucles {FOR:...}{ENDFOR} cassées (vides, ou variables
+    // {module_...} etc. qui ont fini en dehors du bloc en éditant un
+    // tableau) — cf. incidents des 25 et 26/08/2026 sur les modèles de
+    // devis, où le tableau "Prix de la formation" restait vide. Un simple
+    // avertissement s'est révélé trop facile à ignorer (récidive sur le
+    // même modèle moins d'1h après une première alerte) : on bloque
+    // désormais l'enregistrement tant que l'utilisateur ne confirme pas
+    // explicitement vouloir enregistrer malgré le problème.
     const loopWarnings = [
       ...validateLoopBlocks(template.header?.content || ''),
       ...validateLoopBlocks(template.content?.html || ''),
       ...validateLoopBlocks(template.footer?.content || ''),
     ]
     if (loopWarnings.length > 0) {
-      addToast({
-        type: 'warning',
-        title: 'Tableau à vérifier',
-        description: loopWarnings[0] + (loopWarnings.length > 1 ? ` (+${loopWarnings.length - 1} autre${loopWarnings.length > 2 ? 's' : ''})` : ''),
-      })
+      const details = loopWarnings.map((w) => `• ${w}`).join('\n')
+      const confirmed = window.confirm(
+        `Ce modèle a un problème de tableau qui le laissera vide au rendu :\n\n${details}\n\nEnregistrer quand même ?`
+      )
+      if (!confirmed) {
+        addToast({
+          type: 'info',
+          title: 'Enregistrement annulé',
+          description: 'Corrigez le tableau signalé, ou confirmez pour enregistrer tel quel.',
+        })
+        return
+      }
     }
 
     saveMutation.mutate(template)
