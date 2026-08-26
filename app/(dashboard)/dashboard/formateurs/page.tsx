@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -108,6 +108,7 @@ function FormateursPageContent() {
   const [complianceFilter, setComplianceFilter] = useState<'all' | 'ok' | 'expiring_soon' | 'non_conforme'>('all')
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherWithUser | null>(null)
   const [dialogTab, setDialogTab] = useState('conformite')
+  const [prefillRequiredTypeId, setPrefillRequiredTypeId] = useState<string | null>(null)
 
   // Déclenche le seed du catalogue de documents requis au premier accès (idempotent côté serveur)
   useQuery({
@@ -429,7 +430,7 @@ function FormateursPageContent() {
       )}
 
       {/* Dialog de détail */}
-      <Dialog open={!!selectedTeacher} onOpenChange={open => { if (!open) setSelectedTeacher(null) }}>
+      <Dialog open={!!selectedTeacher} onOpenChange={open => { if (!open) { setSelectedTeacher(null); setPrefillRequiredTypeId(null) } }}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           {selectedTeacher && orgId && (
             <>
@@ -455,6 +456,10 @@ function FormateursPageContent() {
                   <ComplianceTab
                     teacher={selectedTeacher}
                     rows={complianceByTeacher.get(selectedTeacher.user_id) ?? []}
+                    onUploadFor={row => {
+                      setPrefillRequiredTypeId(row.required_document_type_id)
+                      setDialogTab('documents')
+                    }}
                   />
                 </TabsContent>
 
@@ -467,6 +472,8 @@ function FormateursPageContent() {
                     teacher={selectedTeacher}
                     orgId={orgId}
                     requiredTypes={complianceByTeacher.get(selectedTeacher.user_id) ?? []}
+                    prefillRequiredTypeId={prefillRequiredTypeId}
+                    onPrefillConsumed={() => setPrefillRequiredTypeId(null)}
                   />
                 </TabsContent>
 
@@ -560,7 +567,11 @@ function relanceKindLabel(alertType: string): string {
   return 'automatique'
 }
 
-function ComplianceTab({ teacher, rows }: { teacher: TeacherWithUser; rows: TeacherComplianceRow[] }) {
+function ComplianceTab({ teacher, rows, onUploadFor }: {
+  teacher: TeacherWithUser
+  rows: TeacherComplianceRow[]
+  onUploadFor: (row: TeacherComplianceRow) => void
+}) {
   const { addToast } = useToast()
   const queryClient = useQueryClient()
 
@@ -655,6 +666,12 @@ function ComplianceTab({ teacher, rows }: { teacher: TeacherWithUser; rows: Teac
                   <Download className="w-3.5 h-3.5" />
                 </Button>
               )}
+              {row.status !== 'ok' && (
+                <Button variant="outline" size="sm" onClick={() => onUploadFor(row)}>
+                  <Upload className="w-3.5 h-3.5 mr-1.5" />
+                  Uploader
+                </Button>
+              )}
             </div>
           </div>
         ))}
@@ -736,10 +753,12 @@ function ProfileTab({ teacher }: { teacher: TeacherWithUser }) {
 
 // ─── DocumentsTab ─────────────────────────────────────────────────────────
 
-function DocumentsTab({ teacher, orgId, requiredTypes }: {
+function DocumentsTab({ teacher, orgId, requiredTypes, prefillRequiredTypeId, onPrefillConsumed }: {
   teacher: TeacherWithUser
   orgId: string
   requiredTypes: TeacherComplianceRow[]
+  prefillRequiredTypeId?: string | null
+  onPrefillConsumed?: () => void
 }) {
   const { addToast } = useToast()
   const { user: adminUser } = useAuth()
@@ -749,6 +768,14 @@ function DocumentsTab({ teacher, orgId, requiredTypes }: {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [showUploadForm, setShowUploadForm] = useState(false)
+
+  useEffect(() => {
+    if (!prefillRequiredTypeId) return
+    const row = requiredTypes.find(rt => rt.required_document_type_id === prefillRequiredTypeId)
+    setUploadForm(p => ({ ...p, required_document_type_id: prefillRequiredTypeId, title: p.title || row?.label || '' }))
+    setShowUploadForm(true)
+    onPrefillConsumed?.()
+  }, [prefillRequiredTypeId])
   const [isSendingInvite, setIsSendingInvite] = useState(false)
 
   const { data: docs, isLoading } = useQuery({

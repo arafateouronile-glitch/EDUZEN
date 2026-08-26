@@ -335,7 +335,26 @@ export default function TeacherDocumentsPage() {
                 className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
               >
                 <span className="text-sm font-medium text-gray-800">{row.label}</span>
-                <ComplianceStatusBadge status={row.status} />
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <ComplianceStatusBadge status={row.status} />
+                  {row.status !== 'ok' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setUploadForm(prev => ({
+                          ...prev,
+                          required_document_type_id: row.required_document_type_id,
+                          title: prev.title || row.label,
+                        }))
+                        setShowUploadModal(true)
+                      }}
+                    >
+                      <Upload className="h-3.5 w-3.5 mr-1.5" />
+                      Uploader
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
