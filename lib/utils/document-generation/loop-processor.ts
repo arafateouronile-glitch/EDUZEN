@@ -66,6 +66,15 @@ export function validateLoopBlocks(html: string): string[] {
   const loopSpans: { start: number; end: number }[] = []
   const prefixes = new Set<string>()
 
+  // Préfixes connus à vérifier même en l'absence totale de {FOR:...} dans le
+  // document (ex: {ENDFOR}/{FOR:modules} entièrement supprimés en éditant le
+  // tableau — les variables {module_...} restent alors seules, sans aucune
+  // boucle nulle part à repérer via le regex ci-dessous).
+  const KNOWN_LOOP_PREFIXES = ['module_']
+  for (const prefix of KNOWN_LOOP_PREFIXES) {
+    if (html.includes(`{${prefix}`)) prefixes.add(prefix)
+  }
+
   let match: RegExpExecArray | null
   while ((match = forRegex.exec(html)) !== null) {
     const [full, arrayName, blockContent] = match
