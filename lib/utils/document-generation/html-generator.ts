@@ -817,6 +817,12 @@ export async function generateHTML(
   h2 { font-size: ${fontSize * 1.2}pt; margin: 0 0 6px 0; }
   h3 { font-size: ${fontSize * 1.1}pt; margin: 0 0 4px 0; }
   p { margin: 0 0 4px 0; }
+  /* Une ligne vide (Enter dans l'éditeur) devient un <p></p> sans contenu :
+     sans contenu inline, il n'établit aucune boîte de ligne et s'affiche
+     avec une hauteur nulle ici, alors que l'éditeur TipTap lui donne une
+     hauteur visible via une décoration ProseMirror jamais persistée dans
+     le HTML sauvegardé. Le caractère inséré force une boîte de ligne réelle. */
+  p:empty::after { content: " "; }
 </style>
 </head>
 <body>
