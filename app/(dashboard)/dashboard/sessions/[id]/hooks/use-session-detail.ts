@@ -28,6 +28,15 @@ type Enrollment = TableRow<'enrollments'>
 type Grade = TableRow<'grades'>
 type User = TableRow<'users'>
 type Program = TableRow<'programs'>
+
+// exam_date est un timestamptz (UTC) ; le champ datetime-local attend des
+// chiffres en heure locale — un slice() brut de la chaîne UTC décalait la
+// valeur affichée/ré-enregistrée du fuseau horaire du navigateur à chaque cycle.
+function toDatetimeLocalValue(isoUtc: string): string {
+  const d = new Date(isoUtc)
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
 type Formation = TableRow<'formations'>
 type Organization = TableRow<'organizations'>
 type SessionSlot = TableRow<'session_slots'>
@@ -626,7 +635,7 @@ export function useSessionDetail(sessionId: string) {
         capacity_max: sessionData.capacity_max?.toString() || '',
         teacher_id: sessionData.teacher_id || '',
         status: (sessionData.status || 'planned') as 'completed' | 'planned' | 'ongoing' | 'cancelled',
-        exam_date: (s as any).exam_date?.slice(0, 16) || '',
+        exam_date: (s as any).exam_date ? toDatetimeLocalValue((s as any).exam_date) : '',
       })
 
       // Note: le total_amount sera mis à jour par l'effet sessionModules ci-dessous

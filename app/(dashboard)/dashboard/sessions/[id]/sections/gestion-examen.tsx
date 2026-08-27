@@ -99,8 +99,11 @@ export function GestionExamen({ sessionId, sessionData }: GestionExamenProps) {
   // Initialiser la date depuis sessionData
   useEffect(() => {
     if (sessionData?.exam_date) {
-      // Format datetime-local : "YYYY-MM-DDTHH:MM"
-      setExamDate(sessionData.exam_date.slice(0, 16))
+      // exam_date est un timestamptz (UTC) ; le champ datetime-local attend
+      // des chiffres en heure locale, d'où le format() plutôt qu'un slice()
+      // brut de la chaîne UTC (qui décalait la valeur affichée/ré-enregistrée
+      // du fuseau horaire du navigateur à chaque cycle).
+      setExamDate(format(new Date(sessionData.exam_date), "yyyy-MM-dd'T'HH:mm"))
     }
   }, [sessionData?.exam_date])
 
