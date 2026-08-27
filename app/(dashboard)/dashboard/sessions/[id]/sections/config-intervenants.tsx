@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import { extractTeacherConventionVariables } from '@/lib/utils/teacher-convention/extract-variables'
+import { extractOrdreMissionVariables } from '@/lib/utils/ordre-mission/extract-variables'
 import {
   Select,
   SelectContent,
@@ -65,15 +66,28 @@ export function ConfigIntervenants({
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [isSendingSignature, setIsSendingSignature] = useState(false)
   const [selectedConventionTemplateId, setSelectedConventionTemplateId] = useState<string>('')
+  const [selectedMissionTemplateId, setSelectedMissionTemplateId] = useState<string>('')
 
-  // Modèles de convention formateur disponibles pour l'organisation — même
-  // principe que le sélecteur "Modèle" des devis/factures.
+  // Modèles de convention formateur / ordre de mission disponibles pour
+  // l'organisation — même principe que le sélecteur "Modèle" des devis/factures.
   const { data: conventionTemplates } = useQuery({
     queryKey: ['convention-formateur-templates', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
       return documentTemplateService.getAllTemplates(user.organization_id, {
         type: 'convention_formateur',
+        isActive: true,
+      })
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  const { data: missionTemplates } = useQuery({
+    queryKey: ['ordre-mission-templates', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return documentTemplateService.getAllTemplates(user.organization_id, {
+        type: 'ordre_de_mission',
         isActive: true,
       })
     },
@@ -169,38 +183,65 @@ export function ConfigIntervenants({
   async function generatePdf(): Promise<Blob | null> {
     if (!selectedTeacher) return null
 
-    // Convention formateur : passe par le pipeline générique de modèles
-    // (document_templates + /api/documents/generate-pdf), comme devis/facture
-    // — permet de choisir le modèle. Ordre de mission reste sur l'ancien
-    // générateur ci-dessous (aucun modèle personnalisable pour l'instant).
-    if (docType === 'convention_formateur') {
+    // Convention formateur et ordre de mission passent tous deux par le
+    // pipeline générique de modèles (document_templates + /api/documents/generate-pdf),
+    // comme devis/facture — permet de choisir le modèle.
+    if (docType === 'convention_formateur' || docType === 'ordre_de_mission') {
       if (!user?.organization_id) throw new Error('Organisation manquante')
 
-      const template = selectedConventionTemplateId
-        ? await documentTemplateService.getTemplateById(selectedConventionTemplateId)
-        : await documentTemplateService.getDefaultTemplate(user.organization_id, 'convention_formateur')
+      const selectedTemplateId = docType === 'convention_formateur' ? selectedConventionTemplateId : selectedMissionTemplateId
+      const template = selectedTemplateId
+        ? await documentTemplateService.getTemplateById(selectedTemplateId)
+        : await documentTemplateService.getDefaultTemplate(user.organization_id, docType)
 
-      if (!template) throw new Error('Aucun modèle de convention formateur trouvé')
+      if (!template) {
+        throw new Error(
+          docType === 'convention_formateur'
+            ? 'Aucun modèle de convention formateur trouvé'
+            : "Aucun modèle d'ordre de mission trouvé"
+        )
+      }
 
-      const variables = extractTeacherConventionVariables({
-        organization: org ?? undefined,
-        teacherUser: {
-          first_name: (selectedTeacher as any).first_name,
-          last_name: (selectedTeacher as any).last_name,
-          full_name: selectedTeacher.full_name,
-          email: (selectedTeacher as any).email,
-          phone: (selectedTeacher as any).phone,
-        },
-        teacherProfile,
-        convention: {
-          period_start: formData.start_date,
-          period_end: formData.end_date,
-          intervention_days: interventionDays ? parseFloat(interventionDays) : null,
-          daily_rate: dailyRate ? parseFloat(dailyRate) : null,
-          location: formData.location,
-          custom_notes: null,
-        },
-      })
+      const variables = docType === 'convention_formateur'
+        ? extractTeacherConventionVariables({
+            organization: org ?? undefined,
+            teacherUser: {
+              first_name: (selectedTeacher as any).first_name,
+              last_name: (selectedTeacher as any).last_name,
+              full_name: selectedTeacher.full_name,
+              email: (selectedTeacher as any).email,
+              phone: (selectedTeacher as any).phone,
+            },
+            teacherProfile,
+            convention: {
+              period_start: formData.start_date,
+              period_end: formData.end_date,
+              intervention_days: interventionDays ? parseFloat(interventionDays) : null,
+              daily_rate: dailyRate ? parseFloat(dailyRate) : null,
+              location: formData.location,
+              custom_notes: null,
+            },
+          })
+        : extractOrdreMissionVariables({
+            organization: org ?? undefined,
+            teacherUser: {
+              first_name: (selectedTeacher as any).first_name,
+              last_name: (selectedTeacher as any).last_name,
+              full_name: selectedTeacher.full_name,
+              email: (selectedTeacher as any).email,
+              phone: (selectedTeacher as any).phone,
+            },
+            teacherProfile,
+            mission: {
+              session_name: formData.name,
+              session_ref: formData.code,
+              period_start: formData.start_date,
+              period_end: formData.end_date,
+              location: formData.location,
+              intervention_days: interventionDays ? parseFloat(interventionDays) : null,
+            },
+            authorizedBy: { full_name: user.full_name, role: user.role },
+          })
 
       const res = await fetch('/api/documents/generate-pdf', {
         method: 'POST',
@@ -215,40 +256,7 @@ export function ConfigIntervenants({
       return res.blob()
     }
 
-    const endpoint = docType === 'ordre_de_mission'
-      ? '/api/teacher-documents/generate-ordre-de-mission'
-      : '/api/teacher-documents/generate-convention'
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        teacher: {
-          user_id: selectedTeacher.id,
-          full_name: selectedTeacher.full_name ?? '',
-          email: (selectedTeacher as any).email ?? '',
-          specialization: (selectedTeacher as any).specialization ?? null,
-        },
-        session: {
-          name: formData.name || '',
-          period_start: formData.start_date || new Date().toISOString().split('T')[0],
-          period_end: formData.end_date || new Date().toISOString().split('T')[0],
-          daily_rate: dailyRate ? parseFloat(dailyRate) : null,
-          intervention_days: interventionDays ? parseFloat(interventionDays) : null,
-          specialization: (selectedTeacher as any).specialization ?? null,
-        },
-        // Compatibilité convention route
-        convention: {
-          period_start: formData.start_date || new Date().toISOString().split('T')[0],
-          period_end: formData.end_date || new Date().toISOString().split('T')[0],
-          daily_rate: dailyRate ? parseFloat(dailyRate) : null,
-          intervention_days: interventionDays ? parseFloat(interventionDays) : null,
-          specialization: (selectedTeacher as any).specialization ?? null,
-          custom_notes: null,
-        },
-      }),
-    })
-    if (!res.ok) throw new Error('Erreur génération PDF')
-    return res.blob()
+    return null
   }
 
   async function handleDownload() {
@@ -298,18 +306,20 @@ export function ConfigIntervenants({
       const { data: signedData } = await supabaseClient.storage.from('documents').createSignedUrl(filePath, 3600)
       const signedUrl = signedData?.signedUrl
 
+      const docLabel = docType === 'ordre_de_mission' ? 'Ordre de mission' : 'Convention de prestation'
+      const filePrefix = docType === 'ordre_de_mission' ? 'ordre-mission' : 'convention'
       await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: (selectedTeacher as any).email ?? '',
-          subject: `Convention de prestation — ${formData.name || 'Session de formation'}`,
-          message: `Bonjour ${selectedTeacher.full_name},\n\nVeuillez trouver ci-joint votre convention de prestation pour la session de formation.\n\nCordialement`,
+          subject: `${docLabel} — ${formData.name || 'Session de formation'}`,
+          message: `Bonjour ${selectedTeacher.full_name},\n\nVeuillez trouver ci-joint votre ${docLabel.toLowerCase()} pour la session de formation.\n\nCordialement`,
           attachmentUrl: signedUrl,
-          attachmentName: `convention-${(selectedTeacher.full_name ?? 'formateur').replace(/\s+/g, '-')}.pdf`,
+          attachmentName: `${filePrefix}-${(selectedTeacher.full_name ?? 'formateur').replace(/\s+/g, '-')}.pdf`,
         }),
       })
-      addToast({ title: 'Convention envoyée par email', type: 'success' })
+      addToast({ title: `${docLabel} envoyé${docType === 'ordre_de_mission' ? '' : 'e'} par email`, type: 'success' })
     } catch {
       addToast({ title: "Erreur lors de l'envoi", type: 'error' })
     } finally {
@@ -550,6 +560,25 @@ export function ConfigIntervenants({
                   <SelectContent>
                     <SelectItem value="">Modèle par défaut</SelectItem>
                     {conventionTemplates?.filter((t) => !!t).map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {docType === 'ordre_de_mission' && (
+              <div>
+                <Label className="text-sm mb-2 block">Modèle</Label>
+                <Select value={selectedMissionTemplateId} onValueChange={setSelectedMissionTemplateId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Modèle par défaut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Modèle par défaut</SelectItem>
+                    {missionTemplates?.filter((t) => !!t).map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name}
                       </SelectItem>
