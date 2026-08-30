@@ -93,7 +93,12 @@ export async function POST(request: NextRequest) {
 
       // Créer l'organisation — pays/fuseau France (contrairement aux defaults
       // Sénégal de la RPC, hérités d'un autre parcours d'inscription)
-      const orgCode = cleanOrganisme.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'OF' + Date.now().toString().slice(-4)
+      // Suffixe aléatoire systématique (pas seulement en secours si la chaîne
+      // est vide) : deux organismes au nom proche — ou un même nom testé
+      // deux fois — produiraient sinon le même code et percuteraient la
+      // contrainte unique organizations_code_key.
+      const orgCodeBase = cleanOrganisme.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'OF'
+      const orgCode = `${orgCodeBase}${Math.random().toString(36).slice(2, 6).toUpperCase()}`
       let orgId: string | null = null
 
       const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
