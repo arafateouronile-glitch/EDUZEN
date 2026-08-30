@@ -234,11 +234,21 @@ export async function POST(request: NextRequest) {
         ? `${appUrl}/auth/confirm?token_hash=${hashedToken}&type=recovery&next=${encodeURIComponent('/auth/reset-password?mode=setup')}`
         : undefined
 
-      sendEmailViaResend({
+      // await impératif ici : sur Vercel, une fonction serverless peut être
+      // arrêtée dès la réponse envoyée — un envoi non attendu risque de ne
+      // jamais se terminer (email silencieusement perdu).
+      const emailResult = await sendEmailViaResend({
         to: cleanEmail,
         subject: `${cleanPrenom}, votre essai gratuit de 14 jours est prêt`,
         html: buildDemoTrialUnlockedEmail({ firstName: cleanPrenom, actionLink }),
-      }).catch(err => logger.error('[demo-signup] Error sending welcome email:', err))
+      }).catch(err => {
+        logger.error('[demo-signup] Error sending welcome email:', err)
+        return { success: false }
+      })
+
+      if (!emailResult.success) {
+        logger.error('[demo-signup] Welcome email not sent', { email: cleanEmail })
+      }
 
       return NextResponse.json({ success: true, status: 'new_account' })
     } catch (error) {
