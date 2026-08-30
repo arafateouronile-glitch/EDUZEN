@@ -145,6 +145,17 @@ function DeferredSection({
 }
 
 export default function HomePage() {
+  useEffect(() => {
+    // Supabase redirige les liens d'auth invalides/expirés vers la Site URL du
+    // projet (la racine du domaine) en ignorant notre redirectTo, avec l'erreur
+    // dans le hash (#error_code=otp_expired...). /auth/login sait déjà afficher
+    // un message adapté pour ce cas — on lui transfère le hash plutôt que de
+    // laisser l'utilisateur sur la page d'accueil sans aucune explication.
+    if (window.location.hash.includes('error_code=otp_expired') || window.location.hash.includes('error=access_denied')) {
+      window.location.replace('/auth/login' + window.location.hash)
+    }
+  }, [])
+
   return (
     <>
       {/* JSON-LD hors du ParallaxProvider (ssr:false) pour être dans le HTML initial */}

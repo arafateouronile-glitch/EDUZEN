@@ -214,15 +214,25 @@ export async function POST(request: NextRequest) {
 
       // Lien de récupération (définition du mot de passe) — sans passer par
       // l'auto-email Supabase, pour garder le contrôle total du contenu envoyé.
+      //
+      // On construit notre propre lien vers /auth/confirm avec le token_hash
+      // plutôt que d'envoyer le action_link brut de Supabase (qui pointe vers
+      // /auth/v1/verify et consomme le token dès le premier GET) : les
+      // scanners de liens des messageries (Outlook Safe Links, proxy Gmail...)
+      // pré-visitent silencieusement chaque lien d'un email dès sa réception,
+      // ce qui grille le token à usage unique avant même que l'utilisateur ne
+      // clique — d'où les erreurs "otp_expired" dès le premier clic réel.
+      // /auth/confirm ne consomme le token que sur un clic explicite du
+      // visiteur (verifyOtp côté client), ce qu'un pré-scan automatisé ne fait pas.
       const { data: recoveryData } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
         email: cleanEmail,
-        options: {
-          redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent('/auth/reset-password?mode=setup')}`,
-        },
       })
 
-      const actionLink = recoveryData?.properties?.action_link
+      const hashedToken = recoveryData?.properties?.hashed_token
+      const actionLink = hashedToken
+        ? `${appUrl}/auth/confirm?token_hash=${hashedToken}&type=recovery&next=${encodeURIComponent('/auth/reset-password?mode=setup')}`
+        : undefined
 
       sendEmailViaResend({
         to: cleanEmail,

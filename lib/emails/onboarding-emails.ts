@@ -55,7 +55,7 @@ export function buildDemoTrialUnlockedEmail({ firstName, actionLink }: { firstNa
     <p style="margin:0 0 20px;">Bonjour ${firstName},</p>
     <p style="margin:0 0 20px;">Félicitations, vous venez de débloquer un essai gratuit de 14 jours. Créez un mot de passe, configurez votre organisme de formation et préparez toutes vos questions et utilisation possible de l'outil pour votre OF en attendant notre visio de démonstration gratuite.</p>
     ${setupBtn}
-    <p style="margin:0 0 8px;font-size:14px;color:#555;">Ce lien est valable 24 heures et à usage unique.</p>
+    <p style="margin:0 0 8px;font-size:14px;color:#555;">Ce lien est valable 1 heure et à usage unique.</p>
   `)
 }
 
