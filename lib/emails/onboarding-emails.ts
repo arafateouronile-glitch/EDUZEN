@@ -48,14 +48,20 @@ export function buildWelcomeEmail({ prenom, organisme }: { prenom: string; organ
 
 export function buildDemoTrialUnlockedEmail({ firstName, actionLink }: { firstName: string; actionLink: string | undefined }): string {
   const setupBtn = actionLink
-    ? `<p style="margin:0 0 28px;text-align:center;"><a href="${actionLink}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Créer mon mot de passe →</a></p>`
+    ? `<p style="margin:0 0 12px;text-align:center;"><a href="${actionLink}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Créer mon mot de passe →</a></p>`
     : `<p style="margin:0 0 20px;color:#555;">Le lien n'a pas pu être généré — contactez le support.</p>`
 
   return wrap(`
     <p style="margin:0 0 20px;">Bonjour ${firstName},</p>
-    <p style="margin:0 0 20px;">Félicitations, vous venez de débloquer un essai gratuit de 14 jours. Créez un mot de passe, configurez votre organisme de formation et préparez toutes vos questions et utilisation possible de l'outil pour votre OF en attendant notre visio de démonstration gratuite.</p>
+    <p style="margin:0 0 20px;">Félicitations, vous venez de débloquer un essai gratuit de 14 jours sur EduZen. Si vous n'avez pas encore choisi votre créneau pour la visio de démonstration, vous pouvez le faire à tout moment depuis la page où vous avez rempli ce formulaire.</p>
+    <p style="margin:0 0 20px;">En attendant notre appel, voici comment bien démarrer :</p>
+    <p style="margin:0 0 12px;">1. <strong>Créez votre mot de passe</strong> ci-dessous pour accéder à votre espace.</p>
+    <p style="margin:0 0 12px;">2. <strong>Configurez votre organisme</strong> dans les réglages — logo, adresse, NDA. Ces infos s'affichent automatiquement sur tous vos documents.</p>
+    <p style="margin:0 0 20px;">3. <strong>Repérez les fonctionnalités</strong> qui vous intéressent le plus et notez vos questions — on y répondra en direct pendant la démo, sur votre cas concret.</p>
     ${setupBtn}
-    <p style="margin:0 0 8px;font-size:14px;color:#555;">Ce lien est valable 1 heure et à usage unique.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#555;">Ce lien est valable 1 heure et à usage unique.</p>
+    <p style="margin:0 0 20px;">Si quelque chose bloque avant notre appel, répondez directement à cet email ou appelez-moi au <a href="tel:+33610441324" style="color:#1a1a1a;">06 10 44 13 24</a> — je réponds personnellement.</p>
+    <p style="margin:0 0 40px;">À très vite,</p>
   `)
 }
 
