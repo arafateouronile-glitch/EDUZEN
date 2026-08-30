@@ -46,6 +46,19 @@ export function buildWelcomeEmail({ prenom, organisme }: { prenom: string; organ
   `)
 }
 
+export function buildDemoTrialUnlockedEmail({ firstName, actionLink }: { firstName: string; actionLink: string | undefined }): string {
+  const setupBtn = actionLink
+    ? `<p style="margin:0 0 28px;text-align:center;"><a href="${actionLink}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">Créer mon mot de passe →</a></p>`
+    : `<p style="margin:0 0 20px;color:#555;">Le lien n'a pas pu être généré — contactez le support.</p>`
+
+  return wrap(`
+    <p style="margin:0 0 20px;">Bonjour ${firstName},</p>
+    <p style="margin:0 0 20px;">Félicitations, vous venez de débloquer un essai gratuit de 14 jours. Créez un mot de passe, configurez votre organisme de formation et préparez toutes vos questions et utilisation possible de l'outil pour votre OF en attendant notre visio de démonstration gratuite.</p>
+    ${setupBtn}
+    <p style="margin:0 0 8px;font-size:14px;color:#555;">Ce lien est valable 24 heures et à usage unique.</p>
+  `)
+}
+
 export function buildCheckInEmail({ prenom }: { prenom: string }): string {
   return wrap(`
     <p style="margin:0 0 20px;">Bonjour ${prenom},</p>

@@ -1,13 +1,16 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from '@/components/ui/motion'
 import { GlassCard } from '@/components/ui/glass-card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import {
   Building2, Star, Shield, BadgeCheck, HeartHandshake,
   MapPin, CalendarCheck2, CheckCircle2, ArrowRight, Clock,
-  Video, User, Zap,
+  Video, User, Zap, LogIn,
 } from 'lucide-react'
 
 function FloatingBlob({ className, delay = 0, duration = 25 }: { className?: string; delay?: number; duration?: number }) {
@@ -58,6 +61,37 @@ const TRUST_ROW = [
 ]
 
 export function DemoContent() {
+  const [unlocked, setUnlocked] = useState(false)
+  const [status, setStatus] = useState<'new_account' | 'existing_account' | null>(null)
+  const [form, setForm] = useState({ prenom: '', nom: '', email: '', organisme: '', website: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/demo-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Une erreur est survenue.')
+      setStatus(json.status)
+      setUnlocked(true)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50 relative pt-16">
       <FloatingBlob className="top-[-10%] left-[-5%] w-96 h-96 rounded-full bg-gradient-to-br from-brand-blue to-brand-blue-light" duration={30} />
@@ -280,39 +314,136 @@ export function DemoContent() {
               </p>
             </div>
 
-            {/* Détails pratiques */}
-            <div className="space-y-3 mb-7">
-              {[
-                { icon: Clock,  text: '30 minutes chrono — pas de débordement' },
-                { icon: Video,  text: 'En visio (Google Meet ou Teams)' },
-                { icon: User,   text: 'Avec le fondateur, pas un commercial' },
-                { icon: Zap,    text: 'Démo sur votre situation réelle' },
-              ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <div className="w-7 h-7 bg-brand-blue/8 border border-brand-blue/15 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon className="h-3.5 w-3.5 text-brand-blue" />
+            {!unlocked ? (
+              <>
+                {/* Formulaire de déblocage */}
+                <form onSubmit={handleSubmit} className="space-y-3 mb-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      name="prenom"
+                      label="Prénom"
+                      required
+                      placeholder="Jean"
+                      value={form.prenom}
+                      onChange={handleChange}
+                    />
+                    <Input
+                      name="nom"
+                      label="Nom"
+                      required
+                      placeholder="Dupont"
+                      value={form.nom}
+                      onChange={handleChange}
+                    />
                   </div>
-                  <span className="text-gray-700 text-sm">{text}</span>
+                  <Input
+                    name="email"
+                    type="email"
+                    label="Email professionnel"
+                    required
+                    placeholder="jean.dupont@organisme.fr"
+                    value={form.email}
+                    onChange={handleChange}
+                  />
+                  <Input
+                    name="organisme"
+                    label="Nom de votre organisme de formation"
+                    required
+                    placeholder="Mon Organisme de Formation"
+                    value={form.organisme}
+                    onChange={handleChange}
+                  />
+                  {/* Honeypot anti-bot — invisible pour un humain */}
+                  <input
+                    type="text"
+                    name="website"
+                    value={form.website}
+                    onChange={handleChange}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    className="sr-only"
+                    aria-hidden="true"
+                  />
+
+                  {error && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                      {error}
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    isLoading={submitting}
+                    className="group w-full h-14 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan text-white font-bold text-base rounded-xl shadow-lg shadow-brand-blue/25 hover:shadow-xl hover:shadow-brand-blue/35 transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-1"
+                  >
+                    <CalendarCheck2 className="h-5 w-5" />
+                    Débloquer mon créneau
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                  </Button>
+                </form>
+
+                <p className="text-center text-gray-400 text-xs mt-3">
+                  Votre espace d'essai gratuit (14 jours) est créé automatiquement
+                </p>
+              </>
+            ) : (
+              <>
+                {status === 'existing_account' && (
+                  <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5 mb-5">
+                    <LogIn className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-blue-700 text-sm">
+                      Vous avez déjà un compte EduZen —{' '}
+                      <Link href="/auth/login" className="font-semibold underline">
+                        connectez-vous
+                      </Link>{' '}
+                      pour accéder à votre espace.
+                    </p>
+                  </div>
+                )}
+                {status === 'new_account' && (
+                  <div className="flex items-start gap-2.5 bg-green-50 border border-green-100 rounded-lg px-3 py-2.5 mb-5">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-green-700 text-sm">
+                      Votre essai gratuit de 14 jours est prêt. Un email pour créer votre mot de passe vous sera envoyé dans quelques minutes.
+                    </p>
+                  </div>
+                )}
+
+                {/* Détails pratiques */}
+                <div className="space-y-3 mb-7">
+                  {[
+                    { icon: Clock,  text: '30 minutes chrono — pas de débordement' },
+                    { icon: Video,  text: 'En visio (Google Meet ou Teams)' },
+                    { icon: User,   text: 'Avec le fondateur, pas un commercial' },
+                    { icon: Zap,    text: 'Démo sur votre situation réelle' },
+                  ].map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-center gap-3">
+                      <div className="w-7 h-7 bg-brand-blue/8 border border-brand-blue/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Icon className="h-3.5 w-3.5 text-brand-blue" />
+                      </div>
+                      <span className="text-gray-700 text-sm">{text}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            {/* CTA principal */}
-            <Link
-              href="https://calendly.com/airtonenile/30min"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group w-full h-14 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan text-white font-bold text-base rounded-xl shadow-lg shadow-brand-blue/25 hover:shadow-xl hover:shadow-brand-blue/35 transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              <CalendarCheck2 className="h-5 w-5" />
-              Choisir mon créneau
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+                {/* CTA principal */}
+                <Link
+                  href="https://calendly.com/airtonenile/30min"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group w-full h-14 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan text-white font-bold text-base rounded-xl shadow-lg shadow-brand-blue/25 hover:shadow-xl hover:shadow-brand-blue/35 transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                >
+                  <CalendarCheck2 className="h-5 w-5" />
+                  Choisir mon créneau
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
 
-            {/* Sous-bouton */}
-            <p className="text-center text-gray-400 text-xs mt-3">
-              Vous serez redirigé vers Calendly pour choisir votre horaire
-            </p>
+                {/* Sous-bouton */}
+                <p className="text-center text-gray-400 text-xs mt-3">
+                  Vous serez redirigé vers Calendly pour choisir votre horaire
+                </p>
+              </>
+            )}
           </GlassCard>
 
           {/* Card garantie */}
