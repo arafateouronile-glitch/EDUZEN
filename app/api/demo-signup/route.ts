@@ -9,7 +9,6 @@ import { logger } from '@/lib/utils/logger'
 
 const TRIAL_DAYS = 14
 const DEFAULT_PLAN_NAME = 'Pro'
-const EMAIL_DELAY_MS = 5 * 60_000
 
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
@@ -225,14 +224,11 @@ export async function POST(request: NextRequest) {
 
       const actionLink = recoveryData?.properties?.action_link
 
-      // Email planifié à +5 minutes via le scheduledAt natif de Resend —
-      // pas de file d'attente/cron à construire.
       sendEmailViaResend({
         to: cleanEmail,
         subject: `${cleanPrenom}, votre essai gratuit de 14 jours est prêt`,
         html: buildDemoTrialUnlockedEmail({ firstName: cleanPrenom, actionLink }),
-        scheduledAt: new Date(Date.now() + EMAIL_DELAY_MS).toISOString(),
-      }).catch(err => logger.error('[demo-signup] Error scheduling welcome email:', err))
+      }).catch(err => logger.error('[demo-signup] Error sending welcome email:', err))
 
       return NextResponse.json({ success: true, status: 'new_account' })
     } catch (error) {
