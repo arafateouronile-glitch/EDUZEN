@@ -199,16 +199,16 @@ export class OrganizationSetupService {
               <table style="width: 100%; margin-bottom: 24px;">
                 <tr>
                   <td style="width: 50%; vertical-align: top;">
-                    <p style="font-size: 11pt; font-weight: 600; color: ${BRAND_COLORS.primary}; margin: 0 0 4px 0;">DEVIS N° {{numero_devis}}</p>
-                    <p style="margin: 0; color: #666; font-size: 9pt;">Date : {{date_emission}}</p>
-                    <p style="margin: 0; color: #666; font-size: 9pt;">Validité : {{validite_devis}}</p>
+                    <p style="font-size: 11pt; font-weight: 600; color: ${BRAND_COLORS.primary}; margin: 0 0 4px 0;">DEVIS N° {numero_devis}</p>
+                    <p style="margin: 0; color: #666; font-size: 9pt;">Date : {date_emission}</p>
+                    <p style="margin: 0; color: #666; font-size: 9pt;">Validité : {validite_devis}</p>
                   </td>
                   <td style="width: 50%; vertical-align: top; text-align: right;">
                     <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 3px solid ${BRAND_COLORS.primary};">
                       <p style="font-weight: 600; margin: 0 0 4px 0; color: ${BRAND_COLORS.primary};">Client</p>
-                      <p style="margin: 0; font-weight: 500;">{{eleve_prenom}} {{eleve_nom}}</p>
-                      <p style="margin: 0; font-size: 9pt; color: #666;">{{eleve_adresse}}</p>
-                      <p style="margin: 0; font-size: 9pt; color: #666;">{{eleve_email}}</p>
+                      <p style="margin: 0; font-weight: 500;">{eleve_prenom} {eleve_nom}</p>
+                      <p style="margin: 0; font-size: 9pt; color: #666;">{eleve_adresse}</p>
+                      <p style="margin: 0; font-size: 9pt; color: #666;">{eleve_email}</p>
                     </div>
                   </td>
                 </tr>
@@ -216,8 +216,8 @@ export class OrganizationSetupService {
 
               <!-- Titre de la formation -->
               <div style="background: linear-gradient(135deg, ${BRAND_COLORS.primary} 0%, ${BRAND_COLORS.primaryLight} 100%); color: white; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
-                <p style="margin: 0; font-size: 12pt; font-weight: 600;">{{formation_nom}}</p>
-                <p style="margin: 4px 0 0 0; font-size: 9pt; opacity: 0.9;">{{formation_description}}</p>
+                <p style="margin: 0; font-size: 12pt; font-weight: 600;">{formation_nom}</p>
+                <p style="margin: 4px 0 0 0; font-size: 9pt; opacity: 0.9;">{formation_description}</p>
               </div>
 
               <!-- Détails de la prestation -->
@@ -232,12 +232,12 @@ export class OrganizationSetupService {
                 <tbody>
                   <tr>
                     <td style="padding: 12px; border-bottom: 1px solid #e9ecef;">
-                      <p style="margin: 0; font-weight: 500;">{{formation_nom}}</p>
-                      <p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Formation {{session_modalite}}</p>
-                      <p style="margin: 2px 0 0 0; font-size: 9pt; color: #666;">Du {{session_debut}} au {{session_fin}}</p>
+                      <p style="margin: 0; font-weight: 500;">{formation_nom}</p>
+                      <p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Formation {session_modalite}</p>
+                      <p style="margin: 2px 0 0 0; font-size: 9pt; color: #666;">Du {session_debut} au {session_fin}</p>
                     </td>
-                    <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e9ecef;">{{formation_duree}}</td>
-                    <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e9ecef; font-weight: 500;">{{montant_ht}} €</td>
+                    <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e9ecef;">{formation_duree}</td>
+                    <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e9ecef; font-weight: 500;">{montant_ht} €</td>
                   </tr>
                 </tbody>
               </table>
@@ -246,15 +246,15 @@ export class OrganizationSetupService {
               <table style="width: 280px; margin-left: auto; border-collapse: collapse; margin-bottom: 24px;">
                 <tr>
                   <td style="padding: 8px 12px; text-align: left; color: #666;">Total HT</td>
-                  <td style="padding: 8px 12px; text-align: right; font-weight: 500;">{{montant_ht}} €</td>
+                  <td style="padding: 8px 12px; text-align: right; font-weight: 500;">{montant_ht} €</td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 12px; text-align: left; color: #666;">TVA ({{taux_tva}}%)</td>
-                  <td style="padding: 8px 12px; text-align: right;">{{tva}} €</td>
+                  <td style="padding: 8px 12px; text-align: left; color: #666;">TVA ({taux_tva}%)</td>
+                  <td style="padding: 8px 12px; text-align: right;">{tva} €</td>
                 </tr>
                 <tr style="background: ${BRAND_COLORS.primary}; color: white;">
                   <td style="padding: 10px 12px; text-align: left; font-weight: 600; border-radius: 4px 0 0 4px;">Total TTC</td>
-                  <td style="padding: 10px 12px; text-align: right; font-weight: 600; font-size: 11pt; border-radius: 0 4px 4px 0;">{{montant_ttc}} €</td>
+                  <td style="padding: 10px 12px; text-align: right; font-weight: 600; font-size: 11pt; border-radius: 0 4px 4px 0;">{montant_ttc} €</td>
                 </tr>
               </table>
 
@@ -262,8 +262,8 @@ export class OrganizationSetupService {
               <div style="background: #f8f9fa; padding: 14px; border-radius: 6px; margin-bottom: 20px;">
                 <p style="margin: 0 0 8px 0; font-weight: 600; color: ${BRAND_COLORS.primary}; font-size: 9pt;">CONDITIONS</p>
                 <ul style="margin: 0; padding-left: 18px; font-size: 9pt; color: #555;">
-                  <li style="margin-bottom: 4px;">Devis valable {{validite_devis}}</li>
-                  <li style="margin-bottom: 4px;">Règlement : {{mode_paiement}}</li>
+                  <li style="margin-bottom: 4px;">Devis valable {validite_devis}</li>
+                  <li style="margin-bottom: 4px;">Règlement : {mode_paiement}</li>
                   <li style="margin-bottom: 4px;">Ce devis est à retourner signé avec la mention "Bon pour accord"</li>
                 </ul>
               </div>

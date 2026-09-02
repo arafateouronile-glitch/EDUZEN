@@ -135,6 +135,8 @@ export function mapInvoiceToVariables(
       ? `${((invoice.tax_amount / invoice.amount) * 100).toFixed(2)}%` 
       : '',
     numero_facture: invoice?.invoice_number || '',
+    numero_devis: invoice?.invoice_number || '',
+    devis_numero: invoice?.invoice_number || '',
     date_echeance: invoice?.due_date ? formatDate(invoice.due_date) : '',
     
     // Dates

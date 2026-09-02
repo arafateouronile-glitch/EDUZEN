@@ -458,6 +458,7 @@ export interface DocumentVariables {
   taux_tva?: string
   date_echeance?: string
   numero_devis?: string
+  devis_numero?: string
   validite_devis?: string
   convocation_objet?: string
   convocation_date?: string

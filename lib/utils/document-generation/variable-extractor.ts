@@ -398,9 +398,12 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     programme_nombre_formations: program?.formations ? `${program.formations.length}` : '',
     programme_nombre_sessions: '',
 
-    // Facture
+    // Facture (devis et facture partagent la même ligne `invoices`, distinguée
+    // par document_type — le numéro vient toujours de invoice_number)
     numero_facture: invoice?.invoice_number || '',
     facture_numero: invoice?.invoice_number || '',
+    numero_devis: invoice?.invoice_number || '',
+    devis_numero: invoice?.invoice_number || '',
     mentions_libres: invoice?.mentions_libres || '',
     reference_devis: (() => {
       const n = invoice?.notes
