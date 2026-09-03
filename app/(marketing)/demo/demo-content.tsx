@@ -88,11 +88,7 @@ export function DemoContent() {
       setUnlocked(true)
       // Pixel TikTok — conversion « demande de démo »
       await identifyTikTok(form.email)
-      trackTikTok('Lead', {
-        contents: [{ content_type: 'product', content_name: 'Demande de démo EduZen' }],
-        value: 0,
-        currency: 'EUR',
-      })
+      trackTikTok('Lead', { content_name: 'Demande de démo EduZen' })
     } catch (err) {
       setError((err as Error).message)
     } finally {
