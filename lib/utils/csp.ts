@@ -116,6 +116,8 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://plausible.io',
     'https://www.googletagmanager.com',
     'https://www.google-analytics.com',
+    'https://www.googleadservices.com',
+    'https://googleads.g.doubleclick.net',
     'https://unpkg.com',
     'https://js.stripe.com',
     'https://*.apollo.io',
@@ -123,6 +125,7 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://*.clarity.ms',
     'https://connect.facebook.net',
     'https://assets.calendly.com',
+    'https://analytics.tiktok.com',
     ...additionalScriptSrc
   )
 
@@ -164,6 +167,12 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://analytics.google.com',
     'https://region1.google-analytics.com',
     'https://region1.analytics.google.com',
+    // Google Ads / conversion tracking (tag AW-* chargé via GTM)
+    'https://www.google.com',
+    'https://www.googleadservices.com',
+    'https://googleads.g.doubleclick.net',
+    'https://ad.doubleclick.net',
+    'https://*.g.doubleclick.net',
     'https://api.stripe.com',
     'https://*.stripe.com',
     'https://*.stripe.network',
@@ -176,6 +185,8 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://connect.facebook.net',
     'https://*.calendly.com',
     'https://calendly.com',
+    'https://analytics.tiktok.com',
+    'https://*.tiktok.com',
     ...additionalConnectSrc,
   ]
 

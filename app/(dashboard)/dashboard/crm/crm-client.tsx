@@ -11,7 +11,8 @@ async function fetchPipeline(): Promise<LearnerPipelineData> {
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
-import { Activity, RefreshCw, Search, SlidersHorizontal, X, AlertTriangle, Download, CalendarClock } from 'lucide-react'
+import { Activity, RefreshCw, Search, SlidersHorizontal, X, AlertTriangle, Download, CalendarClock, Building2 } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -202,6 +203,12 @@ export function CrmClientPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/entities">
+              <Building2 className="mr-1.5 h-4 w-4" />
+              Entreprises & Organismes
+            </Link>
+          </Button>
           <Button
             variant="outline" size="sm"
             onClick={() => setShowFilters(v => !v)}
