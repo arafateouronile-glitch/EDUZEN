@@ -6,6 +6,7 @@ import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { buildDemoTrialUnlockedEmail } from '@/lib/emails/onboarding-emails'
 import { withDistributedRateLimit } from '@/lib/utils/rate-limiter-distributed'
 import { logger } from '@/lib/utils/logger'
+import { sendTikTokEvent, tiktokEventId } from '@/lib/utils/tiktok-capi'
 
 const TRIAL_DAYS = 14
 const DEFAULT_PLAN_NAME = 'Pro'
@@ -43,6 +44,19 @@ export async function POST(request: NextRequest) {
       const cleanEmail = String(email).trim().toLowerCase().slice(0, 200)
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.eduzen.io'
+
+      // TikTok Events API — conversion « demande de démo » (Lead).
+      // Fire-and-forget, event_id partagé avec le pixel navigateur pour la déduplication.
+      // Le formulaire soumis EST le lead, quel que soit le résultat de création de compte.
+      void sendTikTokEvent({
+        eventName: 'Lead',
+        email: cleanEmail,
+        eventId: tiktokEventId('lead', cleanEmail),
+        clientIp: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+        userAgent: req.headers.get('user-agent'),
+        url: `${appUrl}/demo`,
+        properties: { content_name: 'Demande de démo EduZen' },
+      })
       const supabaseAdmin = createAdminClient()
 
       // Écriture CRM non bloquante — enregistrée dans les deux branches

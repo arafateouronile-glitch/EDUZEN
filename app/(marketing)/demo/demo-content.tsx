@@ -6,7 +6,7 @@ import { GlassCard } from '@/components/ui/glass-card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { identifyTikTok, trackTikTok } from '@/lib/utils/tiktok-pixel'
+import { identifyTikTok, trackTikTok, tiktokEventId } from '@/lib/utils/tiktok-pixel'
 import Link from 'next/link'
 import {
   Building2, Star, Shield, BadgeCheck, HeartHandshake,
@@ -86,9 +86,9 @@ export function DemoContent() {
       if (!res.ok) throw new Error(json.error || 'Une erreur est survenue.')
       setStatus(json.status)
       setUnlocked(true)
-      // Pixel TikTok — conversion « demande de démo »
+      // Pixel TikTok — conversion « demande de démo » (event_id partagé avec l'Events API serveur)
       await identifyTikTok(form.email)
-      trackTikTok('Lead', { content_name: 'Demande de démo EduZen' })
+      trackTikTok('Lead', { content_name: 'Demande de démo EduZen' }, await tiktokEventId('lead', form.email))
     } catch (err) {
       setError((err as Error).message)
     } finally {
