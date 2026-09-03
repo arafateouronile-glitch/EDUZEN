@@ -123,6 +123,7 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://*.clarity.ms',
     'https://connect.facebook.net',
     'https://assets.calendly.com',
+    'https://analytics.tiktok.com',
     ...additionalScriptSrc
   )
 
@@ -176,6 +177,8 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://connect.facebook.net',
     'https://*.calendly.com',
     'https://calendly.com',
+    'https://analytics.tiktok.com',
+    'https://*.tiktok.com',
     ...additionalConnectSrc,
   ]
 
