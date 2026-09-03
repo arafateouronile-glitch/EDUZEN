@@ -6,11 +6,12 @@ import { seedDefaultTemplatesForOrg } from '@/lib/utils/seed-default-templates'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { logger } from '@/lib/utils/logger'
 import { buildWelcomeEmail, firstName } from '@/lib/emails/onboarding-emails'
+import { sendTikTokEvent, tiktokEventId } from '@/lib/utils/tiktok-capi'
 
 // POST /api/users/post-signup
 // Appelé une fois après l'inscription : seeder les templates + envoyer l'email de bienvenue immédiat.
 // Les emails J+2 / J+7 / J+11 / J+13 sont gérés par le cron /api/cron/onboarding-sequence.
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -49,6 +50,20 @@ export async function POST(_request: NextRequest) {
     const orgName = orgData?.name ?? 'votre organisme'
     const prenom = firstName(full_name, email ?? user.email ?? null)
     const recipient = email ?? user.email ?? ''
+
+    // TikTok Events API — conversion « création de compte / essai gratuit ».
+    // Fire-and-forget, event_id partagé avec le pixel navigateur (register/page.tsx).
+    if (recipient) {
+      void sendTikTokEvent({
+        eventName: 'CompleteRegistration',
+        email: recipient,
+        eventId: tiktokEventId('cr', recipient),
+        clientIp: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+        userAgent: request.headers.get('user-agent'),
+        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.eduzen.io'}/auth/register`,
+        properties: { content_name: 'Essai gratuit EduZen' },
+      })
+    }
 
     // Seeder les modèles AVANT de répondre — Vercel coupe la fonction dès le return
     const adminClient = createAdminClient()

@@ -16,7 +16,7 @@ import {
   PenLine, FileOutput, Globe, CreditCard, FileCheck, CalendarCheck2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { identifyTikTok, trackTikTok } from '@/lib/utils/tiktok-pixel'
+import { identifyTikTok, trackTikTok, tiktokEventId } from '@/lib/utils/tiktok-pixel'
 
 function FloatingBlob({ className, delay = 0, duration = 25 }: { className?: string; delay?: number; duration?: number }) {
   return (
@@ -211,9 +211,9 @@ function RegisterForm({ fromDemo }: { fromDemo: boolean }) {
       if (typeof w.gtag === 'function') {
         w.gtag('event', 'conversion_event_signup', {})
       }
-      // Pixel TikTok — conversion « création de compte / essai gratuit »
+      // Pixel TikTok — conversion « création de compte / essai gratuit » (event_id partagé avec l'Events API serveur)
       await identifyTikTok(formData.email)
-      trackTikTok('CompleteRegistration', { content_name: 'Essai gratuit EduZen' })
+      trackTikTok('CompleteRegistration', { content_name: 'Essai gratuit EduZen' }, await tiktokEventId('cr', formData.email))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
