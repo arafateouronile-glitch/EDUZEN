@@ -105,6 +105,12 @@ const QualiopiComplianceScore = dynamic(() => import('@/components/qualiopi/comp
 type Payment = TableRow<'payments'>
 type Invoice = TableRow<'invoices'>
 
+const SLOT_TIME_LABELS: Record<string, string> = {
+  morning: 'Matin',
+  afternoon: 'Après-midi',
+  full_day: 'Journée complète',
+}
+
 // Dashboard spécifique pour les enseignants
 function TeacherDashboard() {
   const supabase = createClient()
@@ -447,6 +453,34 @@ function TeacherDashboard() {
     return count
   }, [allSessions])
 
+  // Mes prochaines séances — uniquement celles explicitement assignées à ce
+  // formateur (session_slots.teacher_id, cf. onglet "Intervenants" d'une
+  // session). Une session non encore "découpée" par séance n'apparaît pas
+  // ici mais reste visible dans "Mes sessions assignées" ci-dessous.
+  const { data: upcomingSlots } = useQuery({
+    queryKey: ['teacher-upcoming-slots', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('session_slots')
+        .select('id, session_id, date, start_time, end_time, time_slot, location, sessions(id, name)')
+        .eq('teacher_id', user.id)
+        .gte('date', today)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(8)
+      if (error) {
+        logger.error('Erreur récupération séances à venir de l\'enseignant', error)
+        return []
+      }
+      return data || []
+    },
+    enabled: !!user?.id,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       {/* Header Premium */}
@@ -762,67 +796,109 @@ function TeacherDashboard() {
           </Card>
         </motion.div>
 
-        {/* Actions rapides Premium */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        >
-          <Card variant="premium" hoverable={false} className="overflow-hidden">
-            <CardHeader className="bg-gradient-brand-subtle border-b border-brand-blue/10">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-brand-cyan/10 rounded-lg border border-brand-cyan/20">
-                  <Sparkles className="h-5 w-5 text-brand-cyan" />
-                </div>
-                <span className="text-brand-cyan">
-                  Actions rapides
-                </span>
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Accédez rapidement à vos tâches courantes
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { href: '/dashboard/attendance', icon: ClipboardList, label: 'Émargement', useBrand: true },
-                  { href: '/dashboard/my-students', icon: Users, label: 'Mes apprenants', useBrand: false },
-                  { href: '/dashboard/evaluations', icon: Award, label: 'Évaluations', useBrand: true },
-                  { href: '/dashboard/resources', icon: FileText, label: 'Ressources', useBrand: false },
-                ].map((action, index) => {
-                  const Icon = action.icon
-                  const isBrand = action.useBrand
-                  return (
-                    <motion.div
-                      key={action.href}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.7 + index * 0.1, duration: 0.4 }}
+        <div className="space-y-6">
+          {/* Mes prochaines séances — uniquement celles qui me sont assignées
+              (onglet Intervenants d'une session → séances cochées) */}
+          {upcomingSlots && upcomingSlots.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+            >
+              <Card variant="premium" hoverable={false} className="overflow-hidden">
+                <CardHeader className="bg-gradient-brand-subtle border-b border-brand-blue/10">
+                  <CardTitle className="flex items-center gap-3 text-lg">
+                    <div className="p-2 bg-brand-blue/10 rounded-lg border border-brand-blue/20">
+                      <Clock className="h-5 w-5 text-brand-blue" />
+                    </div>
+                    <span className="text-brand-blue">Mes prochaines séances</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-2">
+                  {upcomingSlots.map((slot: any) => (
+                    <Link
+                      key={slot.id}
+                      href={`/dashboard/sessions/${slot.session_id}?step=suivi`}
+                      className="block"
                     >
-                      <Link href={action.href} className="block group">
-                        <GlassCard
-                          variant="premium"
-                          hoverable
-                          className="p-6 h-full relative overflow-hidden"
-                        >
-                          <div className={`absolute inset-0 ${isBrand ? 'bg-gradient-brand-subtle' : 'bg-brand-cyan/5'} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl`}></div>
-                          <div className="relative z-10 flex flex-col items-center justify-center gap-3">
-                            <div className={`p-4 ${isBrand ? 'bg-brand-blue/10 border border-brand-blue/20' : 'bg-brand-cyan/10 border border-brand-cyan/20'} rounded-xl group-hover:scale-110 transition-transform duration-300`}>
-                              <Icon className={`h-7 w-7 ${isBrand ? 'text-brand-blue' : 'text-brand-cyan'} group-hover:scale-110 transition-transform duration-300`} />
+                      <GlassCard variant="default" hoverable className="p-3">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {slot.sessions?.name || 'Session'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {formatDate(slot.date)} · {SLOT_TIME_LABELS[slot.time_slot as string] ?? slot.time_slot}
+                          {slot.start_time && ` · ${String(slot.start_time).slice(0, 5)}`}
+                        </p>
+                      </GlassCard>
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Actions rapides Premium */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+          >
+            <Card variant="premium" hoverable={false} className="overflow-hidden">
+              <CardHeader className="bg-gradient-brand-subtle border-b border-brand-blue/10">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="p-2 bg-brand-cyan/10 rounded-lg border border-brand-cyan/20">
+                    <Sparkles className="h-5 w-5 text-brand-cyan" />
+                  </div>
+                  <span className="text-brand-cyan">
+                    Actions rapides
+                  </span>
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Accédez rapidement à vos tâches courantes
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { href: '/dashboard/attendance', icon: ClipboardList, label: 'Émargement', useBrand: true },
+                    { href: '/dashboard/my-students', icon: Users, label: 'Mes apprenants', useBrand: false },
+                    { href: '/dashboard/evaluations', icon: Award, label: 'Évaluations', useBrand: true },
+                    { href: '/dashboard/resources', icon: FileText, label: 'Ressources', useBrand: false },
+                  ].map((action, index) => {
+                    const Icon = action.icon
+                    const isBrand = action.useBrand
+                    return (
+                      <motion.div
+                        key={action.href}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.7 + index * 0.1, duration: 0.4 }}
+                      >
+                        <Link href={action.href} className="block group">
+                          <GlassCard
+                            variant="premium"
+                            hoverable
+                            className="p-6 h-full relative overflow-hidden"
+                          >
+                            <div className={`absolute inset-0 ${isBrand ? 'bg-gradient-brand-subtle' : 'bg-brand-cyan/5'} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl`}></div>
+                            <div className="relative z-10 flex flex-col items-center justify-center gap-3">
+                              <div className={`p-4 ${isBrand ? 'bg-brand-blue/10 border border-brand-blue/20' : 'bg-brand-cyan/10 border border-brand-cyan/20'} rounded-xl group-hover:scale-110 transition-transform duration-300`}>
+                                <Icon className={`h-7 w-7 ${isBrand ? 'text-brand-blue' : 'text-brand-cyan'} group-hover:scale-110 transition-transform duration-300`} />
+                              </div>
+                              <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm text-center">
+                                {action.label}
+                              </span>
                             </div>
-                            <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors text-sm text-center">
-                              {action.label}
-                            </span>
-                          </div>
-                        </GlassCard>
-                      </Link>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                          </GlassCard>
+                        </Link>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </div>
   )

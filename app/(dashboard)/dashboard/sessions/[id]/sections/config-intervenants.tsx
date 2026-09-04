@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
+import { sessionSlotService } from '@/lib/services/session-slot.service.client'
 import { extractTeacherConventionVariables } from '@/lib/utils/teacher-convention/extract-variables'
 import { extractOrdreMissionVariables } from '@/lib/utils/ordre-mission/extract-variables'
 import {
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import type { SessionFormData } from '../hooks/use-session-detail'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { formatDate } from '@/lib/utils'
 import {
   Users,
   Save,
@@ -35,15 +37,24 @@ import {
   ClipboardList,
   CheckCircle2,
   Euro,
+  CalendarDays,
 } from 'lucide-react'
 
 type User = TableRow<'users'>
+type SessionSlot = TableRow<'session_slots'>
 
 interface ConfigIntervenantsProps {
   formData: SessionFormData
   onFormDataChange: (data: SessionFormData) => void
   users?: User[]
   sessionId: string
+  sessionSlots?: SessionSlot[]
+}
+
+const TIME_SLOT_LABELS: Record<string, string> = {
+  morning: 'Matin',
+  afternoon: 'Après-midi',
+  full_day: 'Journée complète',
 }
 
 type DocType = 'convention_formateur' | 'ordre_de_mission'
@@ -53,6 +64,7 @@ export function ConfigIntervenants({
   onFormDataChange,
   users = [],
   sessionId,
+  sessionSlots,
 }: ConfigIntervenantsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -368,6 +380,81 @@ export function ConfigIntervenants({
 
   const teachers = users.filter((u) => u.role === 'teacher')
 
+  // Séances (session_slots) de la session — normalement déjà chargées par la
+  // page parente et passées en prop ; requête de secours si absente, sur la
+  // même clé de cache pour rester synchronisée avec l'onglet "Dates & prix".
+  const { data: fetchedSlots } = useQuery({
+    queryKey: ['session-slots', sessionId],
+    queryFn: () => sessionSlotService.getBySessionId(sessionId),
+    enabled: !!sessionId && sessionSlots === undefined,
+  })
+  const slots = useMemo(
+    () => (sessionSlots ?? (fetchedSlots as SessionSlot[] | undefined) ?? []),
+    [sessionSlots, fetchedSlots]
+  )
+
+  // Séances assignées au collaborateur (teacher_id) — état local pour permettre
+  // de cocher/décocher avant sauvegarde.
+  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set())
+
+  // Resynchroniser la sélection quand on change d'intervenant ou que les séances rechargent.
+  useEffect(() => {
+    if (!formData.teacher_id) {
+      setSelectedSlotIds(new Set())
+      return
+    }
+    setSelectedSlotIds(
+      new Set(slots.filter((s) => s.teacher_id === formData.teacher_id).map((s) => s.id))
+    )
+  }, [formData.teacher_id, slots])
+
+  const toggleSlot = (slotId: string) => {
+    setSelectedSlotIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(slotId)) next.delete(slotId)
+      else next.add(slotId)
+      return next
+    })
+  }
+
+  const saveSlotsMutation = useMutation({
+    mutationFn: async () => {
+      if (!formData.teacher_id) throw new Error('Aucun intervenant sélectionné')
+      const toAssign = slots
+        .filter((s) => selectedSlotIds.has(s.id) && s.teacher_id !== formData.teacher_id)
+        .map((s) => s.id)
+      const toUnassign = slots
+        .filter((s) => !selectedSlotIds.has(s.id) && s.teacher_id === formData.teacher_id)
+        .map((s) => s.id)
+
+      if (toAssign.length > 0) {
+        const { error } = await supabase
+          .from('session_slots')
+          .update({ teacher_id: formData.teacher_id })
+          .in('id', toAssign)
+        if (error) throw error
+      }
+      if (toUnassign.length > 0) {
+        const { error } = await supabase
+          .from('session_slots')
+          .update({ teacher_id: null })
+          .in('id', toUnassign)
+        if (error) throw error
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session-slots', sessionId] })
+      addToast({ title: 'Séances de l\'intervenant mises à jour', type: 'success' })
+    },
+    onError: (error) => {
+      addToast({
+        title: 'Erreur lors de la mise à jour des séances',
+        description: error instanceof Error ? error.message : undefined,
+        type: 'error',
+      })
+    },
+  })
+
   // Tous les intervenants de la session (multi-formateurs)
   const { data: allSessionTeachers } = useQuery({
     queryKey: ['all-session-teachers', sessionId],
@@ -439,6 +526,113 @@ export function ConfigIntervenants({
           )}
         </CardContent>
       </Card>
+
+      {/* Séances sur lesquelles intervient ce formateur */}
+      {formData.teacher_id && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarDays className="h-4 w-4" />
+                Séances de l'intervenant
+              </CardTitle>
+              {slots.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setSelectedSlotIds(new Set(slots.map((s) => s.id)))}
+                  >
+                    Tout sélectionner
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setSelectedSlotIds(new Set())}
+                  >
+                    Tout désélectionner
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Seules les séances cochées apparaîtront dans l'espace personnel de {selectedTeacher?.full_name ?? 'cet intervenant'}.
+            </p>
+
+            {slots.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Aucune séance planifiée pour cette session — configurez les dates dans l'onglet "Dates & prix".
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
+                {slots.map((slot) => {
+                  const isChecked = selectedSlotIds.has(slot.id)
+                  const otherTeacher =
+                    slot.teacher_id && slot.teacher_id !== formData.teacher_id
+                      ? users.find((u) => u.id === slot.teacher_id)
+                      : null
+                  return (
+                    <label
+                      key={slot.id}
+                      className={`flex items-center gap-3 p-2.5 rounded-lg border text-sm cursor-pointer transition-colors ${
+                        isChecked ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSlot(slot.id)}
+                        className="h-4 w-4 shrink-0 accent-primary"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{formatDate(slot.date)}</span>
+                          <span className="text-muted-foreground">
+                            {TIME_SLOT_LABELS[slot.time_slot] ?? slot.time_slot}
+                            {slot.start_time && ` · ${slot.start_time.slice(0, 5)}–${slot.end_time?.slice(0, 5) ?? ''}`}
+                          </span>
+                          {slot.location && (
+                            <span className="text-xs text-muted-foreground">📍 {slot.location}</span>
+                          )}
+                        </div>
+                        {otherTeacher && (
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            Actuellement assignée à {otherTeacher.full_name}
+                            {isChecked ? ' — sera réassignée' : ''}
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+
+            {slots.length > 0 && (
+              <Button
+                type="button"
+                onClick={() => saveSlotsMutation.mutate()}
+                disabled={saveSlotsMutation.isPending}
+                size="sm"
+                className="w-full"
+              >
+                {saveSlotsMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Enregistrer les séances ({selectedSlotIds.size} sélectionnée{selectedSlotIds.size > 1 ? 's' : ''})
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Conditions d'intervention */}
       {formData.teacher_id && (

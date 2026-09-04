@@ -287,8 +287,9 @@ export default function CalendarPage() {
         setIsModalOpen(true)
       }
     } else if (event.event_type === 'session') {
-      // Naviguer vers la session
-      window.location.href = `/dashboard/sessions/${event.event_id}`
+      // Naviguer vers la session (event_id peut désigner une séance précise —
+      // session_slots — dont session_id porte alors la session parente)
+      window.location.href = `/dashboard/sessions/${event.session_id ?? event.event_id}`
     } else if (event.event_type === 'formation') {
       // Naviguer vers la formation
       window.location.href = `/dashboard/formations/${event.event_id}`
