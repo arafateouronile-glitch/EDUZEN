@@ -474,11 +474,16 @@ export function CalendarView({
         {/* Grille horaire */}
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-8">
-            {/* Colonne des heures */}
+            {/* Colonne des heures — le libellé est centré sur la ligne de son
+                heure (pas indenté dans sa ligne) pour rester aligné avec le
+                vrai début des événements positionnés au pixel dans la
+                colonne voisine. */}
             <div className="border-r">
               {hours.map((hour) => (
-                <div key={hour} className="h-16 border-b p-1 text-right">
-                  <span className="text-xs text-gray-400">{hour}:00</span>
+                <div key={hour} className="h-16 border-b relative">
+                  <span className="absolute -top-2 right-1 text-xs text-gray-400 bg-white px-1">
+                    {hour}:00
+                  </span>
                 </div>
               ))}
             </div>
@@ -560,8 +565,10 @@ export function CalendarView({
           <div className="flex relative" style={{ minHeight: `${hours.length * rowHeight}px` }}>
             <div className="w-16 border-r shrink-0">
               {hours.map((hour) => (
-                <div key={hour} className="border-b p-2 text-right" style={{ height: `${rowHeight}px` }}>
-                  <span className="text-sm text-gray-400">{hour}:00</span>
+                <div key={hour} className="border-b relative" style={{ height: `${rowHeight}px` }}>
+                  <span className="absolute -top-2.5 right-2 text-sm text-gray-400 bg-white px-1">
+                    {hour}:00
+                  </span>
                 </div>
               ))}
             </div>
