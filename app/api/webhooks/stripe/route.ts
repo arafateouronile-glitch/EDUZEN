@@ -7,6 +7,7 @@ import Stripe from 'stripe'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { APP_URLS } from '@/lib/config/app-config'
+import { ensureOnboardingComplete } from '@/lib/utils/billing/ensure-onboarding-complete'
 
 // Initialiser Stripe uniquement si la clé est disponible
 const getStripe = () => {
@@ -188,44 +189,71 @@ async function handleSubscriptionUpdate(
       return
     }
 
-    // Trouver l'organisation via le customer_id
-    const { data: existingSubscription } = await supabase
+    // Résolution de l'organisation : d'abord par stripe_customer_id, puis en
+    // SECOURS par subscription.metadata.organization_id — cas d'une ligne
+    // `subscriptions` créée sans IDs Stripe (échec de create-trial-subscription
+    // après un paiement réussi). Sans ce fallback, le webhook abandonnait et le
+    // client payé restait bloqué sur l'onboarding.
+    const metadataOrgId = (subscription.metadata?.organization_id as string | undefined) || undefined
+
+    let organizationId: string | null = null
+    const { data: byCustomer } = await supabase
       .from('subscriptions')
       .select('organization_id')
       .eq('stripe_customer_id', customerId)
       .maybeSingle()
 
-    if (!existingSubscription) {
-      logger.warn('Stripe Webhook - Organisation non trouvée', { customerId })
+    if (byCustomer?.organization_id) {
+      organizationId = byCustomer.organization_id
+    } else if (metadataOrgId) {
+      organizationId = metadataOrgId
+      logger.warn('Stripe Webhook - Organisation résolue via metadata (stripe_customer_id absent de subscriptions)', {
+        customerId, organizationId, stripeSubscriptionId: subscription.id,
+      })
+    }
+
+    if (!organizationId) {
+      logger.warn('Stripe Webhook - Organisation non trouvée', { customerId, metadataOrgId })
       return
     }
 
-    // Mettre à jour ou créer la souscription
-    const subscriptionData = {
-      plan_id: plan.id,
-      status: subscription.status === 'active' ? 'active' : subscription.status,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-      stripe_subscription_id: subscription.id,
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      updated_at: new Date().toISOString(),
-    }
+    const nextStatus = subscription.status === 'active' ? 'active' : subscription.status
 
+    // Upsert par organization_id (contrainte unique) : met aussi à jour le
+    // stripe_customer_id manquant pour que les prochains webhooks matchent.
     const { error } = await supabase
       .from('subscriptions')
-      .update(subscriptionData)
-      .eq('stripe_customer_id', customerId)
+      .upsert({
+        organization_id: organizationId,
+        plan_id: plan.id,
+        status: nextStatus,
+        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscription.id,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'organization_id' })
 
     if (error) {
       logger.error('Stripe Webhook - Erreur mise à jour souscription', error)
       throw error
     }
 
-    await syncOrganizationSubscriptionStatus(supabase, existingSubscription.organization_id, subscriptionData.status)
+    await syncOrganizationSubscriptionStatus(supabase, organizationId, nextStatus)
+
+    // Abonnement actif / en essai payant = onboarding finalisé : garantir les
+    // flags settings.onboarding_completed / payment_method_added, sinon le garde
+    // du dashboard verrouille toute l'équipe.
+    if (nextStatus === 'active' || nextStatus === 'trialing') {
+      await ensureOnboardingComplete(supabase, organizationId, {
+        context: { source: 'stripe-webhook:subscription-update', stripeStatus: subscription.status, stripeSubscriptionId: subscription.id },
+      })
+    }
 
     logger.info('Stripe Webhook - Souscription mise à jour', {
       subscriptionId: subscription.id,
-      organizationId: existingSubscription.organization_id,
+      organizationId,
     })
   } catch (error) {
     logger.error('Stripe Webhook - Erreur handleSubscriptionUpdate', error, {
@@ -323,6 +351,11 @@ async function handlePaymentSuccess(supabase: SupabaseClient<Database>, invoice:
 
     if (updated?.organization_id) {
       await syncOrganizationSubscriptionStatus(supabase, updated.organization_id, 'active')
+      // Filet de sécurité : un paiement d'abonnement réussi implique un
+      // onboarding finalisé.
+      await ensureOnboardingComplete(supabase, updated.organization_id, {
+        context: { source: 'stripe-webhook:invoice.payment_succeeded', invoiceId: invoice.id },
+      })
     }
 
     logger.info('Stripe Webhook - Paiement réussi', {
