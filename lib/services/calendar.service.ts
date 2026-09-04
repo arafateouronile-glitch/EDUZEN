@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { logger } from '@/lib/utils/logger'
+import { isVisibleNow } from '@/lib/utils/teacher-visibility'
 
 // Types
 export type CalendarTodo = {
@@ -431,11 +432,15 @@ export class CalendarService {
       .maybeSingle()
 
     if (userData?.role === 'teacher') {
-      const { data: teacherSessions } = await this.supabase
+      const { data: teacherSessionsRaw } = await this.supabase
         .from('session_teachers')
-        .select('session_id')
+        .select('session_id, visibility_date')
         .eq('teacher_id', userId)
-      const sessionIds = (teacherSessions || []).map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
+      const teacherSessions = teacherSessionsRaw as { session_id: string | null; visibility_date: string | null }[] | null
+      const sessionIds = (teacherSessions || [])
+        .filter((st) => isVisibleNow(st.visibility_date))
+        .map((st) => st.session_id)
+        .filter((id): id is string => id != null)
       const allTodos = await this.getTodos(organizationId, todosFilter)
       const filtered = sessionIds.length > 0
         ? allTodos.filter((t) => !t.linked_session_id || sessionIds.includes(t.linked_session_id))
@@ -585,12 +590,21 @@ export class CalendarService {
         .eq('id', userId)
         .maybeSingle()
       if (userData?.role === 'teacher') {
-        const { data: teacherSessions } = await this.supabase
+        const { data: teacherSessionsRaw } = await this.supabase
           .from('session_teachers')
-          .select('session_id')
+          .select('session_id, visibility_date')
           .eq('teacher_id', userId)
-        let sessionIds: string[] = (teacherSessions || []).map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
-        if (sessionIds.length === 0) {
+        const teacherSessions = teacherSessionsRaw as { session_id: string | null; visibility_date: string | null }[] | null
+        // Filtre visibility_date sur la liste, mais le déclenchement du repli
+        // ci-dessous teste la longueur BRUTE (teacherSessions), jamais celle
+        // déjà filtrée : sinon un formateur dont l'unique session a une date
+        // de visibilité future déclencherait à tort le repli legacy
+        // sessions.teacher_id et verrait sa session malgré tout.
+        let sessionIds: string[] = (teacherSessions || [])
+          .filter((st) => isVisibleNow(st.visibility_date))
+          .map((st) => st.session_id)
+          .filter((id): id is string => id != null)
+        if (!teacherSessions || teacherSessions.length === 0) {
           const { data: byTeacher } = await this.supabase
             .from('sessions')
             .select('id')
@@ -725,12 +739,17 @@ export class CalendarService {
         .eq('id', userId)
         .maybeSingle()
       if (userData?.role === 'teacher') {
-        const { data: teacherSessions } = await this.supabase
+        const { data: teacherSessionsRaw } = await this.supabase
           .from('session_teachers')
-          .select('session_id')
+          .select('session_id, visibility_date')
           .eq('teacher_id', userId)
+        const teacherSessions = teacherSessionsRaw as { session_id: string | null; visibility_date: string | null }[] | null
         if (!teacherSessions?.length) return []
-        const sessionIds = teacherSessions.map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
+        const sessionIds = teacherSessions
+          .filter((st) => isVisibleNow(st.visibility_date))
+          .map((st) => st.session_id)
+          .filter((id): id is string => id != null)
+        if (sessionIds.length === 0) return []
         const { data: sessionsData } = await this.supabase
           .from('sessions')
           .select('formation_id')

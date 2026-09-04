@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dialog'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { isVisibleNow } from '@/lib/utils/teacher-visibility'
 
 export default function AttendancePage() {
   const { user } = useAuth()
@@ -51,18 +52,24 @@ export default function AttendancePage() {
       if (!user?.id) return []
       
       // D'abord, essayer via session_teachers
-      const { data: sessionTeachers, error: sessionTeachersError } = await supabase
+      const { data: sessionTeachersRaw, error: sessionTeachersError } = await supabase
         .from('session_teachers')
-        .select('session_id')
+        .select('session_id, visibility_date')
         .eq('teacher_id', user.id)
-      
+      const sessionTeachers = sessionTeachersRaw as { session_id: string | null; visibility_date: string | null }[] | null
+
       if (sessionTeachersError) {
         logger.error('Erreur récupération session_teachers', sanitizeError(sessionTeachersError))
       }
-      
+
+      // Le repli ci-dessous se déclenche sur la longueur BRUTE (sessionTeachers),
+      // jamais sur la liste déjà filtrée par visibility_date — sinon un
+      // formateur dont toutes les sessions ont une date de visibilité future
+      // déclencherait à tort le repli legacy sessions.teacher_id.
       if (sessionTeachers && sessionTeachers.length > 0) {
         return sessionTeachers
-        .map((st: { session_id: string | null }) => st.session_id)
+        .filter((st) => isVisibleNow(st.visibility_date))
+        .map((st) => st.session_id)
         .filter((id): id is string => id != null)
       }
       

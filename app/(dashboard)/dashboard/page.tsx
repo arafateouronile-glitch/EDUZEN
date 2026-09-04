@@ -48,6 +48,7 @@ import { Badge } from '@/components/ui/badge'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { StatsCardSkeleton, ChartSkeleton } from '@/components/ui/skeleton'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { isVisibleNow } from '@/lib/utils/teacher-visibility'
 
 // Lazy load des composants de graphiques lourds (améliore LCP)
 const PremiumLineChart = dynamic(() => import('@/components/charts/premium-line-chart').then((mod) => mod.PremiumLineChart), {
@@ -204,6 +205,7 @@ function TeacherDashboard() {
           session_id,
           role,
           is_primary,
+          visibility_date,
           sessions (
             id,
             name,
@@ -244,7 +246,10 @@ function TeacherDashboard() {
       })
       
       // Filtrer les entrées qui ont bien une session (certaines peuvent être null si la session a été supprimée)
-      const validSessions = (data || []).filter((st: any) => st.sessions !== null && st.sessions !== undefined)
+      // et dont la date de visibilité (onglet Intervenants → "Visibilité du planning") est passée ou non définie.
+      const validSessions = (data || []).filter(
+        (st: any) => st.sessions !== null && st.sessions !== undefined && isVisibleNow(st.visibility_date)
+      )
       
       // Trier les sessions par date de début (plus récentes en premier)
       const sorted = validSessions.sort((a: any, b: any) => {
@@ -462,19 +467,32 @@ function TeacherDashboard() {
     queryFn: async () => {
       if (!user?.id) return []
       const today = new Date().toISOString().split('T')[0]
-      const { data, error } = await supabase
-        .from('session_slots')
-        .select('id, session_id, date, start_time, end_time, time_slot, location, sessions(id, name)')
-        .eq('teacher_id', user.id)
-        .gte('date', today)
-        .order('date', { ascending: true })
-        .order('start_time', { ascending: true })
-        .limit(8)
+      // session_slots n'a pas de RLS par formateur (filtrage applicatif
+      // existant) : on récupère en parallèle les dates de visibilité par
+      // session pour masquer celles pas encore visibles pour ce formateur.
+      const [{ data: visibilityRows }, { data, error }] = await Promise.all([
+        supabase.from('session_teachers').select('session_id, visibility_date').eq('teacher_id', user.id),
+        supabase
+          .from('session_slots')
+          .select('id, session_id, date, start_time, end_time, time_slot, location, sessions(id, name)')
+          .eq('teacher_id', user.id)
+          .gte('date', today)
+          .order('date', { ascending: true })
+          .order('start_time', { ascending: true })
+          .limit(8),
+      ])
       if (error) {
         logger.error('Erreur récupération séances à venir de l\'enseignant', error)
         return []
       }
-      return data || []
+      const visibilityRowsTyped = visibilityRows as { session_id: string | null; visibility_date: string | null }[] | null
+      const visibilityBySession = new Map(
+        (visibilityRowsTyped ?? []).map((r) => [r.session_id, r.visibility_date])
+      )
+      return (data || []).filter((slot: any) => {
+        if (!visibilityBySession.has(slot.session_id)) return true // pas de ligne session_teachers = legacy, visible
+        return isVisibleNow(visibilityBySession.get(slot.session_id))
+      })
     },
     enabled: !!user?.id,
     staleTime: 60 * 1000,

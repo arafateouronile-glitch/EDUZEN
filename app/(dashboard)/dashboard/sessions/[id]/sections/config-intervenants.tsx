@@ -15,6 +15,9 @@ import { documentTemplateService } from '@/lib/services/document-template.servic
 import { sessionSlotService } from '@/lib/services/session-slot.service.client'
 import { extractTeacherConventionVariables } from '@/lib/utils/teacher-convention/extract-variables'
 import { extractOrdreMissionVariables } from '@/lib/utils/ordre-mission/extract-variables'
+import { isVisibleNow } from '@/lib/utils/teacher-visibility'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 import {
   Select,
   SelectContent,
@@ -39,6 +42,9 @@ import {
   Plus,
   Star,
   Trash2,
+  Clock,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 
 type User = TableRow<'users'>
@@ -68,6 +74,7 @@ type SessionTeacherRow = {
   total_hours: number | null
   role: string | null
   is_primary: boolean | null
+  visibility_date: string | null
 }
 
 export function ConfigIntervenants({
@@ -92,7 +99,7 @@ export function ConfigIntervenants({
     queryFn: async () => {
       const { data } = await supabase
         .from('session_teachers')
-        .select('teacher_id, daily_rate, hourly_rate, intervention_days, total_hours, role, is_primary')
+        .select('teacher_id, daily_rate, hourly_rate, intervention_days, total_hours, role, is_primary, visibility_date')
         .eq('session_id', sessionId)
         .order('is_primary', { ascending: false })
       return (data ?? []) as unknown as SessionTeacherRow[]
@@ -150,6 +157,8 @@ export function ConfigIntervenants({
 
   const [interventionDays, setInterventionDays] = useState('')
   const [dailyRate, setDailyRate] = useState('')
+  const [isEditingVisibility, setIsEditingVisibility] = useState(false)
+  const [visibilityDateInput, setVisibilityDateInput] = useState('')
   const [docType, setDocType] = useState<DocType>('convention_formateur')
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [isSendingEmail, setIsSendingEmail] = useState(false)
@@ -236,10 +245,17 @@ export function ConfigIntervenants({
     if (sessionTeacher) {
       setInterventionDays(sessionTeacher.intervention_days?.toString() ?? '')
       setDailyRate(sessionTeacher.daily_rate?.toString() ?? '')
+      setVisibilityDateInput(
+        sessionTeacher.visibility_date
+          ? format(new Date(sessionTeacher.visibility_date), "yyyy-MM-dd'T'HH:mm")
+          : ''
+      )
     } else {
       setInterventionDays('')
       setDailyRate('')
+      setVisibilityDateInput('')
     }
+    setIsEditingVisibility(false)
   }, [sessionTeacher])
 
   // Ajouter un intervenant à la session. Ne touche pas au formateur
@@ -354,6 +370,35 @@ export function ConfigIntervenants({
     },
     onError: () => {
       addToast({ title: 'Erreur lors de la sauvegarde', type: 'error' })
+    },
+  })
+
+  // Programme (ou efface, avec nextValue=null) la date/heure de visibilité du
+  // planning pour l'intervenant actif — indépendant des conditions
+  // d'intervention (jours/tarif) : l'un ne doit pas écraser l'autre.
+  const saveVisibilityMutation = useMutation({
+    mutationFn: async (nextValue: string | null) => {
+      if (!activeIntervenantId) throw new Error('Aucun intervenant sélectionné')
+      const payload: Record<string, any> = {
+        session_id: sessionId,
+        teacher_id: activeIntervenantId,
+        visibility_date: nextValue ? new Date(nextValue).toISOString() : null,
+        is_primary: sessionTeacher?.is_primary ?? false,
+        updated_at: new Date().toISOString(),
+      }
+      const { error } = await supabase
+        .from('session_teachers')
+        .upsert(payload as any, { onConflict: 'session_id,teacher_id' })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session-teacher', sessionId, activeIntervenantId] })
+      queryClient.invalidateQueries({ queryKey: ['all-session-teachers', sessionId] })
+      setIsEditingVisibility(false)
+      addToast({ title: 'Visibilité du planning mise à jour', type: 'success' })
+    },
+    onError: () => {
+      addToast({ title: 'Erreur lors de la mise à jour de la visibilité', type: 'error' })
     },
   })
 
@@ -756,6 +801,105 @@ export function ConfigIntervenants({
 
       {activeTeacher && (
         <>
+          {/* Visibilité du planning (session + séances) pour cet intervenant */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4" />
+                Visibilité du planning — {activeTeacher.full_name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Détermine à partir de quand {activeTeacher.full_name} peut voir cette session et ses
+                séances dans son espace personnel (accueil, calendrier, émargement). Par défaut, tout
+                est visible immédiatement.
+              </p>
+
+              {isEditingVisibility ? (
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Label htmlFor="visibility_date" className="text-sm">
+                      Date et heure de visibilité
+                    </Label>
+                    <Input
+                      id="visibility_date"
+                      type="datetime-local"
+                      value={visibilityDateInput}
+                      onChange={(e) => setVisibilityDateInput(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!visibilityDateInput || saveVisibilityMutation.isPending}
+                    onClick={() => saveVisibilityMutation.mutate(visibilityDateInput)}
+                  >
+                    {saveVisibilityMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIsEditingVisibility(false)
+                      setVisibilityDateInput(
+                        sessionTeacher?.visibility_date
+                          ? format(new Date(sessionTeacher.visibility_date), "yyyy-MM-dd'T'HH:mm")
+                          : ''
+                      )
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm">
+                    {isVisibleNow(sessionTeacher?.visibility_date) ? (
+                      <Eye className="h-4 w-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-amber-600 shrink-0" />
+                    )}
+                    <span>
+                      {!sessionTeacher?.visibility_date
+                        ? 'Visible immédiatement'
+                        : isVisibleNow(sessionTeacher.visibility_date)
+                          ? `Visible depuis le ${format(new Date(sessionTeacher.visibility_date), "d MMMM yyyy 'à' HH'h'mm", { locale: fr })}`
+                          : `Visible à partir du ${format(new Date(sessionTeacher.visibility_date), "d MMMM yyyy 'à' HH'h'mm", { locale: fr })}`}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingVisibility(true)}
+                    >
+                      {sessionTeacher?.visibility_date ? 'Modifier la date' : 'Programmer une date de visibilité'}
+                    </Button>
+                    {!!sessionTeacher?.visibility_date && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={saveVisibilityMutation.isPending}
+                        onClick={() => saveVisibilityMutation.mutate(null)}
+                      >
+                        Rendre visible immédiatement
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Séances sur lesquelles intervient ce formateur */}
           <Card>
             <CardHeader>
