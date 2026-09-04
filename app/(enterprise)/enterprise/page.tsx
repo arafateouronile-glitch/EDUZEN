@@ -103,6 +103,31 @@ export default function EnterprisePortalPage() {
     )
   }
 
+  // Budget : "engagé" = factures + devis signés/validés ; "prévisionnel" = devis en attente.
+  // Tant que rien n'est engagé, la carte bascule sur le prévisionnel.
+  const committedBudget = kpis?.totalBudget || 0
+  const forecastBudget = kpis?.forecastBudget || 0
+  const currency = kpis?.currency || 'EUR'
+  const showForecastOnly = committedBudget <= 0 && forecastBudget > 0
+  const budgetCard = showForecastOnly
+    ? {
+        title: 'Budget prévisionnel',
+        value: formatCurrency(forecastBudget, currency),
+        subtitle: 'Devis en attente de signature',
+        iconColor: 'text-amber-600',
+        iconBg: 'bg-amber-100',
+      }
+    : {
+        title: 'Budget engagé',
+        value: formatCurrency(committedBudget, currency),
+        subtitle:
+          forecastBudget > 0
+            ? `+ ${formatCurrency(forecastBudget, currency)} prévisionnel`
+            : 'Année en cours',
+        iconColor: 'text-emerald-600',
+        iconBg: 'bg-emerald-100',
+      }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -128,12 +153,12 @@ export default function EnterprisePortalPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          title="Budget engagé"
-          value={formatCurrency(kpis?.totalBudget || 0, kpis?.currency || 'EUR')}
-          subtitle="Année en cours"
+          title={budgetCard.title}
+          value={budgetCard.value}
+          subtitle={budgetCard.subtitle}
           icon={Wallet}
-          iconColor="text-emerald-600"
-          iconBg="bg-emerald-100"
+          iconColor={budgetCard.iconColor}
+          iconBg={budgetCard.iconBg}
         />
         <KPICard
           title="Heures de formation"
@@ -199,7 +224,15 @@ export default function EnterprisePortalPage() {
         <div className="space-y-6">
           {/* Training Stats */}
           <GlassCard variant="default" className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Formations</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Formations</h3>
+              <Link href={`/enterprise/sessions${entityQueryString}`}>
+                <Button variant="ghost" size="sm" className="text-[#274472]">
+                  Voir les sessions
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -347,7 +380,7 @@ export default function EnterprisePortalPage() {
           </div>
           <div className="space-y-3">
             {invoicesData?.invoices && invoicesData.invoices.length > 0 ? (
-              (invoicesData.invoices as Array<{ id: string; invoice_number?: string; total_amount?: number; currency?: string; status?: string; student?: { first_name?: string; last_name?: string } }>).slice(0, 5).map((invoice) => (
+              (invoicesData.invoices as Array<{ id: string; invoice_number?: string; total_amount?: number; currency?: string; status?: string; document_type?: string; student?: { first_name?: string; last_name?: string }; entity?: { name?: string } | null; session_entity_reservation?: { session?: { name?: string } | null } | null }>).slice(0, 5).map((invoice) => (
                 <div
                   key={invoice.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -358,10 +391,17 @@ export default function EnterprisePortalPage() {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">
-                        {invoice.invoice_number}
+                        {invoice.invoice_number || 'Brouillon'}
+                        {invoice.document_type === 'quote' && (
+                          <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">
+                            Devis
+                          </span>
+                        )}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {invoice.student?.first_name} {invoice.student?.last_name}
+                        {invoice.student
+                          ? `${invoice.student.first_name ?? ''} ${invoice.student.last_name ?? ''}`.trim()
+                          : invoice.session_entity_reservation?.session?.name || invoice.entity?.name || '—'}
                       </p>
                     </div>
                   </div>

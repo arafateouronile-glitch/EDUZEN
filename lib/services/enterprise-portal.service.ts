@@ -20,6 +20,8 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 export interface Company {
   id: string
   organization_id: string
+  /** Entité dashboard (external_entities) correspondante — sert à retrouver les réservations d'effectif */
+  external_entity_id?: string | null
   name: string
   siren?: string
   siret?: string
@@ -187,7 +189,10 @@ export interface EmployeeSkill {
 }
 
 export interface CompanyKPIs {
+  /** Budget engagé : factures + devis signés/validés */
   totalBudget: number
+  /** Budget prévisionnel : devis non encore signés ni validés */
+  forecastBudget: number
   totalHours: number
   averageAttendanceRate: number
   activeEmployees: number
@@ -216,6 +221,25 @@ export interface SkillsEvolutionData {
   averageSkillLevel: number
   employeesCount: number
   skillsAcquired: number
+}
+
+export interface CompanySession {
+  id: string
+  name: string
+  start_date: string | null
+  end_date: string | null
+  status: string | null
+  formation?: {
+    id: string
+    name: string
+    duration_hours: number | null
+  } | null
+  /** Nombre d'apprenants nominatifs de l'entreprise inscrits sur cette session */
+  enrolledCount: number
+  /** Effectif prévisionnel déclaré via session_entity_reservations (noms non encore communiqués) */
+  expectedCount: number
+  /** true si la session n'apparaît que via une réservation d'effectif (aucun apprenant nominatif) */
+  reservationOnly: boolean
 }
 
 // =====================================================
@@ -291,6 +315,16 @@ export class EnterprisePortalService {
     const startOfYear = `${currentYear}-01-01`
     const endOfYear = `${currentYear}-12-31`
 
+    // Entité externe rattachée : budget / devis / factures émis directement à l'entreprise
+    const { data: company } = await supabase
+      .from('companies')
+      .select('external_entity_id, organization_id')
+      .eq('id', companyId)
+      .maybeSingle()
+    const companyRow = company as { external_entity_id?: string | null; organization_id?: string | null } | null
+    const entityId = companyRow?.external_entity_id ?? null
+    const organizationId = companyRow?.organization_id ?? null
+
     // Get all employees for this company
     const { data: employees } = await supabase
       .from('company_employees')
@@ -298,9 +332,10 @@ export class EnterprisePortalService {
       .eq('company_id', companyId)
       .eq('is_active', true)
 
-    if (!employees || employees.length === 0) {
+    if ((!employees || employees.length === 0) && !entityId) {
       return {
         totalBudget: 0,
+        forecastBudget: 0,
         totalHours: 0,
         averageAttendanceRate: 0,
         activeEmployees: 0,
@@ -312,15 +347,55 @@ export class EnterprisePortalService {
       }
     }
 
-    const studentIds = employees.map((e) => e.student_id)
+    const studentIds = (employees || []).map((e) => e.student_id).filter(Boolean)
 
-    // Get invoices for the year
-    const { data: invoices } = await supabase
+    // Get invoices for the year — apprenants nominatifs ET/OU entité facturée
+    let invoicesQuery = supabase
       .from('invoices')
-      .select('total_amount, status, currency')
-      .in('student_id', studentIds)
+      .select('id, total_amount, status, currency, document_type, validated_at')
       .gte('issue_date', startOfYear)
       .lte('issue_date', endOfYear)
+    if (studentIds.length > 0 && entityId) {
+      invoicesQuery = invoicesQuery.or(`student_id.in.(${studentIds.join(',')}),entity_id.eq.${entityId}`)
+    } else if (studentIds.length > 0) {
+      invoicesQuery = invoicesQuery.in('student_id', studentIds)
+    } else {
+      invoicesQuery = invoicesQuery.eq('entity_id', entityId as string)
+    }
+    type KpiInvoiceRow = {
+      id: string
+      total_amount: number | null
+      status: string | null
+      currency: string | null
+      document_type: string | null
+      validated_at: string | null
+    }
+    const invoicesRes = await invoicesQuery
+    const invoices = (invoicesRes.data ?? null) as KpiInvoiceRow[] | null
+
+    // Devis signés électroniquement : lien indirect invoices.id = documents.metadata->>'invoice_id'
+    const signedQuoteIds = new Set<string>()
+    if (organizationId && (invoices?.length ?? 0) > 0) {
+      // Lien indirect : pas de FK invoices ↔ signature_requests (cf. dashboard Paiements)
+      const { data: sigs } = await (supabase.from('signature_requests') as unknown as {
+        select: (q: string) => {
+          eq: (c: string, v: string) => {
+            eq: (c: string, v: string) => Promise<{ data: unknown[] | null }>
+          }
+        }
+      })
+        .select('status, documents!inner(metadata)')
+        .eq('organization_id', organizationId)
+        .eq('status', 'signed')
+      for (const sig of (sigs || []) as { documents: { metadata: { invoice_id?: string } | null } | null }[]) {
+        const invId = sig.documents?.metadata?.invoice_id
+        if (invId) signedQuoteIds.add(invId)
+      }
+    }
+
+    /** Un devis compte comme "engagé" une fois signé électroniquement ou validé manuellement. */
+    const isCommitted = (inv: { id: string; document_type: string | null; validated_at: string | null }) =>
+      inv.document_type !== 'quote' || inv.validated_at != null || signedQuoteIds.has(inv.id)
 
     // Get enrollments and calculate hours
     const { data: enrollments } = await supabase
@@ -348,9 +423,16 @@ export class EnterprisePortalService {
       .lte('date', endOfYear)
 
     // Calculate KPIs
-    const totalBudget = invoices?.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0) || 0
-    const paidInvoices = invoices?.filter((inv) => inv.status === 'paid').length || 0
-    const pendingInvoices = invoices?.filter((inv) => ['sent', 'partial', 'overdue'].includes(inv.status)).length || 0
+    const liveInvoices = (invoices || []).filter((inv) => inv.status !== 'cancelled')
+    const totalBudget = liveInvoices
+      .filter(isCommitted)
+      .reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0)
+    const forecastBudget = liveInvoices
+      .filter((inv) => !isCommitted(inv))
+      .reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0)
+    const realInvoices = liveInvoices.filter((inv) => inv.document_type !== 'quote')
+    const paidInvoices = realInvoices.filter((inv) => inv.status === 'paid').length
+    const pendingInvoices = realInvoices.filter((inv) => ['sent', 'partial', 'overdue'].includes(inv.status ?? '')).length
 
     const totalHours = enrollments?.reduce((sum, enr) => {
       const session = enr.sessions as unknown as { formations?: { duration_hours?: number } }
@@ -366,9 +448,10 @@ export class EnterprisePortalService {
 
     return {
       totalBudget,
+      forecastBudget,
       totalHours,
       averageAttendanceRate,
-      activeEmployees: employees.length,
+      activeEmployees: employees?.length || 0,
       completedTrainings,
       ongoingTrainings,
       pendingInvoices,
@@ -551,6 +634,119 @@ export class EnterprisePortalService {
   }
 
   // =====================================================
+  // SESSIONS METHODS
+  // =====================================================
+
+  /**
+   * Sessions liées à l'entreprise :
+   *  - via les apprenants nominatifs (company_employees -> enrollments)
+   *  - via une réservation d'effectif prévisionnel de l'entité rattachée
+   *    (session_entity_reservations), y compris quand l'entreprise n'a encore
+   *    aucun apprenant inscrit nominativement.
+   */
+  async getCompanySessions(companyId: string): Promise<CompanySession[]> {
+    const supabase = this.getClient()
+
+    // Entité externe rattachée à cette entreprise (pour les réservations)
+    const { data: company } = await supabase
+      .from('companies')
+      .select('id, external_entity_id')
+      .eq('id', companyId)
+      .maybeSingle()
+
+    const entityId = (company as { external_entity_id?: string | null } | null)?.external_entity_id ?? null
+
+    // 1) Sessions via apprenants nominatifs
+    const { data: employees } = await supabase
+      .from('company_employees')
+      .select('student_id')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+
+    const studentIds = (employees || []).map((e) => e.student_id).filter(Boolean)
+
+    const enrolledBySession = new Map<string, number>()
+    if (studentIds.length > 0) {
+      const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('session_id, status')
+        .in('student_id', studentIds)
+        .in('status', ['pending', 'confirmed', 'in_progress', 'completed'])
+
+      for (const enr of enrollments || []) {
+        const sid = (enr as { session_id: string | null }).session_id
+        if (!sid) continue
+        enrolledBySession.set(sid, (enrolledBySession.get(sid) || 0) + 1)
+      }
+    }
+
+    // 2) Sessions via réservation d'effectif prévisionnel (entité sans liste nominative)
+    const expectedBySession = new Map<string, number>()
+    if (entityId) {
+      const { data: reservations } = await supabase
+        .from('session_entity_reservations')
+        .select('session_id, expected_count')
+        .eq('entity_id', entityId)
+
+      for (const res of reservations || []) {
+        const sid = (res as { session_id: string | null }).session_id
+        if (!sid) continue
+        const count = Number((res as { expected_count: number | null }).expected_count || 0)
+        expectedBySession.set(sid, (expectedBySession.get(sid) || 0) + count)
+      }
+    }
+
+    const sessionIds = [...new Set([...enrolledBySession.keys(), ...expectedBySession.keys()])]
+    if (sessionIds.length === 0) return []
+
+    const { data: sessions, error } = await supabase
+      .from('sessions')
+      .select(`
+        id,
+        name,
+        start_date,
+        end_date,
+        status,
+        formations:formation_id (
+          id,
+          name,
+          duration_hours
+        )
+      `)
+      .in('id', sessionIds)
+      .order('start_date', { ascending: false })
+
+    if (error) {
+      logger.error('[EnterprisePortal] Error fetching company sessions:', error)
+      return []
+    }
+
+    return (sessions || []).map((s) => {
+      const row = s as unknown as {
+        id: string
+        name: string
+        start_date: string | null
+        end_date: string | null
+        status: string | null
+        formations: { id: string; name: string; duration_hours: number | null } | null
+      }
+      const enrolledCount = enrolledBySession.get(row.id) || 0
+      const expectedCount = expectedBySession.get(row.id) || 0
+      return {
+        id: row.id,
+        name: row.name,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        status: row.status,
+        formation: row.formations ?? null,
+        enrolledCount,
+        expectedCount,
+        reservationOnly: enrolledCount === 0 && expectedCount > 0,
+      }
+    })
+  }
+
+  // =====================================================
   // BILLING & DOCUMENTS METHODS
   // =====================================================
 
@@ -567,18 +763,27 @@ export class EnterprisePortalService {
     const { status = 'all', year, page = 1, limit = 20 } = options || {}
     const offset = (page - 1) * limit
 
-    // Get employee student IDs
+    // Entité externe rattachée : devis / factures émis directement à l'entreprise
+    // (invoices.entity_id), sans passer par un apprenant nominatif.
+    const { data: company } = await supabase
+      .from('companies')
+      .select('external_entity_id')
+      .eq('id', companyId)
+      .maybeSingle()
+    const entityId = (company as { external_entity_id?: string | null } | null)?.external_entity_id ?? null
+
+    // Apprenants de l'entreprise : factures / devis nominatifs
     const { data: employees } = await supabase
       .from('company_employees')
       .select('student_id')
       .eq('company_id', companyId)
       .eq('is_active', true)
 
-    if (!employees || employees.length === 0) {
+    const studentIds = (employees || []).map((e) => e.student_id).filter(Boolean)
+
+    if (studentIds.length === 0 && !entityId) {
       return { invoices: [], total: 0 }
     }
-
-    const studentIds = employees.map((e) => e.student_id)
 
     let query = supabase
       .from('invoices')
@@ -588,9 +793,25 @@ export class EnterprisePortalService {
           id,
           first_name,
           last_name
+        ),
+        entity:external_entities (
+          id,
+          name
+        ),
+        session_entity_reservation:session_entity_reservations (
+          id,
+          session:sessions ( id, name )
         )
       `, { count: 'exact' })
-      .in('student_id', studentIds)
+
+    // Périmètre : factures nominatives des apprenants OU devis/factures de l'entité
+    if (studentIds.length > 0 && entityId) {
+      query = query.or(`student_id.in.(${studentIds.join(',')}),entity_id.eq.${entityId}`)
+    } else if (studentIds.length > 0) {
+      query = query.in('student_id', studentIds)
+    } else {
+      query = query.eq('entity_id', entityId as string)
+    }
 
     if (status !== 'all') {
       if (status === 'paid') {
@@ -609,7 +830,7 @@ export class EnterprisePortalService {
     }
 
     const { data, count, error } = await query
-      .order('issue_date', { ascending: false })
+      .order('issue_date', { ascending: false, nullsFirst: false })
       .range(offset, offset + limit - 1)
 
     if (error) {
