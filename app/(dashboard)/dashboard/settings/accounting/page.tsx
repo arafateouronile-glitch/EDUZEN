@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calculator, Download, RefreshCw } from 'lucide-react'
+import { Calculator, Download, RefreshCw, Info } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/components/ui/toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  FEC_EXPORT_MODELS,
+  DEFAULT_FEC_EXPORT_MODEL,
+  type FecExportModelId,
+} from '@/lib/services/accounting/export-models'
 
 const ALLOWED_ROLES = ['super_admin', 'admin', 'accountant']
 
@@ -22,7 +27,13 @@ export default function AccountingSettingsPage() {
   const [endDate, setEndDate] = useState('')
   const [includePayments, setIncludePayments] = useState(true)
   const [journalCode, setJournalCode] = useState('')
+  const [model, setModel] = useState<FecExportModelId>(DEFAULT_FEC_EXPORT_MODEL)
   const [isExporting, setIsExporting] = useState(false)
+
+  const selectedModel = useMemo(
+    () => FEC_EXPORT_MODELS.find((m) => m.id === model) ?? FEC_EXPORT_MODELS[0],
+    [model]
+  )
 
   useEffect(() => {
     if (!authLoading && user?.role && !ALLOWED_ROLES.includes(user.role)) {
@@ -43,6 +54,7 @@ export default function AccountingSettingsPage() {
       if (endDate) params.set('endDate', endDate)
       params.set('includePayments', String(includePayments))
       if (journalCode.trim()) params.set('journalCode', journalCode.trim())
+      params.set('model', model)
 
       const response = await fetch(`/api/accounting/fec-export?${params.toString()}`)
 
@@ -104,11 +116,11 @@ export default function AccountingSettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-brand-blue" />
-            Export FEC
+            Export comptable
           </CardTitle>
           <CardDescription>
-            Génère un Fichier des Écritures Comptables (FEC) au format standard, à transmettre à
-            votre expert-comptable ou à l&apos;administration fiscale en cas de contrôle.
+            Génère vos écritures de vente (factures, avoirs) dans le modèle de votre choix, à
+            transmettre à votre expert-comptable ou à l&apos;administration fiscale en cas de contrôle.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -119,6 +131,32 @@ export default function AccountingSettingsPage() {
               handleExportFEC()
             }}
           >
+            <div className="space-y-2">
+              <Label htmlFor="export_model">Modèle d&apos;export</Label>
+              <select
+                id="export_model"
+                value={model}
+                onChange={(e) => setModel(e.target.value as FecExportModelId)}
+                className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {FEC_EXPORT_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-muted-foreground">{selectedModel.description}</p>
+              {selectedModel.unverified && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                  <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>
+                    Modèle non confirmé auprès de Fulll : vérifiez un premier import avec votre
+                    cabinet comptable avant un usage régulier.
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Date de début</Label>
@@ -175,7 +213,7 @@ export default function AccountingSettingsPage() {
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Générer et télécharger le FEC
+                    Générer et télécharger ({selectedModel.label})
                   </>
                 )}
               </Button>

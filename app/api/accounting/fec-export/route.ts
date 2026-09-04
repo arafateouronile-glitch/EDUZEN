@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import type { Database } from '@/types/database.types'
 import { fecExportService } from '@/lib/services/fec-export.service'
+import type { FecExportModelId } from '@/lib/services/accounting/export-models'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
 export const runtime = 'nodejs'
@@ -78,20 +79,23 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate') || undefined
     const includePayments = searchParams.get('includePayments') === 'true'
     const journalCode = searchParams.get('journalCode') || undefined
+    const model = (searchParams.get('model') as FecExportModelId | null) || undefined
 
-    // Générer le fichier FEC
+    // Générer le fichier (modèle FEC légal par défaut, ou une variante comme Fulll)
     const fecContent = await fecExportService.generateFEC({
       organizationId,
       startDate,
       endDate,
       includePayments,
       journalCode,
+      model,
     })
 
     // Générer le nom de fichier
     const filename = fecExportService.generateFECFilename(organizationId, {
       startDate,
       endDate,
+      model,
     })
 
     // Retourner le fichier avec les bons headers

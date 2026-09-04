@@ -6,6 +6,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { buildSaleLines, resolveSaleTiers } from '@/lib/services/accounting/sale-lines'
+import { getFecExportModel, type FecExportModelId } from '@/lib/services/accounting/export-models'
 
 type Invoice = TableRow<'invoices'>
 type Payment = TableRow<'payments'>
@@ -44,6 +45,8 @@ export interface FECExportOptions {
   endDate?: string // Date de fin (ISO format)
   includePayments?: boolean // Inclure les paiements
   journalCode?: string // Code journal par défaut
+  /** Modèle de sortie (séparateur / en-tête) — voir lib/services/accounting/export-models.ts. Défaut : FEC légal. */
+  model?: FecExportModelId
 }
 
 /**
@@ -66,12 +69,14 @@ export class FECExportService {
   }
 
   /**
-   * Génère le fichier FEC au format texte
+   * Génère le fichier d'export au format texte, selon le modèle choisi
+   * (FEC légal par défaut, ou une variante comme `fulll_custom`).
    */
   async generateFEC(options: FECExportOptions): Promise<string> {
     const entries = await this.getAccountingEntries(options)
-    
-    // En-tête avec les colonnes (format FEC standard)
+    const model = getFecExportModel(options.model)
+
+    // Colonnes (mêmes 18 colonnes FEC quel que soit le modèle)
     const headers = [
       'JournalCode',
       'JournalLib',
@@ -93,7 +98,7 @@ export class FECExportService {
       'Idevise',
     ]
 
-    // Convertir les entrées en lignes de texte (séparées par |)
+    // Convertir les entrées en lignes de texte, avec le séparateur du modèle
     const lines = entries.map((entry) => {
       return [
         entry.JournalCode || '',
@@ -114,11 +119,12 @@ export class FECExportService {
         entry.ValidDate || '',
         entry.Montantdevise || '',
         entry.Idevise || '',
-      ].join('|')
+      ].join(model.separator)
     })
 
-    // Retourner le fichier complet (en-tête + données)
-    return [headers.join('|'), ...lines].join('\n')
+    // En-tête optionnelle selon le modèle
+    const rows = model.includeHeader ? [headers.join(model.separator), ...lines] : lines
+    return rows.join('\n')
   }
 
   /**
@@ -298,22 +304,26 @@ export class FECExportService {
   }
 
   /**
-   * Génère le nom de fichier FEC selon la norme
+   * Génère le nom du fichier d'export, préfixe et extension selon le modèle choisi.
    */
-  generateFECFilename(organizationId: string, options?: { startDate?: string; endDate?: string }): string {
+  generateFECFilename(
+    organizationId: string,
+    options?: { startDate?: string; endDate?: string; model?: FecExportModelId }
+  ): string {
+    const model = getFecExportModel(options?.model)
     const now = new Date()
     const year = now.getFullYear()
     const month = String(now.getMonth() + 1).padStart(2, '0')
-    
-    let filename = `FEC_${organizationId.slice(0, 8)}_${year}${month}`
-    
+
+    let filename = `${model.filePrefix}_${organizationId.slice(0, 8)}_${year}${month}`
+
     if (options?.startDate && options?.endDate) {
       const start = new Date(options.startDate)
       const end = new Date(options.endDate)
       filename += `_${this.formatDateFEC(start)}_${this.formatDateFEC(end)}`
     }
-    
-    return `${filename}.txt`
+
+    return `${filename}.${model.fileExtension}`
   }
 }
 
