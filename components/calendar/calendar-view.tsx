@@ -51,6 +51,30 @@ const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1
 const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay()
 const formatDateKey = (date: Date) => date.toISOString().split('T')[0]
 
+/** Convertit "HH:MM" ou "HH:MM:SS" en heures décimales (ex: "09:30" -> 9.5). */
+const parseTimeToHours = (time?: string | null): number | null => {
+  if (!time) return null
+  const [h, m] = time.split(':').map(Number)
+  if (Number.isNaN(h)) return null
+  return h + (Number.isNaN(m) ? 0 : m) / 60
+}
+
+/**
+ * Position (top) et hauteur (height) en pixels d'un événement dans une grille
+ * horaire, à partir de start_time/end_time — pour que le bloc couvre
+ * visuellement toute la plage horaire qui lui est assignée (ex: une séance
+ * 9h-12h doit s'étendre sur 3 lignes, pas rester coincée sur une seule).
+ * Sans horaire, l'événement garde une position/hauteur par défaut (1 ligne).
+ */
+const getEventTimeSpan = (event: CalendarEvent, baseHour: number, rowHeight: number) => {
+  const startH = parseTimeToHours(event.start_time) ?? 9
+  const endH = parseTimeToHours(event.end_time) ?? startH + 1
+  const top = (startH - baseHour) * rowHeight
+  const minHeight = rowHeight / 3
+  const height = Math.max((endH - startH) * rowHeight, minHeight)
+  return { top, height }
+}
+
 const DAYS_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const DAYS_FULL_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const MONTHS_FR = [
@@ -256,7 +280,7 @@ export function CalendarView({
   }
 
   // Rendu d'un événement
-  const renderEvent = (event: CalendarEvent, compact = false) => {
+  const renderEvent = (event: CalendarEvent, compact = false, fillHeight = false) => {
     const isPast = new Date(event.end_date) < new Date()
     const isCompleted = event.status === 'completed'
 
@@ -269,6 +293,7 @@ export function CalendarView({
           'group relative rounded-md px-2 py-1 text-xs cursor-pointer transition-all',
           'hover:shadow-md hover:scale-[1.02]',
           compact ? 'truncate' : '',
+          fillHeight && 'h-full overflow-hidden',
           isPast && !isCompleted && 'opacity-60',
           isCompleted && 'line-through opacity-50'
         )}
@@ -480,21 +505,18 @@ export function CalendarView({
                       }}
                     />
                   ))}
-                  {/* Événements positionnés */}
+                  {/* Événements positionnés — top ET height reflètent start_time/end_time */}
                   <div className="absolute inset-0 p-0.5 pointer-events-none">
                     {dayEvents.map((event) => {
-                      const startHour = event.start_time
-                        ? parseInt(event.start_time.split(':')[0])
-                        : 9
-                      const top = (startHour - 8) * 64 // 64px = h-16
+                      const { top, height } = getEventTimeSpan(event, 8, 64) // 64px = h-16
 
                       return (
                         <div
                           key={event.event_id}
                           className="absolute left-0.5 right-0.5 pointer-events-auto"
-                          style={{ top: `${top}px` }}
+                          style={{ top: `${top}px`, height: `${height}px` }}
                         >
-                          {renderEvent(event)}
+                          {renderEvent(event, false, true)}
                         </div>
                       )
                     })}
@@ -512,7 +534,9 @@ export function CalendarView({
   const renderDayView = () => {
     const dateKey = formatDateKey(currentDate)
     const dayEvents = eventsByDate[dateKey] || []
-    const hours = Array.from({ length: 14 }, (_, i) => i + 7) // 7h à 20h
+    const baseHour = 7
+    const rowHeight = 60
+    const hours = Array.from({ length: 14 }, (_, i) => i + baseHour) // 7h à 20h
 
     return (
       <div className="flex flex-col h-[600px]">
@@ -529,35 +553,47 @@ export function CalendarView({
           </div>
         </div>
 
-        {/* Grille horaire */}
+        {/* Grille horaire — positionnement absolu pour que chaque événement
+            couvre visuellement toute sa plage horaire (start_time à end_time),
+            pas juste la ligne de son heure de début. */}
         <div className="flex-1 overflow-y-auto">
-          {hours.map((hour) => {
-            const hourEvents = dayEvents.filter((event) => {
-              if (!event.start_time) return hour === 9
-              const eventHour = parseInt(event.start_time.split(':')[0])
-              return eventHour === hour
-            })
-
-            return (
-              <div key={hour} className="flex border-b min-h-[60px]">
-                <div className="w-16 p-2 text-right border-r">
+          <div className="flex relative" style={{ minHeight: `${hours.length * rowHeight}px` }}>
+            <div className="w-16 border-r shrink-0">
+              {hours.map((hour) => (
+                <div key={hour} className="border-b p-2 text-right" style={{ height: `${rowHeight}px` }}>
                   <span className="text-sm text-gray-400">{hour}:00</span>
                 </div>
+              ))}
+            </div>
+            <div className="flex-1 relative">
+              {hours.map((hour) => (
                 <div
-                  className="flex-1 p-1 hover:bg-gray-50 cursor-pointer"
+                  key={hour}
+                  className="border-b hover:bg-gray-50 cursor-pointer"
+                  style={{ height: `${rowHeight}px` }}
                   onClick={() => {
                     const clickDate = new Date(currentDate)
                     clickDate.setHours(hour)
                     onDateClick?.(clickDate)
                   }}
-                >
-                  <div className="space-y-1">
-                    {hourEvents.map((event) => renderEvent(event))}
-                  </div>
-                </div>
+                />
+              ))}
+              <div className="absolute inset-0 p-1 pointer-events-none">
+                {dayEvents.map((event) => {
+                  const { top, height } = getEventTimeSpan(event, baseHour, rowHeight)
+                  return (
+                    <div
+                      key={event.event_id}
+                      className="absolute left-1 right-1 pointer-events-auto"
+                      style={{ top: `${top}px`, height: `${height}px` }}
+                    >
+                      {renderEvent(event, false, true)}
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
+            </div>
+          </div>
         </div>
       </div>
     )
