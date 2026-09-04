@@ -40,6 +40,23 @@ interface Invoice {
     first_name: string
     last_name: string
   }
+  entity?: {
+    id: string
+    name: string
+  } | null
+  session_entity_reservation?: {
+    id: string
+    session?: { id: string; name: string } | null
+  } | null
+}
+
+/** Libellé de l'objet d'un devis/facture : apprenant, ou session/entreprise pour une facturation entité */
+function invoiceSubject(inv: Invoice): string {
+  if (inv.student) return `${inv.student.first_name} ${inv.student.last_name}`
+  const sessionName = inv.session_entity_reservation?.session?.name
+  if (sessionName) return sessionName
+  if (inv.entity?.name) return inv.entity.name
+  return '—'
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -80,20 +97,24 @@ export default function EnterpriseBillingPage() {
 
   const filtered = invoices.filter((inv) => {
     if (!search) return true
-    const name = `${inv.student?.first_name || ''} ${inv.student?.last_name || ''}`.toLowerCase()
+    const q = search.toLowerCase()
+    const subject = invoiceSubject(inv).toLowerCase()
     const num = inv.invoice_number?.toLowerCase() || ''
-    return name.includes(search.toLowerCase()) || num.includes(search.toLowerCase())
+    return subject.includes(q) || num.includes(q)
   })
 
-  const totalPaid = invoices
+  // Les devis (document_type = 'quote') ne sont pas des créances : exclus des totaux € .
+  const realInvoices = invoices.filter((inv) => inv.document_type !== 'quote')
+
+  const totalPaid = realInvoices
     .filter((inv) => inv.status === 'paid')
     .reduce((sum, inv) => sum + Number(inv.total_amount ?? 0), 0)
 
-  const totalPending = invoices
+  const totalPending = realInvoices
     .filter((inv) => ['sent', 'partial'].includes(inv.status ?? ''))
     .reduce((sum, inv) => sum + Number(inv.total_amount ?? 0) - Number(inv.paid_amount ?? 0), 0)
 
-  const totalOverdue = invoices
+  const totalOverdue = realInvoices
     .filter((inv) => inv.status === 'overdue')
     .reduce((sum, inv) => sum + Number(inv.total_amount ?? 0) - Number(inv.paid_amount ?? 0), 0)
 
@@ -243,7 +264,7 @@ export default function EnterpriseBillingPage() {
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">N° Facture</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Collaborateur</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Objet</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Échéance</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Montant</th>
@@ -270,12 +291,15 @@ export default function EnterpriseBillingPage() {
                             <span className="text-sm font-medium text-gray-900">
                               {invoice.invoice_number || 'Brouillon'}
                             </span>
+                            {invoice.document_type === 'quote' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-200">
+                                Devis
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3.5 text-sm text-gray-700">
-                          {invoice.student
-                            ? `${invoice.student.first_name} ${invoice.student.last_name}`
-                            : '—'}
+                          {invoiceSubject(invoice)}
                         </td>
                         <td className="px-4 py-3.5 text-sm text-gray-500">
                           {invoice.issue_date ? formatDate(invoice.issue_date) : '—'}
@@ -317,17 +341,22 @@ export default function EnterpriseBillingPage() {
                   <div key={invoice.id} className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-sm font-medium text-gray-900 truncate">
                             {invoice.invoice_number || 'Brouillon'}
                           </span>
+                          {invoice.document_type === 'quote' && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium border flex-shrink-0 bg-indigo-50 text-indigo-700 border-indigo-200">
+                              Devis
+                            </span>
+                          )}
                           <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium border flex-shrink-0', statusCfg.className)}>
                             {statusCfg.label}
                           </span>
                         </div>
-                        {invoice.student && (
+                        {invoiceSubject(invoice) !== '—' && (
                           <p className="text-xs text-gray-500 mb-1">
-                            {invoice.student.first_name} {invoice.student.last_name}
+                            {invoiceSubject(invoice)}
                           </p>
                         )}
                         <p className="text-xs text-gray-400">

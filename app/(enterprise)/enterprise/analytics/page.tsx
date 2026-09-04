@@ -140,8 +140,12 @@ export default function EnterpriseAnalyticsPage() {
             <h3 className="text-2xl font-bold text-gray-900">
               {formatCurrency(kpis?.totalBudget ?? 0, kpis?.currency ?? 'EUR')}
             </h3>
-            <p className="text-sm font-medium text-gray-900 mt-1">Budget formation</p>
-            <p className="text-xs text-gray-500">Consommé / prévu</p>
+            <p className="text-sm font-medium text-gray-900 mt-1">Budget engagé</p>
+            <p className="text-xs text-gray-500">
+              {(kpis?.forecastBudget ?? 0) > 0
+                ? `+ ${formatCurrency(kpis?.forecastBudget ?? 0, kpis?.currency ?? 'EUR')} prévisionnel (devis non signés)`
+                : 'Factures + devis signés/validés'}
+            </p>
           </div>
         </GlassCard>
       </div>
