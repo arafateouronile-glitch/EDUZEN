@@ -598,7 +598,7 @@ export default function CalendarPage() {
             </div>
             <div className="space-y-2">
               {[
-                { icon: Users, label: 'Sessions', color: '#10B981' },
+                { icon: Users, label: 'Sessions', color: '#274472' },
                 { icon: BookOpen, label: 'Formations', color: '#8B5CF6' },
                 { icon: ListTodo, label: 'Tâches', color: '#3B82F6' },
               ].map(({ icon: Icon, label, color }) => (

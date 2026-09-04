@@ -725,7 +725,7 @@ export function CalendarView({
         <div className="flex items-center gap-4 flex-wrap">
           <span className="text-sm text-gray-500">Afficher :</span>
           {[
-            { key: 'showSessions', label: 'Sessions', color: '#10B981', icon: Users },
+            { key: 'showSessions', label: 'Sessions', color: '#274472', icon: Users },
             { key: 'showFormations', label: 'Formations', color: '#8B5CF6', icon: BookOpen },
             { key: 'showTodos', label: 'Tâches', color: '#3B82F6', icon: ListTodo },
           ].map(({ key, label, color, icon: Icon }) => (
