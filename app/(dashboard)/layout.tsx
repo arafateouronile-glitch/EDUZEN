@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ensureOnboardingComplete } from '@/lib/utils/billing/ensure-onboarding-complete'
 import DashboardClientLayout from './dashboard-client-layout'
 
 // Cached 60s per userId — invalidated by revalidateTag('layout-data-<userId>')
@@ -28,7 +29,7 @@ const getLayoutData = (userId: string) =>
           .single(),
         supabase
           .from('subscriptions')
-          .select('trial_end_at, status')
+          .select('trial_end_at, status, stripe_subscription_id')
           .eq('organization_id', orgId)
           .maybeSingle(),
       ])
@@ -82,8 +83,8 @@ export default async function DashboardLayout({
 
       const { org, subscription } = cached
       const settings = (org?.settings || {}) as Record<string, unknown>
-      const paymentMethodAdded = settings.payment_method_added === true
-      const onboardingCompleted = settings.onboarding_completed === true
+      let paymentMethodAdded = settings.payment_method_added === true
+      let onboardingCompleted = settings.onboarding_completed === true
 
       const trialEndAt = subscription?.trial_end_at
         ? new Date(subscription.trial_end_at)
@@ -93,6 +94,26 @@ export default async function DashboardLayout({
       // dashboard, même si le wizard d'onboarding n'a jamais été terminé —
       // sinon une prolongation en base reste sans effet pour le client.
       const hasActiveTrial = !!trialEndAt && trialEndAt > now
+
+      // Écran de secours : le client a un vrai abonnement Stripe (paiement passé)
+      // mais les flags d'onboarding n'ont pas été écrits — échec post-paiement
+      // dans create-trial-subscription. On répare en place au lieu de le renvoyer
+      // indéfiniment vers l'onboarding (« les clients s'énervent »).
+      const hasStripeSubscription =
+        !!subscription?.stripe_subscription_id &&
+        ['active', 'trialing', 'past_due'].includes(String(subscription.status))
+
+      if (hasStripeSubscription && (!paymentMethodAdded || !onboardingCompleted)) {
+        const repaired = await ensureOnboardingComplete(
+          createAdminClient(),
+          cached.userData.organization_id,
+          { context: { source: 'dashboard-layout-rescue', userId: authUser.id, stripeStatus: subscription?.status } }
+        )
+        if (repaired) {
+          paymentMethodAdded = true
+          onboardingCompleted = true
+        }
+      }
 
       if (!onboardingCompleted && !hasActiveTrial) {
         redirect('/dashboard/onboarding')

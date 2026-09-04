@@ -17,14 +17,34 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import type { OrganizationSubscription } from '@/types/super-admin.types'
 import { logger } from '@/lib/utils/logger'
 
+type RepairState = { status: 'idle' | 'loading' | 'success' | 'error'; message?: string }
+
 export default function SubscriptionsPage() {
   const [selectedSubscription, setSelectedSubscription] = useState<OrganizationSubscription | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [repair, setRepair] = useState<RepairState>({ status: 'idle' })
   const supabase = createClient()
+
+  const handleRepairOnboarding = async (organizationId: string) => {
+    setRepair({ status: 'loading' })
+    try {
+      const res = await fetch(`/api/super-admin/organizations/${organizationId}/repair-onboarding`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markPaymentAdded: true }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la réparation')
+      setRepair({ status: 'success', message: `Onboarding réparé — ${json.usersRefreshed} utilisateur(s) rafraîchi(s). Le client doit recharger sa page.` })
+    } catch (err) {
+      setRepair({ status: 'error', message: (err as Error).message })
+    }
+  }
 
   const { data: subscriptions = [], isLoading: subsLoading } = useQuery({
     queryKey: ['super-admin-subscriptions'],
@@ -54,6 +74,7 @@ export default function SubscriptionsPage() {
 
   const handleViewDetails = (subscription: OrganizationSubscription) => {
     setSelectedSubscription(subscription)
+    setRepair({ status: 'idle' })
     setDetailsOpen(true)
   }
 
@@ -276,6 +297,32 @@ export default function SubscriptionsPage() {
                     </div>
                   </>
                 )}
+
+                {/* Réparation onboarding */}
+                <Separator />
+                <div>
+                  <h3 className="font-semibold text-sm text-muted-foreground mb-3">
+                    DÉPANNAGE
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Force <code>onboarding_completed</code> + <code>payment_method_added</code> si le
+                    client a payé mais reste bloqué sur l&apos;onboarding.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={repair.status === 'loading' || !selectedSubscription.organization?.id}
+                    onClick={() => selectedSubscription.organization?.id && handleRepairOnboarding(selectedSubscription.organization.id)}
+                  >
+                    {repair.status === 'loading' ? 'Réparation…' : 'Réparer l\'onboarding'}
+                  </Button>
+                  {repair.status === 'success' && (
+                    <p className="text-sm text-emerald-600 mt-2">{repair.message}</p>
+                  )}
+                  {repair.status === 'error' && (
+                    <p className="text-sm text-red-600 mt-2">{repair.message}</p>
+                  )}
+                </div>
               </div>
             )}
           </SheetContent>

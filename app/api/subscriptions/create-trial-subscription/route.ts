@@ -9,6 +9,7 @@ import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
 import { z } from 'zod'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
+import { ensureOnboardingComplete } from '@/lib/utils/billing/ensure-onboarding-complete'
 function buildPostConversionEmail(prenom: string, planName: string): string {
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -418,11 +419,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Écriture faisant autorité des flags d'onboarding : idempotente, vérifiée,
+    // avec retry. La RPC / le fallback ci-dessus peuvent avoir « réussi » sans
+    // rien écrire (0 ligne, mauvaise org…) — on ne laisse jamais un client
+    // facturé bloqué sur l'onboarding sans le savoir.
+    const onboardingPersisted = await ensureOnboardingComplete(adminClient, orgId, {
+      context: { source: 'create-trial-subscription', stripeSubscriptionId: subscription.id, customerId },
+    })
+
+    if (!onboardingPersisted) {
+      logger.error('[billing][CRITICAL] Paiement Stripe OK mais onboarding non finalisé en base', {
+        organizationId: orgId,
+        stripeSubscriptionId: subscription.id,
+        customerId,
+        userId: user.id,
+      })
+      // Alerte interne — un humain doit réconcilier ce compte rapidement
+      sendEmailViaResend({
+        to: 'contact@eduzen.io',
+        subject: '🚨 [BILLING] Client facturé mais bloqué sur l\'onboarding',
+        html: `<p>Le paiement Stripe a réussi mais l'écriture des flags d'onboarding a échoué 3×.</p>
+               <ul>
+                 <li>organization_id : <code>${orgId}</code></li>
+                 <li>stripe_subscription_id : <code>${subscription.id}</code></li>
+                 <li>stripe_customer_id : <code>${customerId}</code></li>
+                 <li>user_id : <code>${user.id}</code></li>
+               </ul>
+               <p>Réparer via /super-admin/subscriptions → Réparer l'onboarding, ou SQL.</p>`,
+      }).catch(err => logger.error('[create-trial-subscription] Alerte interne non envoyée:', err))
+    }
+
     revalidateTag(`layout-data-${user.id}`, { expire: 0 })
     logger.info('Onboarding complété avec succès', {
       organizationId: orgId,
       subscriptionId: subscription.id,
       trialEndAt: stripeTrialEndAt.toISOString(),
+      onboardingPersisted,
     })
 
     // Email post-conversion (non bloquant)
