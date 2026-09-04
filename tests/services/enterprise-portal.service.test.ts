@@ -61,6 +61,7 @@ describe('EnterprisePortalService', () => {
 
       expect(result).toEqual({
         totalBudget: 0,
+        forecastBudget: 0,
         totalHours: 0,
         averageAttendanceRate: 0,
         activeEmployees: 0,
