@@ -222,16 +222,6 @@ export function DemoContent() {
             <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">30 minutes chrono.</span>
           </h1>
           <p className="text-gray-500 text-sm mb-4">Une démo en visio, en direct, adaptée à votre situation.</p>
-          <div className="rounded-xl overflow-hidden shadow-lg shadow-brand-blue/10 ring-1 ring-black/5 mb-4">
-            <video
-              src="/videos/VIDEO LP EDUZEN 1.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full block"
-            />
-          </div>
 
           {/* Stats */}
           <div className="flex gap-2.5 mb-4">
@@ -449,6 +439,18 @@ export function DemoContent() {
               </>
             )}
           </GlassCard>
+
+          {/* Aperçu vidéo (mobile uniquement — le desktop l'affiche dans la colonne gauche) */}
+          <div className="lg:hidden rounded-xl overflow-hidden shadow-lg shadow-brand-blue/10 ring-1 ring-black/5">
+            <video
+              src="/videos/VIDEO LP EDUZEN 1.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full block"
+            />
+          </div>
 
           {/* Card garantie */}
           <GlassCard variant="subtle" className="p-4 flex items-start gap-3">
