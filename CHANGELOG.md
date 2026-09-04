@@ -15,6 +15,33 @@ et ce projet adhère à [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### 🔌 Connecteur comptable Fulll
+
+#### Ajouté
+- **Connecteur Fulll** (`provider = 'fulll'` sur l'échafaudage `accounting_integrations`) :
+  push des **factures et avoirs de vente** vers un dossier Fulll via l'API `api.fulll.io`
+  (OAuth2 authorization-code, `POST /accounting/v1/sales_invoice`).
+  - Adapter isolé : `lib/services/accounting/fulll.{adapter,client,payload,errors}.ts`
+  - `AccountingService.pushSalesDocuments()` (factures **+ avoirs**, filtre de dates, mapping
+    par issue `synced`/`pending`/`error`) et `reconcilePendingJobs()` (import asynchrone)
+  - Routes OAuth `/api/accounting/authenticate/fulll` + `/api/accounting/callback/fulll`
+    (state signé HMAC via `lib/utils/oauth-state.ts`)
+  - Route `/api/accounting/sync` (`POST` envoi range/single, `GET` statut + réconciliation)
+  - Cron nocturne `/api/cron/fulll-sync` (orgs `auto_sync`) — `vercel.json` `0 2 * * *`
+  - Réglages : `app/(dashboard)/dashboard/settings/fulll/page.tsx` (connexion, correspondance
+    comptable, envoi manuel, historique) + entrée de menu « Fulll »
+  - Bouton + badge par facture : `components/accounting/fulll-invoice-action.tsx`
+  - Jetons OAuth **chiffrés au repos** (AES, `token-crypto.ts`, préfixe `enc:v1:`,
+    rétro-compatible avec le clair — pas de migration)
+  - Variables : `FULLL_API_BASE_URL`, `FULLL_CLIENT_ID`, `FULLL_CLIENT_SECRET`,
+    `FULLL_OAUTH_REDIRECT_URI`
+  - Doc : `docs/integrations/fulll.md` (onboarding partenaire, `TODO(fulll-docs)`, E2E sandbox)
+
+#### Modifié
+- **Export FEC** : la ventilation d'une vente (411 / 701 / 445, inversée pour un avoir) est
+  extraite dans `lib/services/accounting/sale-lines.ts` (`buildSaleLines`), partagée avec le
+  connecteur Fulll — sortie FEC inchangée.
+
 ### 📄 Documents - Style Premium
 
 #### Ajouté

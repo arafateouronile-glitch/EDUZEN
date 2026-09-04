@@ -36,6 +36,7 @@ import {
 import type { StudentWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { NotificationService } from '@/lib/services/notification.service'
+import { FulllInvoiceAction } from '@/components/accounting/fulll-invoice-action'
 
 type Payment = TableRow<'payments'>
 
@@ -914,6 +915,15 @@ export default function InvoiceDetailPage() {
             <PenTool className="mr-2 h-4 w-4" />
             Demande de signature
           </Button>
+          {invoice.document_type !== 'quote' && (
+            <div className="w-full pt-2 border-t">
+              <FulllInvoiceAction
+                invoiceId={invoice.id}
+                documentType={invoice.document_type}
+                invoiceUpdatedAt={(invoice as unknown as { updated_at?: string | null }).updated_at}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

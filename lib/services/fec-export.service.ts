@@ -5,6 +5,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { buildSaleLines, resolveSaleTiers } from '@/lib/services/accounting/sale-lines'
 
 type Invoice = TableRow<'invoices'>
 type Payment = TableRow<'payments'>
@@ -121,27 +122,6 @@ export class FECExportService {
   }
 
   /**
-   * Détermine le tiers (client) d'une écriture : un apprenant nommé, ou une
-   * entreprise externe quand la facture/l'avoir a été émis directement à une
-   * entité (sans quoi CompAuxNum/CompAuxLib restaient vides pour ces lignes).
-   */
-  private getTiers(
-    student: { student_number?: string | null; first_name?: string | null; last_name?: string | null } | null | undefined,
-    entity: { id?: string; name?: string | null } | null | undefined
-  ): { num?: string; lib?: string } {
-    if (student) {
-      return {
-        num: student.student_number || undefined,
-        lib: `${student.first_name || ''} ${student.last_name || ''}`.trim() || undefined,
-      }
-    }
-    if (entity?.id) {
-      return { num: entity.id.slice(0, 10), lib: entity.name || undefined }
-    }
-    return {}
-  }
-
-  /**
    * Récupère les écritures comptables depuis les factures, avoirs et paiements
    */
   private async getAccountingEntries(options: FECExportOptions): Promise<FECEntry[]> {
@@ -173,79 +153,51 @@ export class FECExportService {
       throw new Error(`Erreur lors de la récupération des factures: ${invoicesError.message}`)
     }
 
-    // Convertir les factures/avoirs en écritures comptables
+    // Convertir les factures/avoirs en écritures comptables.
+    // La logique de ventilation (411 débit TTC / 701 crédit HT / 445 crédit TVA,
+    // inversée pour un avoir) est partagée avec le connecteur Fulll via
+    // `buildSaleLines` — voir lib/services/accounting/sale-lines.ts.
     for (const invoice of invoices || []) {
-      const isCreditNote = invoice.document_type === 'credit_note'
-      const docLabel = isCreditNote ? 'Avoir' : 'Facture'
       const invoiceDate = invoice.issue_date ? new Date(invoice.issue_date) : new Date(invoice.created_at || new Date().toISOString())
       const formattedDate = this.formatDateFEC(invoiceDate)
       const ecritureNum = nextEcritureNum()
 
       const student = invoice.students as { id?: string; first_name?: string | null; last_name?: string | null; student_number?: string | null } | null
       const entity = invoice.external_entities as { id?: string; name?: string | null } | null
-      const tiers = this.getTiers(student, entity)
 
-      // Un avoir porte son propre montant négatif — on travaille en valeur
-      // absolue et on inverse débit/crédit par rapport à une facture normale.
-      const amountHT = Math.abs(invoice.amount || 0)
-      const taxAmount = Math.abs(invoice.tax_amount || 0)
-      const amountTTC = Math.abs(invoice.total_amount || amountHT + taxAmount)
+      const saleLines = buildSaleLines(
+        {
+          documentType: invoice.document_type === 'credit_note' ? 'credit_note' : 'invoice',
+          // Libellé d'écriture : numéro de pièce, sinon numéro d'écriture séquentiel
+          invoiceNumber: invoice.invoice_number || ecritureNum,
+          amountHT: invoice.amount || 0,
+          taxAmount: invoice.tax_amount,
+          totalTTC: invoice.total_amount || null,
+          currency: invoice.currency,
+          tiers: resolveSaleTiers(student, entity),
+        },
+        { journalCode: options.journalCode || 'VT' }
+      )
 
-      // Écriture 1 : Client / Ventes (TTC)
-      entries.push({
-        JournalCode: options.journalCode || 'VT',
-        JournalLib: 'Ventes',
-        EcritureNum: ecritureNum,
-        EcritureDate: formattedDate,
-        CompteNum: '411000', // Compte client (à adapter selon le plan comptable)
-        CompteLib: 'Clients',
-        CompAuxNum: tiers.num,
-        CompAuxLib: tiers.lib,
-        PieceRef: invoice.invoice_number || '',
-        PieceDate: formattedDate,
-        EcritureLib: `${docLabel} ${invoice.invoice_number || ecritureNum}`,
-        Debit: isCreditNote ? '0.00' : this.formatAmount(amountTTC),
-        Credit: isCreditNote ? this.formatAmount(amountTTC) : '0.00',
-        ValidDate: formattedDate,
-        Idevise: invoice.currency || 'EUR',
-        Montantdevise: invoice.currency && invoice.currency !== 'EUR' ? this.formatAmount(amountTTC) : undefined,
-      })
-
-      // Écriture 2 : Ventes (HT)
-      entries.push({
-        JournalCode: options.journalCode || 'VT',
-        JournalLib: 'Ventes',
-        EcritureNum: ecritureNum,
-        EcritureDate: formattedDate,
-        CompteNum: '701000', // Produits des ventes (à adapter)
-        CompteLib: 'Ventes de produits finis',
-        PieceRef: invoice.invoice_number || '',
-        PieceDate: formattedDate,
-        EcritureLib: `${docLabel} ${invoice.invoice_number || ecritureNum}`,
-        Debit: isCreditNote ? this.formatAmount(amountHT) : '0.00',
-        Credit: isCreditNote ? '0.00' : this.formatAmount(amountHT),
-        ValidDate: formattedDate,
-        Idevise: invoice.currency || 'EUR',
-        Montantdevise: invoice.currency && invoice.currency !== 'EUR' ? this.formatAmount(amountHT) : undefined,
-      })
-
-      // Écriture 3 : TVA collectée (si applicable)
-      if (taxAmount > 0) {
+      for (const line of saleLines) {
+        const lineAmount = line.debit || line.credit
         entries.push({
-          JournalCode: options.journalCode || 'VT',
-          JournalLib: 'Ventes',
+          JournalCode: line.journalCode,
+          JournalLib: line.journalLabel,
           EcritureNum: ecritureNum,
           EcritureDate: formattedDate,
-          CompteNum: '445710', // TVA collectée (à adapter selon le taux)
-          CompteLib: 'TVA collectée',
+          CompteNum: line.account,
+          CompteLib: line.accountLabel,
+          CompAuxNum: line.auxAccount,
+          CompAuxLib: line.auxAccountLabel,
           PieceRef: invoice.invoice_number || '',
           PieceDate: formattedDate,
-          EcritureLib: `TVA ${docLabel} ${invoice.invoice_number || ecritureNum}`,
-          Debit: isCreditNote ? this.formatAmount(taxAmount) : '0.00',
-          Credit: isCreditNote ? '0.00' : this.formatAmount(taxAmount),
+          EcritureLib: line.label,
+          Debit: this.formatAmount(line.debit),
+          Credit: this.formatAmount(line.credit),
           ValidDate: formattedDate,
           Idevise: invoice.currency || 'EUR',
-          Montantdevise: invoice.currency && invoice.currency !== 'EUR' ? this.formatAmount(taxAmount) : undefined,
+          Montantdevise: invoice.currency && invoice.currency !== 'EUR' ? this.formatAmount(lineAmount) : undefined,
         })
       }
     }
@@ -284,7 +236,7 @@ export class FECExportService {
           external_entities?: { id?: string; name?: string | null }
         }
         const invoice = payment.invoices as InvoiceForFec | null
-        const tiers = this.getTiers(invoice?.students, invoice?.external_entities)
+        const tiers = resolveSaleTiers(invoice?.students, invoice?.external_entities)
 
         // Écriture : Débit Banque / Crédit Client
         entries.push({

@@ -131,11 +131,21 @@
     {
       "path": "/api/cron/send-cold-evaluations",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/fulll-sync",
+      "schedule": "0 2 * * *"
     }
   ],
   "functions": {
     "app/api/jury/send-convocation/route.ts": {
       "maxDuration": 30
+    },
+    "app/api/accounting/sync/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/fulll-sync/route.ts": {
+      "maxDuration": 300
     },
     "app/api/documents/generate-pdf/route.ts": {
       "maxDuration": 60,

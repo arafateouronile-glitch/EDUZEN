@@ -833,6 +833,7 @@ export default function SettingsPage() {
         { id: 'funding-types', label: 'Financements', icon: DollarSign, href: '/dashboard/settings/funding-types' },
         { id: 'charge-categories', label: 'Charges', icon: Receipt, href: '/dashboard/settings/charge-categories' },
         { id: 'accounting', label: 'Comptabilité', icon: Building2, href: '/dashboard/settings/accounting' },
+        { id: 'fulll', label: 'Fulll', icon: Plug, href: '/dashboard/settings/fulll' },
       ]
     },
     {

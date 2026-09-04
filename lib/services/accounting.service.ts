@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { XeroAdapter } from './accounting/xero.adapter'
 import { QuickBooksAdapter } from './accounting/quickbooks.adapter'
 import { SageAdapter } from './accounting/sage.adapter'
+import { FulllAdapter } from './accounting/fulll.adapter'
 import type {
   AccountingProvider,
   AccountingConfig,
@@ -11,6 +12,7 @@ import type {
   ExpenseData,
   SyncResult,
 } from './accounting/accounting.types'
+import { decryptToken, encryptToken } from './accounting/token-crypto'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 import type { Json } from '@/types/database.types'
 import { InvoiceService } from './invoice.service'
@@ -19,12 +21,29 @@ import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
 type AccountingIntegration = TableRow<'accounting_integrations'>
 type EntityMapping = TableRow<'accounting_entity_mappings'>
+type EntityMappingInsert = TableInsert<'accounting_entity_mappings'>
 type SyncLog = TableRow<'accounting_sync_logs'>
 type AccountingIntegrationInsert = TableInsert<'accounting_integrations'>
 type AccountingIntegrationUpdate = TableUpdate<'accounting_integrations'>
 
 /** Facture avec relation students (retour de getById avec select students) */
 type InvoiceWithStudents = { students?: { first_name?: string; last_name?: string } | null }
+
+/** Ligne `invoices` avec les relations chargées par `pushSalesDocuments`. */
+type InvoiceRowWithRelations = TableRow<'invoices'> & {
+  students?: {
+    id?: string
+    first_name?: string | null
+    last_name?: string | null
+    student_number?: string | null
+  } | null
+  external_entities?: { id: string; name: string; email?: string | null } | null
+}
+
+/** Résultat de `pushSalesDocuments` : `SyncResult` + détail par document. */
+export interface SalesPushResult extends SyncResult {
+  items: Array<{ invoice_id: string; status: 'synced' | 'pending' | 'error' | 'skipped'; error?: string; external_id?: string }>
+}
 
 export class AccountingService {
   private supabase: SupabaseClient<any>
@@ -40,6 +59,7 @@ export class AccountingService {
     xero: new XeroAdapter(),
     quickbooks: new QuickBooksAdapter(),
     sage: new SageAdapter(),
+    fulll: new FulllAdapter(),
   }
 
   /**
@@ -123,10 +143,10 @@ export class AccountingService {
       access_token: tokens.access_token,
     })
 
-    // Mettre à jour la configuration avec les tokens
+    // Mettre à jour la configuration avec les tokens (chiffrés au repos)
     const updates: AccountingIntegrationUpdate = {
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      access_token: encryptToken(tokens.access_token),
+      refresh_token: encryptToken(tokens.refresh_token),
       token_expires_at: tokens.expires_in
         ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
         : undefined,
@@ -162,8 +182,9 @@ export class AccountingService {
     const { data, error: updateError } = await this.supabase
       .from('accounting_integrations')
       .update({
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token: encryptToken(tokens.access_token),
+        // certains providers ne renvoient pas de nouveau refresh token : garder l'ancien
+        refresh_token: tokens.refresh_token ? encryptToken(tokens.refresh_token) : undefined,
         token_expires_at: tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
           : undefined,
@@ -551,6 +572,334 @@ export class AccountingService {
   }
 
   /**
+   * Pousse les factures ET avoirs de vente vers le système comptable (Fulll).
+   *
+   * Différences avec `syncAllInvoices` :
+   *  - inclut `document_type = 'credit_note'` (les avoirs) ;
+   *  - accepte un filtre de dates (`issue_date`) ou une liste d'ids explicite ;
+   *  - déclencheurs manuels : ne dépend pas du flag `sync_invoices`, seul `is_active` compte ;
+   *  - écrit une ligne de mapping pour CHAQUE issue (`synced` / `pending` / `error`),
+   *    ce qui donne un registre de reprise pour les échecs.
+   *
+   * Re-synchronisation : une facture déjà `synced` est ignorée sauf `force = true`
+   * (et même avec `force`, l'API `sales_invoice` étant create-only, on ne renvoie pas —
+   * on renvoie un item `skipped` avec un message). Les `error` / `pending` sont rejoués.
+   */
+  async pushSalesDocuments(
+    organizationId: string,
+    provider: AccountingProvider,
+    opts: {
+      startDate?: string
+      endDate?: string
+      documentTypes?: Array<'invoice' | 'credit_note'>
+      invoiceIds?: string[]
+      force?: boolean
+      /** Plafond de documents traités en un appel (protège le maxDuration). Défaut 200. */
+      limit?: number
+      syncType?: 'manual' | 'incremental' | 'full'
+    } = {}
+  ): Promise<SalesPushResult> {
+    const config = await this.getConfig(organizationId, provider)
+    if (!config || !config.is_active) {
+      throw new Error(`Configuration ${provider} non active ou introuvable`)
+    }
+
+    await this.ensureValidToken(config)
+    const freshConfig = (await this.getConfig(organizationId, provider)) ?? config
+    const adapter = this.adapters[provider]
+    const accountingConfig = this.convertToAccountingConfig(freshConfig)
+
+    const documentTypes = opts.documentTypes ?? ['invoice', 'credit_note']
+    const limit = opts.limit ?? 200
+
+    // 1. Charger les factures / avoirs cibles
+    let query = this.supabase
+      .from('invoices')
+      .select('*, students(id, first_name, last_name, student_number), external_entities(id, name, email)')
+      .eq('organization_id', organizationId)
+      .in('document_type', documentTypes)
+      .order('issue_date', { ascending: true })
+      .limit(limit)
+
+    if (opts.invoiceIds && opts.invoiceIds.length > 0) {
+      query = query.in('id', opts.invoiceIds)
+    }
+    if (opts.startDate) query = query.gte('issue_date', opts.startDate)
+    if (opts.endDate) query = query.lte('issue_date', opts.endDate)
+
+    const { data: invoices, error: invErr } = await query
+    if (invErr) throw invErr
+
+    const result: SalesPushResult = {
+      success: true,
+      records_synced: 0,
+      records_failed: 0,
+      records_created: 0,
+      records_updated: 0,
+      records_skipped: 0,
+      errors: [],
+      items: [],
+    }
+
+    if (!invoices || invoices.length === 0) {
+      await this.logSync(config.id, opts.syncType ?? 'manual', 'sales_document', result)
+      return result
+    }
+
+    // 2. Charger les mappings existants (facture + avoir) en une requête
+    const { data: existingMappings } = await this.supabase
+      .from('accounting_entity_mappings')
+      .select('*')
+      .eq('integration_id', config.id)
+      .in('entity_type', ['invoice', 'credit_note'])
+
+    const mappingByLocalId = new Map<string, EntityMapping>(
+      (existingMappings || []).map((m) => [m.local_entity_id, m as EntityMapping])
+    )
+
+    // 3. Traiter chaque document
+    const toInsert: EntityMappingInsert[] = []
+    const toUpdate: Array<{ id: string; patch: Record<string, unknown> }> = []
+
+    const settled = await Promise.allSettled(
+      invoices.map(async (row) => {
+        const invoiceRow = row as InvoiceRowWithRelations
+        const entityType = invoiceRow.document_type === 'credit_note' ? 'credit_note' : 'invoice'
+        const existing = mappingByLocalId.get(invoiceRow.id)
+
+        if (existing?.sync_status === 'synced' && !opts.force) {
+          return { kind: 'skip' as const, invoiceId: invoiceRow.id, entityType }
+        }
+        if (existing?.sync_status === 'synced' && opts.force) {
+          return {
+            kind: 'blocked' as const,
+            invoiceId: invoiceRow.id,
+            entityType,
+            error: 'Déjà exporté vers Fulll — corrigez dans Fulll ou émettez un avoir.',
+          }
+        }
+
+        const invoiceData = this.rowToInvoiceData(invoiceRow)
+        const syncResult = await adapter.syncInvoice(accountingConfig, invoiceData)
+        const status = (syncResult.data?.status as string) || 'pending'
+        return {
+          kind: 'sent' as const,
+          invoiceId: invoiceRow.id,
+          entityType,
+          externalId: syncResult.external_id,
+          data: syncResult.data,
+          status,
+        }
+      })
+    )
+
+    settled.forEach((s, i) => {
+      const invoiceRow = invoices[i] as InvoiceRowWithRelations
+      const existing = mappingByLocalId.get(invoiceRow.id)
+
+      if (s.status === 'rejected') {
+        result.records_failed++
+        const message = s.reason instanceof Error ? s.reason.message : 'Erreur inconnue'
+        result.errors?.push({ entity_id: invoiceRow.id, error: message })
+        result.items.push({ invoice_id: invoiceRow.id, status: 'error', error: message })
+        this.stageMapping(existing, invoiceRow.id, config.id,
+          invoiceRow.document_type === 'credit_note' ? 'credit_note' : 'invoice',
+          { sync_status: 'error', external_entity_data: { error_message: message } as unknown as Json },
+          toInsert, toUpdate)
+        return
+      }
+
+      const v = s.value
+      if (v.kind === 'skip') {
+        result.records_skipped++
+        result.items.push({ invoice_id: v.invoiceId, status: 'skipped' })
+        return
+      }
+      if (v.kind === 'blocked') {
+        result.records_skipped++
+        result.items.push({ invoice_id: v.invoiceId, status: 'skipped', error: v.error })
+        return
+      }
+
+      // kind === 'sent'
+      const mappingStatus = v.status === 'synced' ? 'synced' : v.status === 'error' ? 'error' : 'pending'
+      if (mappingStatus === 'synced') result.records_synced++
+      else if (mappingStatus === 'error') {
+        result.records_failed++
+        result.errors?.push({ entity_id: v.invoiceId, error: 'Import Fulll en échec' })
+      }
+      if (mappingStatus === 'pending') result.records_created++
+
+      result.items.push({
+        invoice_id: v.invoiceId,
+        status: mappingStatus,
+        external_id: v.externalId,
+      })
+
+      this.stageMapping(existing, v.invoiceId, config.id, v.entityType, {
+        sync_status: mappingStatus,
+        external_entity_id: v.externalId,
+        external_entity_data: (v.data ?? null) as unknown as Json,
+        ...(mappingStatus === 'synced' ? { last_synced_at: new Date().toISOString() } : {}),
+      }, toInsert, toUpdate)
+    })
+
+    // 4. Persister les mappings
+    if (toInsert.length > 0) {
+      const { error } = await this.supabase.from('accounting_entity_mappings').insert(toInsert)
+      if (error) {
+        logger.error('pushSalesDocuments: mapping insert failed', error, {
+          error: sanitizeError(error),
+          count: toInsert.length,
+        })
+      }
+    }
+    for (const u of toUpdate) {
+      const { error } = await this.supabase
+        .from('accounting_entity_mappings')
+        .update(u.patch)
+        .eq('id', u.id)
+      if (error) {
+        logger.error('pushSalesDocuments: mapping update failed', error, { error: sanitizeError(error) })
+      }
+    }
+
+    result.success = result.records_failed === 0
+    await this.logSync(config.id, opts.syncType ?? 'manual', 'sales_document', result)
+    return result
+  }
+
+  /**
+   * Interroge Fulll sur les jobs d'import encore `pending` et bascule les mappings
+   * vers `synced` / `error`. Appelée par la route de statut et par le cron.
+   */
+  async reconcilePendingJobs(
+    organizationId: string,
+    provider: AccountingProvider
+  ): Promise<{ checked: number; synced: number; failed: number; pending: number }> {
+    const config = await this.getConfig(organizationId, provider)
+    if (!config || !config.is_active) {
+      return { checked: 0, synced: 0, failed: 0, pending: 0 }
+    }
+
+    const adapter = this.adapters[provider]
+    if (typeof adapter.getImportJob !== 'function') {
+      return { checked: 0, synced: 0, failed: 0, pending: 0 }
+    }
+
+    const { data: pendingMappings } = await this.supabase
+      .from('accounting_entity_mappings')
+      .select('*')
+      .eq('integration_id', config.id)
+      .eq('sync_status', 'pending')
+      .in('entity_type', ['invoice', 'credit_note'])
+
+    if (!pendingMappings || pendingMappings.length === 0) {
+      return { checked: 0, synced: 0, failed: 0, pending: 0 }
+    }
+
+    await this.ensureValidToken(config)
+    const freshConfig = (await this.getConfig(organizationId, provider)) ?? config
+    const accountingConfig = this.convertToAccountingConfig(freshConfig)
+
+    const counts = { checked: 0, synced: 0, failed: 0, pending: 0 }
+
+    for (const mapping of pendingMappings as EntityMapping[]) {
+      counts.checked++
+      const jobId = mapping.external_entity_id
+      if (!jobId) {
+        counts.pending++
+        continue
+      }
+      try {
+        const job = await adapter.getImportJob!(accountingConfig, jobId)
+        if (job.data.status === 'synced') {
+          counts.synced++
+          await this.supabase
+            .from('accounting_entity_mappings')
+            .update({
+              sync_status: 'synced',
+              external_entity_id: job.external_id,
+              external_entity_data: job.data as unknown as Json,
+              last_synced_at: new Date().toISOString(),
+            })
+            .eq('id', mapping.id)
+        } else if (job.data.status === 'error') {
+          counts.failed++
+          await this.supabase
+            .from('accounting_entity_mappings')
+            .update({
+              sync_status: 'error',
+              external_entity_data: job.data as unknown as Json,
+            })
+            .eq('id', mapping.id)
+        } else {
+          counts.pending++
+        }
+      } catch (error) {
+        counts.pending++
+        logger.error('reconcilePendingJobs: job check failed', error, {
+          error: sanitizeError(error),
+          mapping: maskId(mapping.id),
+        })
+      }
+    }
+
+    return counts
+  }
+
+  /** Range un changement de mapping dans les buffers insert/update. */
+  private stageMapping(
+    existing: EntityMapping | undefined,
+    localEntityId: string,
+    integrationId: string,
+    entityType: string,
+    patch: Record<string, unknown>,
+    toInsert: EntityMappingInsert[],
+    toUpdate: Array<{ id: string; patch: Record<string, unknown> }>
+  ): void {
+    if (existing) {
+      toUpdate.push({ id: existing.id, patch })
+    } else {
+      toInsert.push({
+        integration_id: integrationId,
+        entity_type: entityType,
+        local_entity_id: localEntityId,
+        external_entity_id: (patch.external_entity_id as string) || '',
+        external_entity_data: (patch.external_entity_data ?? null) as Json,
+        sync_status: (patch.sync_status as string) || 'pending',
+        ...(patch.last_synced_at ? { last_synced_at: patch.last_synced_at as string } : {}),
+      })
+    }
+  }
+
+  /** DB invoice row (+ relations) -> InvoiceData pour l'adapter. */
+  private rowToInvoiceData(row: InvoiceRowWithRelations): InvoiceData {
+    const student = row.students || null
+    const entity = row.external_entities || null
+    return {
+      id: row.id,
+      invoice_number: row.invoice_number,
+      issue_date: row.issue_date,
+      due_date: row.due_date,
+      amount: Number(row.amount),
+      tax_amount: Number(row.tax_amount || 0),
+      total_amount: Number(row.total_amount),
+      currency: row.currency || 'EUR',
+      status: row.status || '',
+      student_id: row.student_id,
+      student_name: student
+        ? `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() || undefined
+        : undefined,
+      student_number: student?.student_number ?? null,
+      entity: entity ? { id: entity.id, name: entity.name, email: entity.email ?? null } : null,
+      document_type: row.document_type === 'credit_note' ? 'credit_note' : 'invoice',
+      journal_code: undefined,
+      items: (row.items as InvoiceData['items']) ?? undefined,
+    }
+  }
+
+  /**
    * Vérifie et rafraîchit le token si nécessaire
    */
   private async ensureValidToken(config: AccountingIntegration): Promise<void> {
@@ -573,8 +922,11 @@ export class AccountingService {
       id: config.id,
       organization_id: config.organization_id,
       provider: config.provider as AccountingProvider,
-      access_token: config.access_token || undefined,
-      refresh_token: config.refresh_token || undefined,
+      // Déchiffrement transparent : les jetons peuvent être chiffrés (`enc:v1:`)
+      // ou en clair (lignes écrites avant l'introduction du chiffrement).
+      access_token: decryptToken(config.access_token) || undefined,
+      refresh_token: decryptToken(config.refresh_token) || undefined,
+      token_expires_at: config.token_expires_at || undefined,
       api_key: config.api_key || undefined,
       api_secret: config.api_secret || undefined,
       company_id: config.company_id || undefined,

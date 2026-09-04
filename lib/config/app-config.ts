@@ -143,6 +143,38 @@ export const EMAIL_CONFIG = {
 } as const
 
 /**
+ * Configuration du connecteur comptable Fulll (fulll.fr / api.fulll.io)
+ *
+ * L'API Fulll est réservée aux partenaires : `FULLL_CLIENT_ID` / `FULLL_CLIENT_SECRET`
+ * proviennent d'une application OAuth2 déclarée auprès de Fulll. Tant que l'onboarding
+ * partenaire n'est pas fait, ces variables sont absentes et le connecteur reste inactif.
+ *
+ * Certains chemins/paramètres sont marqués TODO(fulll-docs) : à confirmer contre la
+ * documentation Stoplight (accessible seulement avec un compte partenaire).
+ */
+export const FULLL_CONFIG = {
+  getBaseUrl: (): string => process.env.FULLL_API_BASE_URL || 'https://api.fulll.io',
+  // OAuth2 authorization-code
+  tokenPath: '/cred/oauth2/token',
+  authorizePath: '/cred/oauth2/authorize', // TODO(fulll-docs): confirmer host/path d'autorisation + PKCE
+  oauthScope: 'accounting', // TODO(fulll-docs): confirmer la/les scope(s)
+  // Endpoints comptables
+  salesInvoicePath: '/accounting/v1/sales_invoice',
+  entriesPath: '/accounting/v1/entries',
+  customersPath: '/accounting/v1/customers',
+  currenciesPath: '/accounting/v1/currencies',
+  paymentTypesPath: '/accounting/v1/payment_types',
+  booksPath: '/accounting/v1/books',
+  accountsPath: '/accounting/v1/accounts',
+  jobsPath: '/accounting/v1/jobs', // TODO(fulll-docs): confirmer le path de suivi des jobs d'import
+  getClientId: (): string | undefined => process.env.FULLL_CLIENT_ID,
+  getClientSecret: (): string | undefined => process.env.FULLL_CLIENT_SECRET,
+  isConfigured: (): boolean => Boolean(process.env.FULLL_CLIENT_ID && process.env.FULLL_CLIENT_SECRET),
+  getRedirectUri: (): string =>
+    process.env.FULLL_OAUTH_REDIRECT_URI || `${APP_URLS.getBaseUrl()}/api/accounting/callback/fulll`,
+} as const
+
+/**
  * Export de toutes les configurations
  */
 export const APP_CONFIG = {
@@ -152,4 +184,5 @@ export const APP_CONFIG = {
   security: SECURITY_CONFIG,
   urls: APP_URLS,
   email: EMAIL_CONFIG,
+  fulll: FULLL_CONFIG,
 } as const
