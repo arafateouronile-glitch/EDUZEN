@@ -61,8 +61,18 @@ const TRUST_ROW = [
   { icon: BadgeCheck,     label: 'Export libre' },
 ]
 
-export function DemoContent() {
-  const [unlocked, setUnlocked] = useState(false)
+interface DemoContentProps {
+  /**
+   * Saute le formulaire de capture (prénom/nom/email/organisme) et affiche
+   * directement le CTA de prise de rendez-vous Calendly — lien séparé pour
+   * tester un funnel sans friction de formulaire préalable (cf. /demo/reserver).
+   * Aucun compte d'essai n'est créé automatiquement dans ce cas, faute d'email.
+   */
+  skipForm?: boolean
+}
+
+export function DemoContent({ skipForm = false }: DemoContentProps) {
+  const [unlocked, setUnlocked] = useState(skipForm)
   const [status, setStatus] = useState<'new_account' | 'existing_account' | null>(null)
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', organisme: '', website: '' })
   const [submitting, setSubmitting] = useState(false)
