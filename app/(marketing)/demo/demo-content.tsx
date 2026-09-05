@@ -133,11 +133,12 @@ export function DemoContent({ skipForm = false }: DemoContentProps) {
           {/* Hero */}
           <div>
             <h1 className="font-display font-bold text-[1.85rem] leading-[1.2] text-gray-900 mb-3">
-              Voyez EduZen<br />en action —<br />
-              <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">30 minutes chrono.</span>
+              Reprenez<br />
+              <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">6h par semaine</span><br />
+              sur votre administratif Qualiopi.
             </h1>
             <p className="text-gray-500 text-sm leading-relaxed">
-              Une démo en visio, en direct, adaptée à votre situation. Zéro powerpoint, 100% concret.
+              Une démo de 30 min avec le fondateur, sur votre organisme — pas une présentation générique. Zéro powerpoint, 100% concret.
             </p>
           </div>
 
@@ -228,10 +229,10 @@ export function DemoContent({ skipForm = false }: DemoContentProps) {
             </span>
           </div>
           <h1 className="font-display font-bold text-2xl text-gray-900 leading-tight mb-2">
-            Voyez EduZen en action —<br />
-            <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">30 minutes chrono.</span>
+            Reprenez <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">6h par semaine</span><br />
+            sur votre administratif Qualiopi.
           </h1>
-          <p className="text-gray-500 text-sm mb-4">Une démo en visio, en direct, adaptée à votre situation.</p>
+          <p className="text-gray-500 text-sm mb-4">Une démo de 30 min avec le fondateur, sur votre organisme — pas une présentation générique.</p>
 
           {/* Stats */}
           <div className="flex gap-2.5 mb-4">
@@ -320,6 +321,14 @@ export function DemoContent({ skipForm = false }: DemoContentProps) {
 
             {!unlocked ? (
               <>
+                {/* Bonus essai gratuit — annoncé avant le formulaire, pas caché après */}
+                <div className="flex items-center gap-2.5 bg-brand-blue/5 border border-brand-blue/10 rounded-lg px-3 py-2.5 mb-4">
+                  <Zap className="h-4 w-4 text-brand-blue flex-shrink-0" />
+                  <p className="text-gray-700 text-sm">
+                    <span className="font-semibold">+ un essai gratuit de 14 jours offert</span>, sans engagement
+                  </p>
+                </div>
+
                 {/* Formulaire de déblocage */}
                 <form onSubmit={handleSubmit} className="space-y-3 mb-1">
                   <div className="grid grid-cols-2 gap-3">
@@ -381,14 +390,10 @@ export function DemoContent({ skipForm = false }: DemoContentProps) {
                     className="group w-full h-14 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan text-white font-bold text-base rounded-xl shadow-lg shadow-brand-blue/25 hover:shadow-xl hover:shadow-brand-blue/35 transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-1"
                   >
                     <CalendarCheck2 className="h-5 w-5" />
-                    Débloquer mon créneau
+                    Voir les créneaux disponibles
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                   </Button>
                 </form>
-
-                <p className="text-center text-gray-400 text-xs mt-3">
-                  Votre espace d'essai gratuit (14 jours) est créé automatiquement
-                </p>
               </>
             ) : (
               <>
