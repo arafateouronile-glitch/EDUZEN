@@ -257,6 +257,18 @@ function RegisterForm({ fromDemo }: { fromDemo: boolean }) {
             </p>
           </div>
 
+          {/* Aperçu vidéo */}
+          <div className="rounded-xl overflow-hidden shadow-xl shadow-brand-blue/10 ring-1 ring-black/5">
+            <video
+              src="/videos/VIDEO LP EDUZEN 1.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full block"
+            />
+          </div>
+
           {/* Stats */}
           <div className="flex gap-2.5">
             {STATS.map((stat) => (
@@ -579,6 +591,18 @@ function RegisterForm({ fromDemo }: { fromDemo: boolean }) {
               </p>
             </div>
           </GlassCard>
+
+          {/* Aperçu vidéo (mobile uniquement — le desktop l'affiche dans la colonne gauche) */}
+          <div className="lg:hidden rounded-xl overflow-hidden shadow-lg shadow-brand-blue/10 ring-1 ring-black/5">
+            <video
+              src="/videos/VIDEO LP EDUZEN 1.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full block"
+            />
+          </div>
 
           {/* Security badges */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }} className="flex flex-wrap gap-2 justify-center">
