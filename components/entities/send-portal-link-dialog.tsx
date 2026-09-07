@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { Send, Loader2, Plus, X } from 'lucide-react'
-import { emailService } from '@/lib/services/email.service'
 import { APP_URLS } from '@/lib/config/app-config'
 
 interface SendPortalLinkDialogProps {
@@ -69,27 +68,33 @@ export function SendPortalLinkDialog({
   const sendMutation = useMutation({
     mutationFn: async (recipients: string[]) => {
       const greeting = contactName ? `Bonjour ${contactName},` : 'Bonjour,'
-      const html = `
-          <p>${greeting}</p>
-          <p>Vous pouvez désormais suivre en ligne les formations de vos collaborateurs :
-          sessions, apprenants inscrits, devis et factures.</p>
-          <p style="margin:24px 0;">
-            <a href="${portalUrl}" style="background:#274472;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
-              Accéder à mon espace entreprise
-            </a>
-          </p>
-          <p style="font-size:13px;color:#666;">Ou copiez ce lien dans votre navigateur :<br />${portalUrl}</p>
-        `
-      const text = `${greeting}\n\nAccédez à votre espace entreprise (sessions, apprenants, devis et factures) : ${portalUrl}`
-      // L'API /api/email/send n'accepte qu'un destinataire par appel : un envoi
-      // séparé par adresse (chaque contact reçoit son propre email).
+      // /api/send-email transforme les sauts de ligne du `message` en paragraphes
+      // espacés (contrairement à /api/email/send qui retire tout le HTML côté
+      // serveur et produit un bloc de texte compact).
+      const message = [
+        greeting,
+        '',
+        'Vous pouvez désormais suivre en ligne les formations de vos collaborateurs : sessions, apprenants inscrits, devis et factures.',
+        '',
+        'Accédez à votre espace entreprise :',
+        portalUrl,
+      ].join('\n')
+      // Un envoi séparé par adresse : chaque contact reçoit son propre email.
       for (const recipient of recipients) {
-        await emailService.sendEmail({
-          to: recipient,
-          subject: `Votre espace entreprise — ${entityName}`,
-          html,
-          text,
+        const res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            to: recipient,
+            subject: `Votre espace entreprise — ${entityName}`,
+            message,
+          }),
         })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err?.details || err?.error || "L'envoi de l'email a échoué")
+        }
       }
       return recipients
     },
