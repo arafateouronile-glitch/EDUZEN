@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/toast'
 import {
   ArrowLeft, Users, Search, Plus, X, Check, Loader2, UserPlus,
   Calendar, Briefcase, Mail, Phone, MapPin, Building2, ExternalLink,
-  FileText, Receipt, FolderOpen, BookOpen, Download,
+  FileText, Receipt, FolderOpen, BookOpen, Download, Send,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -22,6 +22,8 @@ import { Badge } from '@/components/ui/badge'
 import { RoleGuard, ADMIN_ROLES } from '@/components/auth/role-guard'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils/format'
+import { emailService } from '@/lib/services/email.service'
+import { APP_URLS } from '@/lib/config/app-config'
 
 type Student = {
   id: string
@@ -71,6 +73,10 @@ function EntityStudentsPageContent() {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState('students')
+  const [isSendLinkOpen, setIsSendLinkOpen] = useState(false)
+  const [linkRecipient, setLinkRecipient] = useState('')
+
+  const portalUrl = `${APP_URLS.getBaseUrl()}/enterprise?entity=${entityId}`
 
   // Formulaire pour le rattachement
   const [formData, setFormData] = useState({
@@ -336,6 +342,45 @@ function EntityStudentsPageContent() {
     },
   })
 
+  // Envoyer le lien d'accès à l'espace entreprise au contact de l'entité
+  const sendLinkMutation = useMutation({
+    mutationFn: async (to: string) => {
+      const contactName = [entity?.contact_first_name, entity?.contact_last_name].filter(Boolean).join(' ')
+      const greeting = contactName ? `Bonjour ${contactName},` : 'Bonjour,'
+      await emailService.sendEmail({
+        to,
+        subject: `Votre espace entreprise — ${entity?.name ?? 'EDUZEN'}`,
+        html: `
+          <p>${greeting}</p>
+          <p>Vous pouvez désormais suivre en ligne les formations de vos collaborateurs :
+          sessions, apprenants inscrits, devis et factures.</p>
+          <p style="margin:24px 0;">
+            <a href="${portalUrl}" style="background:#274472;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+              Accéder à mon espace entreprise
+            </a>
+          </p>
+          <p style="font-size:13px;color:#666;">Ou copiez ce lien dans votre navigateur :<br />${portalUrl}</p>
+        `,
+        text: `${greeting}\n\nAccédez à votre espace entreprise (sessions, apprenants, devis et factures) : ${portalUrl}`,
+      })
+    },
+    onSuccess: () => {
+      setIsSendLinkOpen(false)
+      addToast({
+        title: 'Lien envoyé',
+        description: `L'accès à l'espace entreprise a été envoyé à ${linkRecipient}`,
+        type: 'success',
+      })
+    },
+    onError: (error: any) => {
+      addToast({
+        title: 'Erreur',
+        description: error?.message || "L'envoi de l'email a échoué",
+        type: 'error',
+      })
+    },
+  })
+
   const resetForm = () => {
     setFormData({
       relationship_type: 'apprenticeship',
@@ -414,13 +459,27 @@ function EntityStudentsPageContent() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isCompany && (
-            <Link href={`/enterprise?entity=${entityId}`} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Building2 className="h-4 w-4" />
-                Espace entreprise (portail)
-                <ExternalLink className="h-3.5 w-3.5" />
+            <>
+              <Link href={`/enterprise?entity=${entityId}`} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Espace entreprise (portail)
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  setLinkRecipient(entity.contact_email || entity.email || '')
+                  setIsSendLinkOpen(true)
+                }}
+              >
+                <Send className="h-4 w-4" />
+                Envoyer le lien à l&apos;entreprise
               </Button>
-            </Link>
+            </>
           )}
           {entitySessions && entitySessions.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
@@ -982,6 +1041,63 @@ function EntityStudentsPageContent() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog : envoyer le lien de l'espace entreprise */}
+      <Dialog open={isSendLinkOpen} onOpenChange={setIsSendLinkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Envoyer le lien de l&apos;espace entreprise</DialogTitle>
+            <DialogDescription>
+              {entity.name} recevra un email avec un lien d&apos;accès direct à son espace entreprise
+              (sessions, apprenants, devis et factures).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="link-recipient">Email du destinataire</Label>
+              <Input
+                id="link-recipient"
+                type="email"
+                value={linkRecipient}
+                onChange={(e) => setLinkRecipient(e.target.value)}
+                placeholder="contact@entreprise.fr"
+                className="mt-1"
+              />
+              {!entity.contact_email && !entity.email && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Aucun email de contact enregistré pour cette entité — saisissez une adresse.
+                </p>
+              )}
+            </div>
+            <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-600 break-all">
+              <span className="font-medium text-gray-700">Lien envoyé :</span>
+              <br />
+              {portalUrl}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button variant="outline" onClick={() => setIsSendLinkOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => sendLinkMutation.mutate(linkRecipient.trim())}
+              disabled={sendLinkMutation.isPending || !linkRecipient.trim()}
+            >
+              {sendLinkMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Envoi...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer
+                </>
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
