@@ -1,14 +1,20 @@
 'use client'
 
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { Download, FileText, Mail, Building2, Users, Phone, MapPin, Briefcase, FileCheck, Info, ExternalLink } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
+import { Download, FileText, Mail, Building2, Users, Phone, MapPin, Briefcase, FileCheck, Info, ExternalLink, Send, Loader2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { emailService } from '@/lib/services/email.service'
+import { APP_URLS } from '@/lib/config/app-config'
 import { useDocumentGeneration } from '../hooks/use-document-generation'
 import type { 
   SessionWithRelations, 
@@ -49,6 +55,9 @@ export function GestionEspaceEntreprise({
   attendanceStats = null,
 }: GestionEspaceEntrepriseProps) {
   const supabase = createClient()
+  const { addToast } = useToast()
+  const [sendLinkEntity, setSendLinkEntity] = useState<{ id: string; name: string; contactName: string } | null>(null)
+  const [linkRecipient, setLinkRecipient] = useState('')
   const {
     handleGenerateSessionReport,
     handleGenerateCertificate,
@@ -74,26 +83,45 @@ export function GestionEspaceEntreprise({
       if (enrolledStudentIds.length === 0) return []
       const { data, error } = await supabase
         .from('student_entities')
-        .select('student_id, entity_id, external_entities(id, name)')
+        .select('student_id, entity_id, external_entities(id, name, contact_email, email, contact_first_name, contact_last_name)')
         .in('student_id', enrolledStudentIds)
         .eq('is_current', true)
       if (error) throw error
       return (data || []) as Array<{
         student_id: string
         entity_id: string
-        external_entities: { id: string; name: string } | null
+        external_entities: {
+          id: string
+          name: string
+          contact_email: string | null
+          email: string | null
+          contact_first_name: string | null
+          contact_last_name: string | null
+        } | null
       }>
     },
     enabled: enrolledStudentIds.length > 0,
   })
 
-  // Grouper par entité : entityId -> { id, name, enrollments }
+  // Grouper par entité : entityId -> { id, name, contactEmail, contactName, enrollments }
   const entitiesWithEnrollments = useMemo(() => {
-    const byEntityId = new Map<string, { id: string; name: string; enrollments: EnrollmentWithRelations[] }>()
-    const studentToEntity = new Map<string | null, { id: string; name: string }>()
+    type EntityGroup = {
+      id: string
+      name: string
+      contactEmail: string
+      contactName: string
+      enrollments: EnrollmentWithRelations[]
+    }
+    const byEntityId = new Map<string, EntityGroup>()
+    const studentToEntity = new Map<string | null, Omit<EntityGroup, 'enrollments'>>()
     studentEntitiesWithEntity?.forEach((se) => {
       const ent = se.external_entities
-      if (ent) studentToEntity.set(se.student_id, { id: se.entity_id, name: ent.name })
+      if (ent) studentToEntity.set(se.student_id, {
+        id: se.entity_id,
+        name: ent.name,
+        contactEmail: ent.contact_email || ent.email || '',
+        contactName: [ent.contact_first_name, ent.contact_last_name].filter(Boolean).join(' '),
+      })
     })
     enrollments.forEach((enrollment) => {
       const studentId = enrollment.student_id
@@ -101,12 +129,57 @@ export function GestionEspaceEntreprise({
       const displayName = entity?.name ?? (enrollment.students as { company?: string })?.company ?? 'Non rattaché'
       const entityId = entity?.id ?? `name:${displayName}`
       if (!byEntityId.has(entityId)) {
-        byEntityId.set(entityId, { id: entity?.id ?? '', name: displayName, enrollments: [] })
+        byEntityId.set(entityId, {
+          id: entity?.id ?? '',
+          name: displayName,
+          contactEmail: entity?.contactEmail ?? '',
+          contactName: entity?.contactName ?? '',
+          enrollments: [],
+        })
       }
       byEntityId.get(entityId)!.enrollments.push(enrollment)
     })
     return Array.from(byEntityId.values())
   }, [enrollments, studentEntitiesWithEntity])
+
+  // Envoyer le lien d'accès à l'espace entreprise au contact de l'entité
+  const sendLinkMutation = useMutation({
+    mutationFn: async ({ to, entity }: { to: string; entity: { id: string; name: string; contactName: string } }) => {
+      const portalUrl = `${APP_URLS.getBaseUrl()}/enterprise?entity=${entity.id}`
+      const greeting = entity.contactName ? `Bonjour ${entity.contactName},` : 'Bonjour,'
+      await emailService.sendEmail({
+        to,
+        subject: `Votre espace entreprise — ${entity.name}`,
+        html: `
+          <p>${greeting}</p>
+          <p>Vous pouvez désormais suivre en ligne les formations de vos collaborateurs :
+          sessions, apprenants inscrits, devis et factures.</p>
+          <p style="margin:24px 0;">
+            <a href="${portalUrl}" style="background:#274472;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+              Accéder à mon espace entreprise
+            </a>
+          </p>
+          <p style="font-size:13px;color:#666;">Ou copiez ce lien dans votre navigateur :<br />${portalUrl}</p>
+        `,
+        text: `${greeting}\n\nAccédez à votre espace entreprise (sessions, apprenants, devis et factures) : ${portalUrl}`,
+      })
+    },
+    onSuccess: () => {
+      setSendLinkEntity(null)
+      addToast({
+        title: 'Lien envoyé',
+        description: `L'accès à l'espace entreprise a été envoyé à ${linkRecipient}`,
+        type: 'success',
+      })
+    },
+    onError: (error: unknown) => {
+      addToast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : "L'envoi de l'email a échoué",
+        type: 'error',
+      })
+    },
+  })
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -183,17 +256,31 @@ export function GestionEspaceEntreprise({
                   </div>
                   <div className="flex items-center gap-2">
                     {entity.id ? (
-                      <Link href={`/dashboard/entities/${entity.id}/students`}>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                      <>
+                        <Link href={`/dashboard/entities/${entity.id}/students`}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue gap-2"
+                          >
+                            <Building2 className="h-4 w-4" />
+                            Voir l&apos;entité
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue gap-2"
+                          onClick={() => {
+                            setLinkRecipient(entity.contactEmail || '')
+                            setSendLinkEntity({ id: entity.id, name: entity.name, contactName: entity.contactName })
+                          }}
                         >
-                          <Building2 className="h-4 w-4" />
-                          Voir l&apos;entité
-                          <ExternalLink className="h-3.5 w-3.5" />
+                          <Send className="h-4 w-4" />
+                          Envoyer le lien
                         </Button>
-                      </Link>
+                      </>
                     ) : null}
                     <Button 
                       variant="outline" 
@@ -323,6 +410,69 @@ export function GestionEspaceEntreprise({
           </div>
         </GlassCard>
       </motion.div>
+
+      {/* Dialog : envoyer le lien de l'espace entreprise */}
+      <Dialog open={!!sendLinkEntity} onOpenChange={(open) => { if (!open) setSendLinkEntity(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Envoyer le lien de l&apos;espace entreprise</DialogTitle>
+            <DialogDescription>
+              {sendLinkEntity?.name} recevra un email avec un lien d&apos;accès direct à son espace
+              entreprise (sessions, apprenants, devis et factures).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="entity-link-recipient">Email du destinataire</Label>
+              <Input
+                id="entity-link-recipient"
+                type="email"
+                value={linkRecipient}
+                onChange={(e) => setLinkRecipient(e.target.value)}
+                placeholder="contact@entreprise.fr"
+                className="mt-1"
+              />
+              {sendLinkEntity && !linkRecipient && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Aucun email de contact enregistré pour cette entité — saisissez une adresse.
+                </p>
+              )}
+            </div>
+            {sendLinkEntity && (
+              <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-600 break-all">
+                <span className="font-medium text-gray-700">Lien envoyé :</span>
+                <br />
+                {`${APP_URLS.getBaseUrl()}/enterprise?entity=${sendLinkEntity.id}`}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button variant="outline" onClick={() => setSendLinkEntity(null)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                if (sendLinkEntity) {
+                  sendLinkMutation.mutate({ to: linkRecipient.trim(), entity: sendLinkEntity })
+                }
+              }}
+              disabled={sendLinkMutation.isPending || !linkRecipient.trim()}
+            >
+              {sendLinkMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Envoi...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }
