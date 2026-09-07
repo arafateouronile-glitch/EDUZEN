@@ -103,17 +103,44 @@ export function GestionEspaceEntreprise({
     enabled: enrolledStudentIds.length > 0,
   })
 
-  // Grouper par entité : entityId -> { id, name, contactEmail, contactName, enrollments }
+  // Entités ayant réservé un effectif prévisionnel sur cette session, sans apprenants nominatifs
+  const { data: sessionEntityReservations } = useQuery({
+    queryKey: ['session-entity-reservations', sessionData?.id],
+    queryFn: async () => {
+      if (!sessionData?.id) return []
+      const { data, error } = await supabase
+        .from('session_entity_reservations')
+        .select('entity_id, expected_count, external_entities(id, name, contact_email, email, contact_first_name, contact_last_name)')
+        .eq('session_id', sessionData.id)
+      if (error) throw error
+      return (data || []) as Array<{
+        entity_id: string
+        expected_count: number
+        external_entities: {
+          id: string
+          name: string
+          contact_email: string | null
+          email: string | null
+          contact_first_name: string | null
+          contact_last_name: string | null
+        } | null
+      }>
+    },
+    enabled: !!sessionData?.id,
+  })
+
+  // Grouper par entité : entityId -> { id, name, contactEmail, contactName, expectedCount, enrollments }
   const entitiesWithEnrollments = useMemo(() => {
     type EntityGroup = {
       id: string
       name: string
       contactEmail: string
       contactName: string
+      expectedCount: number
       enrollments: EnrollmentWithRelations[]
     }
     const byEntityId = new Map<string, EntityGroup>()
-    const studentToEntity = new Map<string | null, Omit<EntityGroup, 'enrollments'>>()
+    const studentToEntity = new Map<string | null, Omit<EntityGroup, 'enrollments' | 'expectedCount'>>()
     studentEntitiesWithEntity?.forEach((se) => {
       const ent = se.external_entities
       if (ent) studentToEntity.set(se.student_id, {
@@ -134,13 +161,32 @@ export function GestionEspaceEntreprise({
           name: displayName,
           contactEmail: entity?.contactEmail ?? '',
           contactName: entity?.contactName ?? '',
+          expectedCount: 0,
           enrollments: [],
         })
       }
       byEntityId.get(entityId)!.enrollments.push(enrollment)
     })
+    // Fusionner les réservations d'effectif prévisionnel (entités sans apprenants nominatifs)
+    sessionEntityReservations?.forEach((res) => {
+      const ent = res.external_entities
+      if (!ent) return
+      const existing = byEntityId.get(ent.id)
+      if (existing) {
+        existing.expectedCount = res.expected_count
+      } else {
+        byEntityId.set(ent.id, {
+          id: ent.id,
+          name: ent.name,
+          contactEmail: ent.contact_email || ent.email || '',
+          contactName: [ent.contact_first_name, ent.contact_last_name].filter(Boolean).join(' '),
+          expectedCount: res.expected_count,
+          enrollments: [],
+        })
+      }
+    })
     return Array.from(byEntityId.values())
-  }, [enrollments, studentEntitiesWithEntity])
+  }, [enrollments, studentEntitiesWithEntity, sessionEntityReservations])
 
   // Envoyer le lien d'accès à l'espace entreprise au contact de l'entité
   const sendLinkMutation = useMutation({
@@ -227,7 +273,8 @@ export function GestionEspaceEntreprise({
               </div>
               <p className="text-gray-900 font-bold text-lg mb-1">Aucune entreprise identifiée</p>
               <p className="text-gray-500 text-sm text-center max-w-sm">
-                Les entreprises seront listées ici dès qu'elles seront associées aux apprenants inscrits.
+                Les entreprises seront listées ici dès qu'elles seront associées aux apprenants inscrits
+                ou qu'un effectif prévisionnel sera réservé pour elles.
               </p>
             </div>
           ) : (
@@ -246,11 +293,26 @@ export function GestionEspaceEntreprise({
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 text-lg">{entity.name}</p>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                      <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-gray-500">
                         <Users className="h-4 w-4" />
-                        <span>
-                          {entity.enrollments.length} apprenant{entity.enrollments.length > 1 ? 's' : ''}
-                        </span>
+                        {entity.enrollments.length > 0 ? (
+                          <span>
+                            {entity.enrollments.length} apprenant{entity.enrollments.length > 1 ? 's' : ''} inscrit{entity.enrollments.length > 1 ? 's' : ''}
+                            {entity.expectedCount > 0 && ` · ${entity.expectedCount} prévu${entity.expectedCount > 1 ? 's' : ''}`}
+                          </span>
+                        ) : (
+                          <span>
+                            {entity.expectedCount} apprenant{entity.expectedCount > 1 ? 's' : ''} prévu{entity.expectedCount > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {entity.enrollments.length === 0 && entity.expectedCount > 0 && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-semibold border-brand-blue/20 text-brand-blue bg-brand-blue/5"
+                          >
+                            Effectif prévisionnel
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
