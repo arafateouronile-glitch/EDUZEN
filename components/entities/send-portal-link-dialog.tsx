@@ -69,10 +69,7 @@ export function SendPortalLinkDialog({
   const sendMutation = useMutation({
     mutationFn: async (recipients: string[]) => {
       const greeting = contactName ? `Bonjour ${contactName},` : 'Bonjour,'
-      await emailService.sendEmail({
-        to: recipients,
-        subject: `Votre espace entreprise — ${entityName}`,
-        html: `
+      const html = `
           <p>${greeting}</p>
           <p>Vous pouvez désormais suivre en ligne les formations de vos collaborateurs :
           sessions, apprenants inscrits, devis et factures.</p>
@@ -82,9 +79,18 @@ export function SendPortalLinkDialog({
             </a>
           </p>
           <p style="font-size:13px;color:#666;">Ou copiez ce lien dans votre navigateur :<br />${portalUrl}</p>
-        `,
-        text: `${greeting}\n\nAccédez à votre espace entreprise (sessions, apprenants, devis et factures) : ${portalUrl}`,
-      })
+        `
+      const text = `${greeting}\n\nAccédez à votre espace entreprise (sessions, apprenants, devis et factures) : ${portalUrl}`
+      // L'API /api/email/send n'accepte qu'un destinataire par appel : un envoi
+      // séparé par adresse (chaque contact reçoit son propre email).
+      for (const recipient of recipients) {
+        await emailService.sendEmail({
+          to: recipient,
+          subject: `Votre espace entreprise — ${entityName}`,
+          html,
+          text,
+        })
+      }
       return recipients
     },
     onSuccess: (recipients) => {
