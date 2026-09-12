@@ -41,13 +41,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 404 })
     }
 
-    const { data: orgData } = await supabase
-      .from('organizations')
-      .select('name')
-      .eq('id', orgId)
-      .single()
+    const adminClient = createAdminClient()
 
-    const orgName = orgData?.name ?? 'votre organisme'
+    // Idempotence : claim atomique en base — seul l'appel dont l'UPDATE affecte une ligne
+    // continue. Le provisioning peut être déclenché plusieurs fois en concurrence (inscription
+    // immédiate + retour depuis /dashboard/onboarding, remounts React en dev, etc.) ; un simple
+    // "lire le flag puis l'écrire" laisse une fenêtre où deux appels passent le contrôle avant
+    // que l'un des deux ait fini d'écrire — vécu en pratique (templates dupliqués, email envoyé 2x).
+    const { data: claimedOrg, error: claimError } = await adminClient
+      .from('organizations')
+      .update({ post_signup_completed_at: new Date().toISOString() })
+      .eq('id', orgId)
+      .is('post_signup_completed_at', null)
+      .select('name')
+      .maybeSingle()
+
+    if (claimError) {
+      logger.error('[post-signup] Claim error:', claimError)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    }
+
+    if (!claimedOrg) {
+      return NextResponse.json({ success: true, alreadyCompleted: true })
+    }
+
+    const orgName = claimedOrg.name ?? 'votre organisme'
     const prenom = firstName(full_name, email ?? user.email ?? null)
     const recipient = email ?? user.email ?? ''
 
@@ -66,7 +84,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Seeder les modèles AVANT de répondre — Vercel coupe la fonction dès le return
-    const adminClient = createAdminClient()
     const seedResult = await seedDefaultTemplatesForOrg(adminClient, orgId)
       .catch(err => { logger.error('[post-signup] Error seeding templates:', err); return null })
     logger.info('[post-signup] Templates seeded', { orgId, created: seedResult?.created ?? 0 })

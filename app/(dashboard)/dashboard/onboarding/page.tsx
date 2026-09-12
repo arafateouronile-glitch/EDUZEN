@@ -1,12 +1,24 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { TrialOnboardingWizard } from '@/components/onboarding/trial-onboarding-wizard'
 import { Loader2 } from 'lucide-react'
 
 function OnboardingContent() {
   const searchParams = useSearchParams()
+
+  // Rejoue le provisioning post-inscription (modèles de documents, email de bienvenue, pixel TikTok)
+  // une fois qu'une session réelle existe — utile quand l'appel initial (juste après signUp) a
+  // échoué faute de session, notamment quand la confirmation email est requise. L'API est censée
+  // être idempotente, mais on évite quand même le double appel évident (ex. React Strict Mode
+  // en dev invoque les effects deux fois au montage).
+  const postSignupFired = useRef(false)
+  useEffect(() => {
+    if (postSignupFired.current) return
+    postSignupFired.current = true
+    fetch('/api/users/post-signup', { method: 'POST' }).catch(() => {})
+  }, [])
 
   // Récupérer l'étape depuis les query params (pour reprendre où on en était)
   const stepParam = searchParams.get('step')

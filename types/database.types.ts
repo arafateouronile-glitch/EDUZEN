@@ -13182,6 +13182,7 @@ export type Database = {
           nda_number: string | null
           organization_type: string | null
           phone: string | null
+          post_signup_completed_at: string | null
           qualiopi_certificate_url: string | null
           settings: Json | null
           signature_url: string | null
@@ -13209,6 +13210,7 @@ export type Database = {
           nda_number?: string | null
           organization_type?: string | null
           phone?: string | null
+          post_signup_completed_at?: string | null
           qualiopi_certificate_url?: string | null
           settings?: Json | null
           signature_url?: string | null
@@ -13236,6 +13238,7 @@ export type Database = {
           nda_number?: string | null
           organization_type?: string | null
           phone?: string | null
+          post_signup_completed_at?: string | null
           qualiopi_certificate_url?: string | null
           settings?: Json | null
           signature_url?: string | null

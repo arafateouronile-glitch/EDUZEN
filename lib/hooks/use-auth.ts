@@ -316,6 +316,13 @@ export function useAuth() {
       }
       if (!authData.user) throw new Error('Erreur lors de la création du compte')
 
+      // Anti-énumération Supabase : si l'email correspond à un compte déjà confirmé,
+      // signUp() ne renvoie pas d'erreur mais un faux utilisateur avec identities: [] et session: null
+      // (aucun nouvel email de confirmation n'est réellement envoyé pour ce compte existant)
+      if (!authData.session && authData.user.identities && authData.user.identities.length === 0) {
+        throw new Error('Cette adresse email est déjà associée à un compte. Essayez de vous connecter ou de réinitialiser votre mot de passe.')
+      }
+
       // Avec Supabase, signUp peut retourner null pour la session si l'email nécessite une confirmation
       // On essaie de récupérer la session de plusieurs façons
       let currentSession: { user: User } | null = authData.session
@@ -606,10 +613,9 @@ export function useAuth() {
         queryClient.invalidateQueries({ queryKey: ['user', authData.user.id] })
       }
 
-      // Attendre la fin du post-signup (seeding templates) avant de naviguer
-      await fetch('/api/users/post-signup', { method: 'POST' }).catch(() => {})
-
       if (authUser) {
+        // Attendre la fin du post-signup (seeding templates) avant de naviguer
+        await fetch('/api/users/post-signup', { method: 'POST' }).catch(() => {})
         router.push('/dashboard/onboarding')
       } else {
         const email = authData.user?.email ? `?email=${encodeURIComponent(authData.user.email)}` : ''
