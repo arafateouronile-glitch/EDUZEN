@@ -16,6 +16,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { logger } from '@/lib/utils/logger'
+import { ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES } from '@/lib/services/electronic-attendance.service'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -232,7 +233,7 @@ export async function GET(request: NextRequest) {
             .from('enrollments')
             .select('student_id, students(id, first_name, last_name, email)')
             .eq('session_id', session.id)
-            .in('status', ['confirmed', 'pending'])
+            .in('status', ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES)
 
           const students = (
             enrollments as Array<{

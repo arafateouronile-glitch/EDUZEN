@@ -33,6 +33,15 @@ type AttendanceSessionWithSessionName = { session?: { name?: string } | null; ti
 /** Request avec access_token (généré côté service) */
 type RequestWithAccessToken = ElectronicAttendanceRequest & { access_token?: string }
 
+/**
+ * Statuts d'inscription pour lesquels un apprenant doit apparaître sur les
+ * feuilles d'émargement (création, envoi par email, lien public/QR, cron
+ * d'auto-lancement). Exclut 'cancelled' et 'failed' — inscriptions qui n'ont
+ * jamais eu lieu ou ont été annulées. Voir aussi
+ * app/api/cron/auto-launch-attendance/route.ts qui importe cette constante.
+ */
+export const ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES = ['pending', 'confirmed', 'completed']
+
 export interface CreateAttendanceSessionParams {
   sessionId: string
   organizationId: string
@@ -79,6 +88,42 @@ export class ElectronicAttendanceService {
   }
 
   /**
+   * Récupère les apprenants éligibles à l'émargement pour une session (inscrits
+   * avec un statut de ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES), avec repli
+   * optionnel sur un sous-ensemble d'IDs. Centralise le filtre utilisé à la
+   * création, au lancement, à l'envoi sélectif et à la resynchronisation du
+   * lien public — pour ne plus avoir à le dupliquer (et donc à le désynchroniser).
+   */
+  private async getEligibleEnrolledStudents(
+    sessionId: string,
+    studentIds?: string[]
+  ): Promise<{ students: StudentRef[]; skippedNoEmail: Array<{ id: string; name: string }> }> {
+    let query = this.supabase
+      .from('enrollments')
+      .select('student_id, students(id, first_name, last_name, email)')
+      .eq('session_id', sessionId)
+      .in('status', ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES)
+
+    if (studentIds) {
+      query = query.in('student_id', studentIds)
+    }
+
+    const { data: enrollments, error } = await query
+    if (error) throw error
+
+    const enrolledStudents = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
+      .map((e) => e.students)
+      .filter((s): s is StudentRef => !!s)
+
+    const students = enrolledStudents.filter((s) => !!s.email)
+    const skippedNoEmail = enrolledStudents
+      .filter((s) => !s.email)
+      .map((s) => ({ id: s.id, name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() }))
+
+    return { students, skippedNoEmail }
+  }
+
+  /**
    * Crée une session d'émargement électronique
    */
   async createAttendanceSession(params: CreateAttendanceSessionParams) {
@@ -89,17 +134,7 @@ export class ElectronicAttendanceService {
       }
 
       // Récupérer les étudiants inscrits à la session
-      const { data: enrollments, error: enrollmentsError } = await this.supabase
-        .from('enrollments')
-        .select('student_id, students(id, first_name, last_name, email)')
-        .eq('session_id', params.sessionId)
-        .in('status', ['confirmed', 'pending'])
-
-      if (enrollmentsError) throw enrollmentsError
-
-      const students = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
-        .map((e) => e.students)
-        .filter((s): s is StudentRef => !!s && !!s.email)
+      const { students } = await this.getEligibleEnrolledStudents(params.sessionId)
 
       // Générer un QR code si activé
       let qrCodeData: string | null = null
@@ -201,24 +236,9 @@ export class ElectronicAttendanceService {
       }
 
       // Récupérer les étudiants inscrits
-      const { data: enrollments, error: enrollmentsError } = await this.supabase
-        .from('enrollments')
-        .select('student_id, students(id, first_name, last_name, email)')
-        .eq('session_id', attendanceSession.session_id)
-        .in('status', ['confirmed', 'pending'])
-
-      if (enrollmentsError) throw enrollmentsError
-
-      const enrolledStudents = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
-        .map((e) => e.students)
-        .filter((s): s is StudentRef => !!s)
-
-      const students = enrolledStudents.filter((s) => !!s.email)
       // Inscrits sans email : ne recevront jamais la demande, on le signale
       // à l'appelant au lieu de les exclure en silence.
-      const skippedNoEmail = enrolledStudents
-        .filter((s) => !s.email)
-        .map((s) => ({ id: s.id, name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() }))
+      const { students, skippedNoEmail } = await this.getEligibleEnrolledStudents(attendanceSession.session_id)
 
       const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
 
@@ -620,21 +640,9 @@ export class ElectronicAttendanceService {
       let skippedNoEmail: Array<{ id: string; name: string }> = []
 
       if (missingIds.length > 0) {
-        const { data: enrollments } = await this.supabase
-          .from('enrollments')
-          .select('student_id, students(id, first_name, last_name, email)')
-          .eq('session_id', attendanceSession.session_id)
-          .in('student_id', missingIds)
-          .in('status', ['confirmed', 'pending'])
-
-        const enrolledStudents = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
-          .map((e) => e.students)
-          .filter((s): s is StudentRef => !!s)
-
-        const students = enrolledStudents.filter((s) => !!s.email)
-        skippedNoEmail = enrolledStudents
-          .filter((s) => !s.email)
-          .map((s) => ({ id: s.id, name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() }))
+        const eligible = await this.getEligibleEnrolledStudents(attendanceSession.session_id, missingIds)
+        const students = eligible.students
+        skippedNoEmail = eligible.skippedNoEmail
 
         const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
         const toInsert = students.map((student) => ({
@@ -712,6 +720,10 @@ export class ElectronicAttendanceService {
 
   /**
    * Active/désactive le lien public et met à jour ses options.
+   * À l'activation, resynchronise les apprenants inscrits depuis la création
+   * de la session d'émargement (ou la dernière activation) : sans ça, le lien
+   * public reste figé sur le snapshot du jour de sa création et un apprenant
+   * inscrit après coup n'apparaît jamais sur la feuille d'émargement.
    */
   async updatePublicLink(
     attendanceSessionId: string,
@@ -728,14 +740,84 @@ export class ElectronicAttendanceService {
         .from('electronic_attendance_sessions')
         .update(update as ElectronicAttendanceSessionUpdate)
         .eq('id', attendanceSessionId)
-        .select('id, public_emargement_token, public_emargement_active, public_emargement_expires_at')
+        .select('id, session_id, organization_id, public_emargement_token, public_emargement_active, public_emargement_expires_at')
         .single()
 
       if (error) throw error
+
+      if (options.active && data.session_id && data.organization_id) {
+        await this.syncMissingAttendanceRequests(attendanceSessionId, data.session_id, data.organization_id)
+      }
+
       return data
     } catch (error) {
       if (error instanceof AppError) throw error
       throw errorHandler.handleError(error, { operation: 'updatePublicLink', attendanceSessionId })
+    }
+  }
+
+  /**
+   * Ajoute aux demandes d'émargement les apprenants éligibles inscrits sur la
+   * session mais absents de electronic_attendance_requests (inscrits après la
+   * création de la session d'émargement, ou dont le statut/email ne
+   * satisfaisait pas encore les critères d'éligibilité). Non-bloquant : une
+   * erreur ici ne doit jamais empêcher l'activation du lien public.
+   */
+  private async syncMissingAttendanceRequests(
+    attendanceSessionId: string,
+    sessionId: string,
+    organizationId: string
+  ): Promise<number> {
+    try {
+      const { data: existingRequests } = await this.supabase
+        .from('electronic_attendance_requests')
+        .select('student_id')
+        .eq('attendance_session_id', attendanceSessionId)
+
+      const existingIds = new Set(
+        (existingRequests ?? [])
+          .map((r) => r.student_id)
+          .filter((id): id is string => !!id)
+      )
+
+      const { students } = await this.getEligibleEnrolledStudents(sessionId)
+      const missing = students.filter((s) => !existingIds.has(s.id))
+
+      if (missing.length === 0) return 0
+
+      const newRequests = missing.map((student) => ({
+        attendance_session_id: attendanceSessionId,
+        student_id: student.id,
+        student_name: `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
+        student_email: student.email!,
+        status: 'pending' as const,
+        organization_id: organizationId,
+        signature_token: crypto.randomUUID().replace(/-/g, ''),
+      }))
+
+      const { error: insertError } = await this.supabase
+        .from('electronic_attendance_requests')
+        .insert(newRequests as ElectronicAttendanceRequestInsert[])
+
+      if (insertError) {
+        logger.error('Échec de la resynchronisation des inscrits sur le lien public', insertError, { attendanceSessionId })
+        return 0
+      }
+
+      // Le compteur "X/Y" du lien public ne doit pas rester sous-évalué après l'ajout.
+      await this.supabase
+        .from('electronic_attendance_sessions')
+        .update({ total_expected: existingIds.size + missing.length } as ElectronicAttendanceSessionUpdate)
+        .eq('id', attendanceSessionId)
+
+      logger.info('Inscrits manquants resynchronisés sur le lien public', {
+        attendanceSessionId,
+        added: missing.length,
+      })
+      return missing.length
+    } catch (error) {
+      logger.error('Erreur resynchronisation lien public', error, { attendanceSessionId })
+      return 0
     }
   }
 

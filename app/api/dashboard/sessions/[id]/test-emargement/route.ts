@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
+import { ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES } from '@/lib/services/electronic-attendance.service'
 import type { Database } from '@/types/database.types'
 
 type AttendanceRequestInsert = Database['public']['Tables']['electronic_attendance_requests']['Insert']
@@ -110,7 +111,7 @@ export async function POST(
       .from('enrollments')
       .select('student_id, students(id, first_name, last_name, email)')
       .eq('session_id', sessionId)
-      .in('status', ['confirmed', 'pending'])
+      .in('status', ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES)
 
     type StudentRow = { id: string; first_name: string; last_name: string; email: string }
     const students = (
