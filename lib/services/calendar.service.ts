@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { logger } from '@/lib/utils/logger'
+import { isVisibleNow } from '@/lib/utils/teacher-visibility'
 
 // Types
 export type CalendarTodo = {
@@ -95,6 +96,11 @@ export type CalendarEvent = {
   linked_id: string | null
   location?: string | null
   formation_name?: string | null
+  /**
+   * Session parente (utile pour la navigation quand event_id désigne une séance
+   * — session_slots — et non la session elle-même, cf. mapSlotToEvent).
+   */
+  session_id?: string | null
 }
 
 export type CreateTodoInput = {
@@ -426,11 +432,15 @@ export class CalendarService {
       .maybeSingle()
 
     if (userData?.role === 'teacher') {
-      const { data: teacherSessions } = await this.supabase
+      const { data: teacherSessionsRaw } = await this.supabase
         .from('session_teachers')
-        .select('session_id')
+        .select('session_id, visibility_date')
         .eq('teacher_id', userId)
-      const sessionIds = (teacherSessions || []).map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
+      const teacherSessions = teacherSessionsRaw as { session_id: string | null; visibility_date: string | null }[] | null
+      const sessionIds = (teacherSessions || [])
+        .filter((st) => isVisibleNow(st.visibility_date))
+        .map((st) => st.session_id)
+        .filter((id): id is string => id != null)
       const allTodos = await this.getTodos(organizationId, todosFilter)
       const filtered = sessionIds.length > 0
         ? allTodos.filter((t) => !t.linked_session_id || sessionIds.includes(t.linked_session_id))
@@ -487,12 +497,69 @@ export class CalendarService {
       end_time: session.end_time,
       all_day: false,
       status: session.status || '',
-      color: '#10B981',
+      color: '#274472',
       category: 'session',
       priority: 'medium',
       linked_id: session.formation_id,
       location: session.location || null,
       formation_name: session.formations?.name || null,
+      session_id: session.id,
+    }
+  }
+
+  /**
+   * Construit un événement calendrier pour une séance (session_slots) précise,
+   * quand une session a été découpée par intervenant (cf. onglet "Intervenants").
+   * `event_id` identifie la séance (unique) ; `session_id` porte la session
+   * parente pour la navigation ("voir la session").
+   */
+  private mapSlotToEvent(
+    slot: {
+      id: string
+      date: string
+      start_time: string | null
+      end_time: string | null
+      time_slot: string | null
+      location: string | null
+    },
+    session: {
+      id: string
+      name: string | null
+      formation_id: string | null
+      status: string | null
+      formations?: { name?: string | null } | null
+    }
+  ): CalendarEvent {
+    const descriptionParts: string[] = []
+    if (slot.start_time) {
+      const timeStr = slot.start_time.slice(0, 5)
+      const endTimeStr = slot.end_time ? slot.end_time.slice(0, 5) : null
+      descriptionParts.push(endTimeStr ? `🕐 ${timeStr} - ${endTimeStr}` : `🕐 ${timeStr}`)
+    }
+    const location = slot.location || null
+    if (location) descriptionParts.push(`📍 ${location}`)
+    if (session.formations?.name) descriptionParts.push(`📚 ${session.formations.name}`)
+    const slotLabel =
+      slot.time_slot === 'morning' ? 'Matin' : slot.time_slot === 'afternoon' ? 'Après-midi' : null
+
+    return {
+      event_id: slot.id,
+      event_type: 'session',
+      title: slotLabel ? `${session.name || ''} — ${slotLabel}` : session.name || '',
+      description: descriptionParts.length > 0 ? descriptionParts.join(' • ') : null,
+      start_date: slot.date,
+      start_time: slot.start_time,
+      end_date: slot.date,
+      end_time: slot.end_time,
+      all_day: false,
+      status: session.status || '',
+      color: '#274472',
+      category: 'session',
+      priority: 'medium',
+      linked_id: session.formation_id,
+      location,
+      formation_name: session.formations?.name || null,
+      session_id: session.id,
     }
   }
 
@@ -523,12 +590,21 @@ export class CalendarService {
         .eq('id', userId)
         .maybeSingle()
       if (userData?.role === 'teacher') {
-        const { data: teacherSessions } = await this.supabase
+        const { data: teacherSessionsRaw } = await this.supabase
           .from('session_teachers')
-          .select('session_id')
+          .select('session_id, visibility_date')
           .eq('teacher_id', userId)
-        let sessionIds: string[] = (teacherSessions || []).map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
-        if (sessionIds.length === 0) {
+        const teacherSessions = teacherSessionsRaw as { session_id: string | null; visibility_date: string | null }[] | null
+        // Filtre visibility_date sur la liste, mais le déclenchement du repli
+        // ci-dessous teste la longueur BRUTE (teacherSessions), jamais celle
+        // déjà filtrée : sinon un formateur dont l'unique session a une date
+        // de visibilité future déclencherait à tort le repli legacy
+        // sessions.teacher_id et verrait sa session malgré tout.
+        let sessionIds: string[] = (teacherSessions || [])
+          .filter((st) => isVisibleNow(st.visibility_date))
+          .map((st) => st.session_id)
+          .filter((id): id is string => id != null)
+        if (!teacherSessions || teacherSessions.length === 0) {
           const { data: byTeacher } = await this.supabase
             .from('sessions')
             .select('id')
@@ -541,9 +617,77 @@ export class CalendarService {
             .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations(id, name, organization_id)')
             .in('id', sessionIds)
           if (error) throw error
-          sessions = (sessionsData || []).filter(
+          const orgSessions = (sessionsData || []).filter(
             (s: SessionRow) => s.formations?.organization_id === organizationId
           )
+
+          // Une session peut avoir été "découpée" par intervenant (onglet
+          // Intervenants → séances cochées, cf. session_slots.teacher_id).
+          // Dans ce cas on affiche uniquement les séances de CE formateur ;
+          // sinon (aucune séance assignée à personne) on garde le bloc
+          // "session entière" historique.
+          const { data: allSlots } = await this.supabase
+            .from('session_slots')
+            .select('id, session_id, date, start_time, end_time, time_slot, location, teacher_id')
+            .in('session_id', orgSessions.map((s) => s.id))
+
+          const slotsBySession = new Map<string, NonNullable<typeof allSlots>>()
+          for (const slot of allSlots || []) {
+            if (!slot.session_id) continue
+            const arr = slotsBySession.get(slot.session_id) ?? []
+            arr.push(slot)
+            slotsBySession.set(slot.session_id, arr)
+          }
+
+          const rangeStartT = new Date(startDate)
+          const rangeEndT = new Date(endDate)
+          const slotEvents: CalendarEvent[] = []
+
+          sessions = orgSessions.filter((session) => {
+            const sessionSlotsList = slotsBySession.get(session.id) ?? []
+            // "Découpée" seulement si l'assignation par séance est réellement
+            // significative : plusieurs intervenants différents, ou une partie
+            // des séances est sans intervenant (narrowing volontaire depuis
+            // l'onglet Intervenants). Le cas par défaut — génération auto des
+            // séances, toutes affectées au même formateur principal — reste
+            // au comportement historique (bloc "session entière") pour ne pas
+            // fragmenter le calendrier de tous les formateurs existants.
+            const assignedSlots = sessionSlotsList.filter((s) => !!s.teacher_id)
+            const distinctTeacherIds = new Set(assignedSlots.map((s) => s.teacher_id))
+            const isFullyCoveredBySingleTeacher =
+              sessionSlotsList.length > 0 &&
+              assignedSlots.length === sessionSlotsList.length &&
+              distinctTeacherIds.size === 1
+            const isSliced = assignedSlots.length > 0 && !isFullyCoveredBySingleTeacher
+            if (!isSliced) return true // comportement historique : bloc session entière
+
+            for (const slot of sessionSlotsList) {
+              if (slot.teacher_id !== userId || !slot.date) continue
+              const slotDate = new Date(slot.date)
+              if (slotDate >= rangeStartT && slotDate <= rangeEndT) {
+                slotEvents.push(this.mapSlotToEvent(slot, session))
+              }
+            }
+            return false // exclue du bloc "session entière"
+          })
+
+          // Les séances découpées sont retournées directement ; les sessions
+          // non découpées poursuivent le chemin habituel plus bas (filtre de
+          // recouvrement de dates + mapSessionToEvent).
+          if (slotEvents.length > 0) {
+            const overlapping = sessions.filter((session) => {
+              if (!session.start_date) return false
+              const sessionStart = new Date(session.start_date)
+              const sessionEnd = session.end_date ? new Date(session.end_date) : null
+              return (
+                (sessionStart >= rangeStartT && sessionStart <= rangeEndT) ||
+                (sessionEnd && sessionEnd >= rangeStartT && sessionEnd <= rangeEndT) ||
+                (sessionStart <= rangeStartT && (!sessionEnd || sessionEnd >= rangeStartT)) ||
+                (sessionStart <= rangeStartT && sessionEnd && sessionEnd >= rangeEndT)
+              )
+            })
+            return [...slotEvents, ...overlapping.map((s) => this.mapSessionToEvent(s))]
+          }
         }
       } else {
         const { data: sessionsData, error } = await this.supabase
@@ -595,12 +739,17 @@ export class CalendarService {
         .eq('id', userId)
         .maybeSingle()
       if (userData?.role === 'teacher') {
-        const { data: teacherSessions } = await this.supabase
+        const { data: teacherSessionsRaw } = await this.supabase
           .from('session_teachers')
-          .select('session_id')
+          .select('session_id, visibility_date')
           .eq('teacher_id', userId)
+        const teacherSessions = teacherSessionsRaw as { session_id: string | null; visibility_date: string | null }[] | null
         if (!teacherSessions?.length) return []
-        const sessionIds = teacherSessions.map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
+        const sessionIds = teacherSessions
+          .filter((st) => isVisibleNow(st.visibility_date))
+          .map((st) => st.session_id)
+          .filter((id): id is string => id != null)
+        if (sessionIds.length === 0) return []
         const { data: sessionsData } = await this.supabase
           .from('sessions')
           .select('formation_id')

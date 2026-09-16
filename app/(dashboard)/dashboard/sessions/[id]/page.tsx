@@ -717,6 +717,7 @@ export default function SessionDetailPage() {
                     onFormDataChange={setFormData}
                     users={users}
                     sessionId={sessionId}
+                    sessionSlots={sessionSlots}
                   />
                 </Suspense>
               )}
