@@ -1405,9 +1405,14 @@ export function useSessionDetail(sessionId: string) {
           const organizationName = organization?.name || 'Organisation'
           
           const emailPromises = studentsToNotify.map(async (student) => {
-            // Générer le lien vers l'évaluation dans l'espace personnel
+            // Générer le lien vers l'évaluation dans l'espace personnel — passe
+            // par /learner/access/[id] pour établir la session apprenant (cookie +
+            // secureSessionStorage) avant de renvoyer sur /learner/evaluations.
+            // Un lien direct sans session laisse l'apprenant bloqué sur un spinner
+            // indéfini (aucune redirection réelle n'est déclenchée). Même pattern
+            // que app/api/cron/send-cold-evaluations/route.ts.
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-            const evaluationLink = `${baseUrl}/learner/evaluations`
+            const evaluationLink = `${baseUrl}/learner/access/${student.studentId}?redirect=/learner/evaluations`
             
             const subject = `Nouvelle évaluation : ${evaluationForm.subject}`
             const emailBody = `
