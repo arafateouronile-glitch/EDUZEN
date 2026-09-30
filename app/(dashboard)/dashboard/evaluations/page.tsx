@@ -186,6 +186,40 @@ export default function EvaluationsPage() {
     enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
+  // Étudiants inscrits (actifs) à la session choisie dans le formulaire de
+  // création/édition — permet de filtrer le menu "Étudiant" par session et
+  // d'activer le mode collectif (un grade par apprenant) quand aucun étudiant
+  // précis n'est sélectionné. Indépendant de `students` (liste org/enseignant
+  // utilisée quand aucune session n'est choisie).
+  const modalSessionId = formData.session_id
+  const { data: modalSessionStudents } = useQuery({
+    queryKey: ['session-students-for-evaluation-modal', modalSessionId],
+    queryFn: async () => {
+      if (!modalSessionId) return []
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('student_id, students(id, first_name, last_name, student_number, status)')
+        .eq('session_id', modalSessionId)
+        .eq('status', 'active')
+      if (error) throw error
+
+      const uniqueStudents = new Map<string, { id: string; first_name?: string; last_name?: string; student_number?: string }>()
+      ;(data ?? []).forEach((e: { student_id: string | null; students: { id: string; first_name: string; last_name: string; student_number: string; status: string | null } | null }) => {
+        const student = e.students
+        if (student && student.status === 'active' && !uniqueStudents.has(student.id)) {
+          uniqueStudents.set(student.id, {
+            id: student.id,
+            first_name: student.first_name,
+            last_name: student.last_name,
+            student_number: student.student_number,
+          })
+        }
+      })
+      return Array.from(uniqueStudents.values()).sort((a, b) => (a.last_name || '').localeCompare(b.last_name || ''))
+    },
+    enabled: !!modalSessionId && showCreateModal,
+  })
+
   // Récupérer les évaluations
   // Pour les enseignants, filtrer uniquement les évaluations des sessions assignées
   const { data: evaluations, isLoading } = useQuery({
@@ -300,6 +334,39 @@ export default function EvaluationsPage() {
     onError: (error: Error) => addToast({ type: 'error', title: 'Erreur', description: error.message })
   })
 
+  // Évaluation collective : aucun étudiant précis sélectionné mais une session
+  // choisie — crée un grade par apprenant actif inscrit à cette session.
+  const createBulkMutation = useMutation({
+    mutationFn: async (data: EvaluationFormData) => {
+      if (!user?.organization_id) throw new Error('Organization ID manquant')
+      if (!modalSessionStudents || modalSessionStudents.length === 0) {
+        throw new Error('Aucun apprenant actif inscrit à cette session.')
+      }
+      const base = {
+        session_id: data.session_id || null,
+        subject: data.subject,
+        assessment_type: data.assessment_type,
+        max_score: data.max_score ? parseFloat(data.max_score) : null,
+        score: parseFloat(data.score),
+        notes: data.notes || null,
+        graded_at: data.graded_at || new Date().toISOString(),
+        teacher_id: user.id,
+      }
+      return evaluationService.createBulk(
+        user.organization_id,
+        modalSessionStudents.map((s) => ({ ...base, student_id: s.id })) as unknown as Parameters<typeof evaluationService.createBulk>[1]
+      )
+    },
+    onSuccess: async (created) => {
+      setShowCreateModal(false)
+      reset()
+      await queryClient.invalidateQueries({ queryKey: ['evaluations'] })
+      await queryClient.invalidateQueries({ queryKey: ['evaluation-stats'] })
+      addToast({ type: 'success', title: 'Succès', description: `${created?.length || 0} évaluation(s) créée(s).` })
+    },
+    onError: (error: Error) => addToast({ type: 'error', title: 'Erreur', description: error.message })
+  })
+
   const updateMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!editingEvaluation) throw new Error('Aucune évaluation sélectionnée')
@@ -353,10 +420,22 @@ export default function EvaluationsPage() {
 
   const onSubmit = (data: EvaluationFormData) => {
     if (editingEvaluation) {
+      if (!data.student_id) {
+        addToast({ type: 'error', title: 'Erreur', description: 'Sélectionnez un étudiant.' })
+        return
+      }
       updateMutation.mutate(data)
-    } else {
-      createMutation.mutate(data)
+      return
     }
+    if (!data.student_id) {
+      if (!data.session_id) {
+        addToast({ type: 'error', title: 'Erreur', description: 'Sélectionnez un étudiant, ou une session pour créer une évaluation collective.' })
+        return
+      }
+      createBulkMutation.mutate(data)
+      return
+    }
+    createMutation.mutate(data)
   }
 
   const handleExport = async (format: 'csv' | 'xlsx') => {
@@ -824,27 +903,14 @@ export default function EvaluationsPage() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Étudiant *</label>
-                      <select
-                        value={formData.student_id || ''}
-                        onChange={(e) => setValue('student_id', e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
-                        required
-                      >
-                        <option value="">Sélectionner un étudiant</option>
-                        {(students as Array<{ id: string; first_name?: string; last_name?: string; student_number?: string }> | undefined)?.map((student) => (
-                          <option key={student.id} value={student.id}>
-                            {student.first_name} {student.last_name} ({student.student_number})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Session</label>
                       <select
                         value={formData.session_id || ''}
-                        onChange={(e) => setValue('session_id', e.target.value)}
+                        onChange={(e) => {
+                          setValue('session_id', e.target.value)
+                          // La liste d'étudiants change avec la session — repartir d'une sélection vide.
+                          setValue('student_id', '')
+                        }}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
                       >
                         <option value="">Aucune session</option>
@@ -854,6 +920,36 @@ export default function EvaluationsPage() {
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Étudiant {(editingEvaluation || !formData.session_id) && '*'}
+                      </label>
+                      <select
+                        value={formData.student_id || ''}
+                        onChange={(e) => setValue('student_id', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
+                        required={!!editingEvaluation || !formData.session_id}
+                      >
+                        <option value="">
+                          {!editingEvaluation && formData.session_id
+                            ? 'Tous les apprenants de la session (évaluation collective)'
+                            : 'Sélectionner un étudiant'}
+                        </option>
+                        {(
+                          (!editingEvaluation && formData.session_id ? modalSessionStudents : students) as
+                            | Array<{ id: string; first_name?: string; last_name?: string; student_number?: string }>
+                            | undefined
+                        )?.map((student) => (
+                          <option key={student.id} value={student.id}>
+                            {student.first_name} {student.last_name} ({student.student_number})
+                          </option>
+                        ))}
+                      </select>
+                      {!editingEvaluation && formData.session_id && modalSessionStudents?.length === 0 && (
+                        <p className="text-xs text-amber-600">Aucun apprenant actif inscrit à cette session.</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -942,10 +1038,14 @@ export default function EvaluationsPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={createMutation.isPending || updateMutation.isPending}
+                      disabled={createMutation.isPending || createBulkMutation.isPending || updateMutation.isPending}
                       className="shadow-lg shadow-brand-blue/20"
                     >
-                      {editingEvaluation ? 'Mettre à jour' : 'Créer l\'évaluation'}
+                      {editingEvaluation
+                        ? 'Mettre à jour'
+                        : !formData.student_id && formData.session_id
+                          ? `Créer pour ${modalSessionStudents?.length || 0} apprenant(s)`
+                          : 'Créer l\'évaluation'}
                     </Button>
                   </div>
                 </form>

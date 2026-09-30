@@ -172,7 +172,9 @@ export const sessionSchema = z.object({
 
 // Schéma pour la création d'une évaluation
 export const evaluationSchema = z.object({
-  student_id: z.string().min(1, 'L\'étudiant est requis'),
+  // Optionnel : vide + session_id renseigné = évaluation collective (un grade
+  // par apprenant inscrit à la session), validé au niveau du formulaire.
+  student_id: z.string().optional().or(z.literal('')),
   session_id: z.string().optional().or(z.literal('')),
   subject: z.string().min(1, 'Le sujet est requis').max(200, 'Le sujet est trop long'),
   assessment_type: z.enum([
