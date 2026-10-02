@@ -146,11 +146,13 @@ export default function EvaluationsPage() {
         if (!teacherSessionIds || teacherSessionIds.length === 0) return []
         
         // Récupérer les étudiants via les inscriptions dans les sessions de l'enseignant
+        // enrollments.status vaut 'confirmed' / 'pending' / 'cancelled' — il n'y a
+        // pas de valeur 'active' ; seule 'cancelled' doit être exclue.
         const { data: enrollments, error: enrollmentsError } = await supabase
           .from('enrollments')
           .select('student_id, students(id, first_name, last_name, student_number, status)')
           .in('session_id', teacherSessionIds)
-          .eq('status', 'active')
+          .neq('status', 'cancelled')
         
         if (enrollmentsError) throw enrollmentsError
         
@@ -196,11 +198,13 @@ export default function EvaluationsPage() {
     queryKey: ['session-students-for-evaluation-modal', modalSessionId],
     queryFn: async () => {
       if (!modalSessionId) return []
+      // enrollments.status vaut 'confirmed' / 'pending' / 'cancelled' — il n'y a
+      // pas de valeur 'active' ; seule 'cancelled' doit être exclue.
       const { data, error } = await supabase
         .from('enrollments')
         .select('student_id, students(id, first_name, last_name, student_number, status)')
         .eq('session_id', modalSessionId)
-        .eq('status', 'active')
+        .neq('status', 'cancelled')
       if (error) throw error
 
       const uniqueStudents = new Map<string, { id: string; first_name?: string; last_name?: string; student_number?: string }>()
