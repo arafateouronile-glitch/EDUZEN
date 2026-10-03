@@ -353,13 +353,20 @@ export default function EditEvaluationTemplatePage() {
                   className="w-full px-4 py-2 border rounded-lg"
                 >
                   <option value="">Sélectionner...</option>
-                  <option value="pre_formation">Pré-formation</option>
-                  <option value="hot">À chaud</option>
-                  <option value="cold">À froid</option>
-                  <option value="quiz">Quiz</option>
-                  <option value="exam">Examen</option>
-                  <option value="other">Autre</option>
+                  <optgroup label="Satisfaction (étoiles + expression libre)">
+                    <option value="pre_formation">Pré-formation</option>
+                    <option value="hot">À chaud</option>
+                    <option value="cold">À froid</option>
+                  </optgroup>
+                  <optgroup label="Quiz / examen (choix multiples, vrai/faux, etc.)">
+                    <option value="quiz">Quiz</option>
+                    <option value="exam">Examen</option>
+                    <option value="other">Autre</option>
+                  </optgroup>
                 </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pré-formation / À chaud / À froid : évaluations de satisfaction, limitées aux étoiles et à l&apos;expression libre. Pour un quiz à choix multiples, vrai/faux, réponse courte ou numérique, choisissez Quiz, Examen ou Autre.
+                </p>
               </div>
             </div>
 
