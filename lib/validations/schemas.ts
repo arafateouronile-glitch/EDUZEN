@@ -176,6 +176,9 @@ export const evaluationSchema = z.object({
   // par apprenant inscrit à la session), validé au niveau du formulaire.
   student_id: z.string().optional().or(z.literal('')),
   session_id: z.string().optional().or(z.literal('')),
+  // Modèle d'évaluation (quiz) à associer au grade créé, pour que l'apprenant
+  // puisse le passer dans son espace personnel. Optionnel : note manuelle seule sinon.
+  template_id: z.string().optional().or(z.literal('')),
   subject: z.string().min(1, 'Le sujet est requis').max(200, 'Le sujet est trop long'),
   assessment_type: z.enum([
     'pre_formation',

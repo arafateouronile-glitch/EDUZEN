@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { evaluationService } from '@/lib/services/evaluation.service.client'
+import { evaluationTemplateService } from '@/lib/services/evaluation-template.service.client'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
@@ -75,6 +76,7 @@ export default function EvaluationsPage() {
     defaultValues: {
       student_id: '',
       session_id: '',
+      template_id: '',
       subject: '',
       assessment_type: 'quiz',
       score: '',
@@ -134,6 +136,17 @@ export default function EvaluationsPage() {
     enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
+  // Modèles d'évaluation (quiz) disponibles — permet d'associer un quiz à
+  // l'évaluation créée pour que l'apprenant le passe dans son espace personnel.
+  const { data: evaluationTemplates } = useQuery({
+    queryKey: ['evaluation-templates', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return evaluationTemplateService.getTemplates(user.organization_id)
+    },
+    enabled: !!user?.organization_id,
+  })
+
   // Récupérer les étudiants pour les filtres
   // Pour les enseignants, filtrer uniquement les étudiants de leurs sessions assignées
   const { data: students } = useQuery({
@@ -175,15 +188,25 @@ export default function EvaluationsPage() {
         )
       }
       
-      // Pour les admins, récupérer tous les étudiants
-      const { data, error } = await supabase
-        .from('students')
-        .select('id, first_name, last_name, student_number')
-        .eq('organization_id', user.organization_id)
-        .eq('status', 'active')
-        .order('last_name')
-      if (error) throw error
-      return data || []
+      // Pour les admins, récupérer tous les étudiants. PostgREST plafonne
+      // chaque requête à 1000 lignes — sur une organisation avec plusieurs
+      // milliers d'apprenants (triés par nom), la liste s'arrêtait en plein
+      // milieu de l'alphabet. On pagine jusqu'à épuisement.
+      const PAGE_SIZE = 1000
+      const allStudents: Array<{ id: string; first_name: string; last_name: string; student_number: string }> = []
+      for (let offset = 0; ; offset += PAGE_SIZE) {
+        const { data, error } = await supabase
+          .from('students')
+          .select('id, first_name, last_name, student_number')
+          .eq('organization_id', user.organization_id)
+          .eq('status', 'active')
+          .order('last_name')
+          .range(offset, offset + PAGE_SIZE - 1)
+        if (error) throw error
+        allStudents.push(...(data || []))
+        if (!data || data.length < PAGE_SIZE) break
+      }
+      return allStudents
     },
     enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
@@ -318,7 +341,7 @@ export default function EvaluationsPage() {
   const createMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
-      return evaluationService.create(user.organization_id, {
+      const created = await evaluationService.create(user.organization_id, {
         ...data,
         session_id: data.session_id || null,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
@@ -327,6 +350,21 @@ export default function EvaluationsPage() {
         graded_at: data.graded_at || new Date().toISOString(),
         teacher_id: user.id,
       } as unknown as Parameters<typeof evaluationService.create>[1])
+
+      // Lier le modèle d'évaluation au grade pour que l'apprenant voie le quiz
+      if (created?.id && data.template_id) {
+        try {
+          await evaluationTemplateService.createInstance(created.id, data.template_id)
+        } catch (instanceErr) {
+          logger.warn("Impossible de lier le modèle au grade (l'apprenant ne verra pas le quiz)", {
+            gradeId: created.id,
+            templateId: data.template_id,
+            error: instanceErr instanceof Error ? instanceErr.message : String(instanceErr),
+          })
+        }
+      }
+
+      return created
     },
     onSuccess: async () => {
       setShowCreateModal(false)
@@ -356,10 +394,27 @@ export default function EvaluationsPage() {
         graded_at: data.graded_at || new Date().toISOString(),
         teacher_id: user.id,
       }
-      return evaluationService.createBulk(
+      const created = await evaluationService.createBulk(
         user.organization_id,
         modalSessionStudents.map((s) => ({ ...base, student_id: s.id })) as unknown as Parameters<typeof evaluationService.createBulk>[1]
       )
+
+      // Lier le modèle d'évaluation à chaque grade créé pour que les apprenants voient le quiz
+      if (data.template_id) {
+        for (const grade of created ?? []) {
+          try {
+            await evaluationTemplateService.createInstance(grade.id, data.template_id)
+          } catch (instanceErr) {
+            logger.warn("Impossible de lier le modèle à un grade collectif (l'apprenant ne verra pas le quiz)", {
+              gradeId: grade.id,
+              templateId: data.template_id,
+              error: instanceErr instanceof Error ? instanceErr.message : String(instanceErr),
+            })
+          }
+        }
+      }
+
+      return created
     },
     onSuccess: async (created) => {
       setShowCreateModal(false)
@@ -905,6 +960,28 @@ export default function EvaluationsPage() {
 
               <div className="p-6 max-h-[80vh] overflow-y-auto">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {!editingEvaluation && evaluationTemplates && evaluationTemplates.length > 0 && (
+                    <div className="space-y-2 p-4 bg-brand-blue-ghost border border-brand-blue/20 rounded-xl">
+                      <label className="text-sm font-semibold text-gray-900">Modèle d'évaluation</label>
+                      <select
+                        value={formData.template_id || ''}
+                        onChange={(e) => setValue('template_id', e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
+                      >
+                        <option value="">Aucun modèle (note manuelle uniquement)</option>
+                        {evaluationTemplates.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.name}{template.subject ? ` (${template.subject})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-600">
+                        {formData.template_id
+                          ? "L'apprenant pourra passer le quiz associé à ce modèle dans son espace personnel."
+                          : 'Choisir un modèle permet à l\'apprenant de passer le quiz dans son espace personnel.'}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Session</label>
