@@ -341,8 +341,11 @@ export default function EvaluationsPage() {
   const createMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
+      // template_id n'est pas une colonne de `grades` — il ne sert qu'à
+      // l'association séparée evaluation_template_instances ci-dessous.
+      const { template_id, ...gradeData } = data
       const created = await evaluationService.create(user.organization_id, {
-        ...data,
+        ...gradeData,
         session_id: data.session_id || null,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
         score: parseFloat(data.score),
@@ -352,13 +355,13 @@ export default function EvaluationsPage() {
       } as unknown as Parameters<typeof evaluationService.create>[1])
 
       // Lier le modèle d'évaluation au grade pour que l'apprenant voie le quiz
-      if (created?.id && data.template_id) {
+      if (created?.id && template_id) {
         try {
-          await evaluationTemplateService.createInstance(created.id, data.template_id)
+          await evaluationTemplateService.createInstance(created.id, template_id)
         } catch (instanceErr) {
           logger.warn("Impossible de lier le modèle au grade (l'apprenant ne verra pas le quiz)", {
             gradeId: created.id,
-            templateId: data.template_id,
+            templateId: template_id,
             error: instanceErr instanceof Error ? instanceErr.message : String(instanceErr),
           })
         }
@@ -429,8 +432,10 @@ export default function EvaluationsPage() {
   const updateMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!editingEvaluation) throw new Error('Aucune évaluation sélectionnée')
+      // template_id n'est pas une colonne de `grades` (cf. createMutation).
+      const { template_id: _templateId, ...gradeData } = data
       return evaluationService.update(editingEvaluation.id, {
-        ...data,
+        ...gradeData,
         session_id: data.session_id || null,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
         score: parseFloat(data.score),
