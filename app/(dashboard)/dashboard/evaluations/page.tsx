@@ -5,14 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { evaluationService } from '@/lib/services/evaluation.service.client'
 import { evaluationTemplateService } from '@/lib/services/evaluation-template.service.client'
+import { emailService } from '@/lib/services/email.service'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { 
-  Plus, Search, Download, Filter, X, FileCheck, Calendar, 
+  Plus, Search, Download, Filter, X, FileCheck, Calendar,
   User, BookOpen, TrendingUp, Award, BarChart3, Edit, Trash2,
-  CheckCircle, XCircle, Clock, FileText, ArrowRight, Star, Layout
+  CheckCircle, XCircle, Clock, FileText, ArrowRight, Star, Layout, Mail
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, cn } from '@/lib/utils'
@@ -83,6 +84,7 @@ export default function EvaluationsPage() {
       max_score: '',
       notes: '',
       graded_at: new Date().toISOString().split('T')[0],
+      sendByEmail: true,
     },
   })
 
@@ -147,6 +149,21 @@ export default function EvaluationsPage() {
     enabled: !!user?.organization_id,
   })
 
+  // Nom de l'organisation, pour la signature des emails d'évaluation envoyés aux apprenants.
+  const { data: organization } = useQuery({
+    queryKey: ['organization-name', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+      const { data } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', user.organization_id)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!user?.organization_id,
+  })
+
   // Récupérer les étudiants pour les filtres
   // Pour les enseignants, filtrer uniquement les étudiants de leurs sessions assignées
   const { data: students } = useQuery({
@@ -163,15 +180,15 @@ export default function EvaluationsPage() {
         // pas de valeur 'active' ; seule 'cancelled' doit être exclue.
         const { data: enrollments, error: enrollmentsError } = await supabase
           .from('enrollments')
-          .select('student_id, students(id, first_name, last_name, student_number, status)')
+          .select('student_id, students(id, first_name, last_name, student_number, status, email)')
           .in('session_id', teacherSessionIds)
           .neq('status', 'cancelled')
-        
+
         if (enrollmentsError) throw enrollmentsError
-        
+
         // Extraire les étudiants uniques
-        const uniqueStudents = new Map<string, { id: string; first_name?: string; last_name?: string; student_number?: string }>()
-        ;(enrollments ?? []).forEach((e: { student_id: string | null; students: { id: string; first_name: string; last_name: string; student_number: string; status: string | null; } | null }) => {
+        const uniqueStudents = new Map<string, { id: string; first_name?: string; last_name?: string; student_number?: string; email?: string | null }>()
+        ;(enrollments ?? []).forEach((e: { student_id: string | null; students: { id: string; first_name: string; last_name: string; student_number: string; status: string | null; email: string | null } | null }) => {
           const student = e.students
           if (student && student.status === 'active' && !uniqueStudents.has(student.id)) {
             uniqueStudents.set(student.id, {
@@ -179,6 +196,7 @@ export default function EvaluationsPage() {
               first_name: student.first_name,
               last_name: student.last_name,
               student_number: student.student_number,
+              email: student.email,
             })
           }
         })
@@ -193,11 +211,11 @@ export default function EvaluationsPage() {
       // milliers d'apprenants (triés par nom), la liste s'arrêtait en plein
       // milieu de l'alphabet. On pagine jusqu'à épuisement.
       const PAGE_SIZE = 1000
-      const allStudents: Array<{ id: string; first_name: string; last_name: string; student_number: string }> = []
+      const allStudents: Array<{ id: string; first_name: string; last_name: string; student_number: string; email: string | null }> = []
       for (let offset = 0; ; offset += PAGE_SIZE) {
         const { data, error } = await supabase
           .from('students')
-          .select('id, first_name, last_name, student_number')
+          .select('id, first_name, last_name, student_number, email')
           .eq('organization_id', user.organization_id)
           .eq('status', 'active')
           .order('last_name')
@@ -225,13 +243,13 @@ export default function EvaluationsPage() {
       // pas de valeur 'active' ; seule 'cancelled' doit être exclue.
       const { data, error } = await supabase
         .from('enrollments')
-        .select('student_id, students(id, first_name, last_name, student_number, status)')
+        .select('student_id, students(id, first_name, last_name, student_number, status, email)')
         .eq('session_id', modalSessionId)
         .neq('status', 'cancelled')
       if (error) throw error
 
-      const uniqueStudents = new Map<string, { id: string; first_name?: string; last_name?: string; student_number?: string }>()
-      ;(data ?? []).forEach((e: { student_id: string | null; students: { id: string; first_name: string; last_name: string; student_number: string; status: string | null } | null }) => {
+      const uniqueStudents = new Map<string, { id: string; first_name?: string; last_name?: string; student_number?: string; email?: string | null }>()
+      ;(data ?? []).forEach((e: { student_id: string | null; students: { id: string; first_name: string; last_name: string; student_number: string; status: string | null; email: string | null } | null }) => {
         const student = e.students
         if (student && student.status === 'active' && !uniqueStudents.has(student.id)) {
           uniqueStudents.set(student.id, {
@@ -239,6 +257,7 @@ export default function EvaluationsPage() {
             first_name: student.first_name,
             last_name: student.last_name,
             student_number: student.student_number,
+            email: student.email,
           })
         }
       })
@@ -337,13 +356,72 @@ export default function EvaluationsPage() {
     ? Array.from(new Set((evaluations as GradeWithRelations[]).map((e) => e.subject))).sort()
     : []
 
+  // Envoie l'email "nouvelle évaluation" à un apprenant — passe par
+  // /learner/access/[id] pour établir la session apprenant (cookie +
+  // secureSessionStorage) avant de renvoyer sur /learner/evaluations. Un lien
+  // direct sans session laisse l'apprenant bloqué sur un spinner indéfini.
+  // Même pattern que use-session-detail.ts / send-cold-evaluations/route.ts.
+  const sendEvaluationEmail = async (
+    student: { id: string; first_name?: string; last_name?: string; email?: string | null },
+    data: EvaluationFormData
+  ) => {
+    if (!student.email) return
+    const sessionInfo = sessions?.find((s: { id: string }) => s.id === data.session_id) as
+      | { name?: string; formations?: { name?: string } | { name?: string }[] }
+      | undefined
+    const formationInfo = Array.isArray(sessionInfo?.formations) ? sessionInfo?.formations[0] : sessionInfo?.formations
+    const sessionName = sessionInfo?.name || 'Session'
+    const formationName = formationInfo?.name
+    const organizationName = organization?.name || 'Organisation'
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const evaluationLink = `${baseUrl}/learner/access/${student.id}?redirect=/learner/evaluations`
+
+    const emailBody = `
+      <p>Bonjour ${student.first_name || ''} ${student.last_name || ''},</p>
+      <p>Une nouvelle évaluation a été créée pour vous :</p>
+      <ul style="margin: 20px 0; padding-left: 20px;">
+        <li><strong>Sujet :</strong> ${data.subject}</li>
+        <li><strong>Session :</strong> ${sessionName}</li>
+        ${formationName ? `<li><strong>Formation :</strong> ${formationName}</li>` : ''}
+        ${data.score ? `<li><strong>Note :</strong> ${data.score}/${data.max_score || 20}</li>` : ''}
+        ${data.graded_at ? `<li><strong>Date de correction :</strong> ${formatDate(data.graded_at)}</li>` : ''}
+      </ul>
+      ${data.notes ? `<p><strong>Commentaires :</strong><br>${data.notes.replace(/\n/g, '<br>')}</p>` : ''}
+      <p style="margin: 20px 0;">
+        <a href="${evaluationLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+          Consulter l'évaluation dans mon espace personnel
+        </a>
+      </p>
+      <p style="margin-top: 20px; color: #666; font-size: 14px;">
+        Ou copiez ce lien dans votre navigateur :<br>
+        <a href="${evaluationLink}" style="color: #2563eb; word-break: break-all;">${evaluationLink}</a>
+      </p>
+      <p>Cordialement,<br>${organizationName}</p>
+    `
+
+    try {
+      await emailService.sendEmail({
+        to: student.email,
+        subject: `Nouvelle évaluation : ${data.subject}`,
+        html: emailBody,
+      })
+    } catch (emailError) {
+      logger.warn("Erreur lors de l'envoi de l'email d'évaluation", {
+        studentEmail: student.email,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      })
+    }
+  }
+
   // Mutations (create, update, delete) - gardées identiques mais simplifiées ici pour la lisibilité
   const createMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
-      // template_id n'est pas une colonne de `grades` — il ne sert qu'à
-      // l'association séparée evaluation_template_instances ci-dessous.
-      const { template_id, ...gradeData } = data
+      // template_id et sendByEmail ne sont pas des colonnes de `grades` — le
+      // premier sert à l'association séparée evaluation_template_instances,
+      // le second ne déclenche que l'envoi d'email ci-dessous.
+      const { template_id, sendByEmail: _sendByEmail, ...gradeData } = data
       const created = await evaluationService.create(user.organization_id, {
         ...gradeData,
         session_id: data.session_id || null,
@@ -365,6 +443,14 @@ export default function EvaluationsPage() {
             error: instanceErr instanceof Error ? instanceErr.message : String(instanceErr),
           })
         }
+      }
+
+      // Envoyer un email à l'apprenant, en plus de l'ajout (toujours fait) dans son espace personnel
+      if (data.sendByEmail && data.student_id) {
+        const student = (data.session_id ? modalSessionStudents : students)?.find(
+          (s: { id: string }) => s.id === data.student_id
+        )
+        if (student) await sendEvaluationEmail(student, data)
       }
 
       return created
@@ -417,6 +503,14 @@ export default function EvaluationsPage() {
         }
       }
 
+      // Envoyer un email à chaque apprenant de la session, en plus de l'ajout
+      // (toujours fait) dans son espace personnel
+      if (data.sendByEmail) {
+        for (const student of modalSessionStudents) {
+          await sendEvaluationEmail(student, data)
+        }
+      }
+
       return created
     },
     onSuccess: async (created) => {
@@ -432,8 +526,8 @@ export default function EvaluationsPage() {
   const updateMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!editingEvaluation) throw new Error('Aucune évaluation sélectionnée')
-      // template_id n'est pas une colonne de `grades` (cf. createMutation).
-      const { template_id: _templateId, ...gradeData } = data
+      // template_id et sendByEmail ne sont pas des colonnes de `grades` (cf. createMutation).
+      const { template_id: _templateId, sendByEmail: _sendByEmail, ...gradeData } = data
       return evaluationService.update(editingEvaluation.id, {
         ...gradeData,
         session_id: data.session_id || null,
@@ -482,7 +576,12 @@ export default function EvaluationsPage() {
     deleteMutation.mutate(id)
   }
 
-  const onSubmit = (data: EvaluationFormData) => {
+  const onSubmit = (rawData: EvaluationFormData) => {
+    // Sujet optionnel : repris du libellé du type d'évaluation si laissé vide.
+    const data: EvaluationFormData = {
+      ...rawData,
+      subject: rawData.subject?.trim() || ASSESSMENT_TYPES.find((t) => t.value === rawData.assessment_type)?.label || 'Évaluation',
+    }
     if (editingEvaluation) {
       if (!data.student_id) {
         addToast({ type: 'error', title: 'Erreur', description: 'Sélectionnez un étudiant.' })
@@ -1039,14 +1138,13 @@ export default function EvaluationsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Sujet *</label>
+                      <label className="text-sm font-medium text-gray-700">Sujet</label>
                       <input
                         type="text"
                         value={formData.subject || ''}
                         onChange={(e) => setValue('subject', e.target.value)}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
-                        placeholder="Ex: Mathématiques, Français..."
-                        required
+                        placeholder="Ex: Mathématiques, Français... (optionnel, repris du type d'évaluation sinon)"
                       />
                     </div>
 
@@ -1113,6 +1211,26 @@ export default function EvaluationsPage() {
                       placeholder="Commentaires additionnels sur la performance..."
                     />
                   </div>
+
+                  {!editingEvaluation && (
+                    <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={formData.sendByEmail ?? true}
+                        onChange={(e) => setValue('sendByEmail', e.target.checked)}
+                        className="w-5 h-5 text-brand-blue border-gray-300 rounded focus:ring-brand-blue/20 focus:ring-2"
+                      />
+                      <div className="flex items-center gap-2 flex-1">
+                        <Mail className="h-4 w-4 text-gray-500 group-hover:text-brand-blue transition-colors" />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-900">Envoyer par email</span>
+                          <p className="text-xs text-gray-500">
+                            En plus de l'ajout dans son espace personnel (toujours fait), un email avec un lien direct sera envoyé à l'apprenant.
+                          </p>
+                        </div>
+                      </div>
+                    </label>
+                  )}
 
                   <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                     <Button

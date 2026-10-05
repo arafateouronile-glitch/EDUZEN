@@ -386,7 +386,18 @@ export default function LearnerQuizPage() {
     let correct_answer: string | string[] = q.correct_answer
 
     if (type === 'multiple_choice') {
-      const rawOptions = q.options
+      // Les options sont une colonne jsonb, mais certains modèles ont été
+      // enregistrés avec un JSON.stringify en trop (options stockées comme
+      // chaîne plutôt que tableau) — on la parse ici pour rester compatible
+      // avec les modèles déjà créés, en plus du correctif à la sauvegarde.
+      let rawOptions = q.options
+      if (typeof rawOptions === 'string') {
+        try {
+          rawOptions = JSON.parse(rawOptions)
+        } catch {
+          rawOptions = undefined
+        }
+      }
       if (Array.isArray(rawOptions)) {
         if (rawOptions.length && typeof rawOptions[0] === 'object') {
           options = rawOptions.map((o: any) => String(o?.text ?? '')).filter(Boolean)
@@ -1031,6 +1042,14 @@ export default function LearnerQuizPage() {
               <div className="space-y-4">
                 {evaluationTemplate.questions.map((question: any, index: number) => {
                   const showCorrectAnswers = isCompleted || hasResponses
+                  // Compat. modèles enregistrés avec options doublement encodées en JSON (cf. mapQuestionToUI).
+                  if (typeof question.options === 'string') {
+                    try {
+                      question = { ...question, options: JSON.parse(question.options) }
+                    } catch {
+                      question = { ...question, options: null }
+                    }
+                  }
                   return (
                     <div key={question.id} className="p-4 bg-white border border-gray-200 rounded-lg">
                       <div className="flex items-start gap-3 mb-3">

@@ -179,7 +179,12 @@ export const evaluationSchema = z.object({
   // Modèle d'évaluation (quiz) à associer au grade créé, pour que l'apprenant
   // puisse le passer dans son espace personnel. Optionnel : note manuelle seule sinon.
   template_id: z.string().optional().or(z.literal('')),
-  subject: z.string().min(1, 'Le sujet est requis').max(200, 'Le sujet est trop long'),
+  // Envoie un email à l'apprenant (en plus de l'ajout dans son espace personnel,
+  // toujours fait). Non géré en base, seulement côté formulaire.
+  sendByEmail: z.boolean().optional().default(true),
+  // Optionnel : repris du libellé du type d'évaluation si laissé vide (voir
+  // onSubmit dans evaluations/page.tsx).
+  subject: z.string().max(200, 'Le sujet est trop long').optional().or(z.literal('')),
   assessment_type: z.enum([
     'pre_formation',
     'hot',

@@ -138,7 +138,7 @@ export default function EditEvaluationTemplatePage() {
         questions.map((q) => ({
           question_text: q.question_text,
           question_type: q.question_type,
-          options: q.options ? JSON.stringify(q.options) as any : null,
+          options: (q.options || null) as any,
           correct_answer: q.correct_answer || null,
           correct_answer_pattern: q.correct_answer_pattern || null,
           points: q.points,
