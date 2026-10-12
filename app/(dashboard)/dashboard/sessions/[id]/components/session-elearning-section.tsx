@@ -74,6 +74,25 @@ interface SessionCourse {
   }
 }
 
+interface LessonDetail {
+  id: string
+  title: string
+  order_index: number
+  is_completed: boolean
+  completed_at: string | null
+  started_at: string | null
+}
+
+interface QuizAttemptDetail {
+  attempt_id: string
+  quiz_title: string
+  score: number | null
+  is_passed: boolean | null
+  completed_at: string | null
+  correct_answers: number | null
+  total_questions: number | null
+}
+
 interface StudentProgress {
   student_id: string
   student_name: string
@@ -84,6 +103,10 @@ interface StudentProgress {
   quiz_score: number | null
   last_activity: string | null
   status: 'not_started' | 'in_progress' | 'completed'
+  /** Détail leçon par leçon, pour l'affichage nominatif détaillé */
+  lessonsDetail: LessonDetail[]
+  /** Résultats individuels de chaque test passé (pas seulement la moyenne) */
+  quizzesDetail: QuizAttemptDetail[]
 }
 
 export function SessionElearningSection({
@@ -212,24 +235,26 @@ export function SessionElearningSection({
           if (!isMissingTableError(progressError)) logger.warn('Error fetching lesson progress', sanitizeError(progressError))
         }
 
-        // Récupérer le nombre total de leçons par cours
+        // Récupérer le détail des leçons (titre + ordre, pour l'affichage leçon par leçon)
         const { data: lessons, error: lessonsError } = await supabase
           .from('lessons')
-          .select('id, course_id')
+          .select('id, course_id, title, order_index')
           .in('course_id', courseIds)
+          .order('order_index', { ascending: true })
 
         if (lessonsError) {
           if (!isMissingTableError(lessonsError)) logger.warn('Error fetching lessons', sanitizeError(lessonsError))
         }
 
-        // Récupérer les scores des quiz
+        // Récupérer les résultats de quiz, avec le titre du quiz (pour afficher chaque test individuellement)
         // eslint-disable-next-line
         const qQuiz: any = supabase
           .from('quiz_attempts')
-          .select('*, quizzes(lesson_id, lessons(course_id))')
+          .select('*, quizzes(id, title, lesson_id, lessons(course_id))')
           .in('student_id', studentIds)
           // Le schéma actuel utilise `completed_at` (pas `is_completed`)
           .not('completed_at', 'is', null)
+          .order('completed_at', { ascending: false })
         const { data: quizAttempts, error: quizError } = await qQuiz
 
         if (quizError) {
@@ -263,9 +288,33 @@ export function SessionElearningSection({
               ? Math.round(courseQuizAttempts.reduce((sum: number, qa: any) => sum + (qa.score || 0), 0) / courseQuizAttempts.length)
               : null
 
-            const lastProgress = studentLessonProgress.sort((a: any, b: any) => 
+            const lastProgress = studentLessonProgress.sort((a: any, b: any) =>
               new Date(b.last_accessed_at || b.started_at || b.completed_at || 0).getTime() - new Date(a.last_accessed_at || a.started_at || a.completed_at || 0).getTime()
             )[0]
+
+            // Détail leçon par leçon (toutes les leçons du cours, même non commencées)
+            const lessonsDetail: LessonDetail[] = courseLessons.map((lesson) => {
+              const lp = studentLessonProgress.find((x: any) => x.lesson_id === lesson.id)
+              return {
+                id: lesson.id,
+                title: lesson.title,
+                order_index: lesson.order_index,
+                is_completed: lp?.is_completed === true,
+                completed_at: lp?.completed_at || null,
+                started_at: lp?.started_at || null,
+              }
+            }).sort((a, b) => a.order_index - b.order_index)
+
+            // Résultat individuel de chaque test passé (pas seulement la moyenne)
+            const quizzesDetail: QuizAttemptDetail[] = courseQuizAttempts.map((qa: any) => ({
+              attempt_id: qa.id,
+              quiz_title: qa.quizzes?.title || 'Test',
+              score: qa.score,
+              is_passed: qa.is_passed,
+              completed_at: qa.completed_at,
+              correct_answers: qa.correct_answers,
+              total_questions: qa.total_questions,
+            }))
 
             let status: 'not_started' | 'in_progress' | 'completed' = 'not_started'
             if (completedLessons > 0 && completedLessons >= totalLessons) {
@@ -285,6 +334,8 @@ export function SessionElearningSection({
                 quiz_score: quizScore,
                 last_activity: lastProgress?.last_accessed_at || lastProgress?.started_at || lastProgress?.completed_at || null,
                 status,
+                lessonsDetail,
+                quizzesDetail,
               })
             }
           }
@@ -627,29 +678,91 @@ export function SessionElearningSection({
                             entries.map((p) => {
                               const courseMeta = sessionCourses.find(sc => sc.course_id === p.course_id)
                               return (
-                                <div key={`${p.student_id}-${p.course_id}`} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                                  <div className="min-w-0">
-                                    <p className="font-medium text-sm truncate">{courseMeta?.course?.title || 'Séquence'}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {p.completed_lessons}/{p.total_lessons} leçons
-                                      {p.last_activity && ` • Dernière activité: ${formatDate(p.last_activity)}`}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-24">
-                                      <Progress value={p.progress} className="h-2" />
-                                      <p className="text-xs text-center mt-1">{p.progress}%</p>
+                                <div key={`${p.student_id}-${p.course_id}`} className="bg-white rounded-lg border overflow-hidden">
+                                  <div className="flex items-center justify-between p-3">
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-sm truncate">{courseMeta?.course?.title || 'Séquence'}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {p.completed_lessons}/{p.total_lessons} leçons
+                                        {p.last_activity && ` • Dernière activité: ${formatDate(p.last_activity)}`}
+                                      </p>
                                     </div>
-                                    {p.quiz_score !== null && (
-                                      <div className="text-center">
-                                        <p className="text-xs text-muted-foreground">Quiz</p>
-                                        <p className="text-sm font-semibold">{p.quiz_score}%</p>
+                                    <div className="flex items-center gap-4">
+                                      <div className="w-24">
+                                        <Progress value={p.progress} className="h-2" />
+                                        <p className="text-xs text-center mt-1">{p.progress}%</p>
                                       </div>
-                                    )}
-                                    <Badge variant={p.status === 'completed' ? 'default' : p.status === 'in_progress' ? 'secondary' : 'outline'}>
-                                      {p.status === 'completed' ? 'Terminé' : p.status === 'in_progress' ? 'En cours' : 'Non commencé'}
-                                    </Badge>
+                                      {p.quiz_score !== null && (
+                                        <div className="text-center">
+                                          <p className="text-xs text-muted-foreground">Moy. tests</p>
+                                          <p className="text-sm font-semibold">{p.quiz_score}%</p>
+                                        </div>
+                                      )}
+                                      <Badge variant={p.status === 'completed' ? 'default' : p.status === 'in_progress' ? 'secondary' : 'outline'}>
+                                        {p.status === 'completed' ? 'Terminé' : p.status === 'in_progress' ? 'En cours' : 'Non commencé'}
+                                      </Badge>
+                                    </div>
                                   </div>
+
+                                  {/* Détail leçon par leçon */}
+                                  {p.lessonsDetail.length > 0 && (
+                                    <div className="border-t px-3 py-2 bg-gray-50/70">
+                                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Leçons</p>
+                                      <div className="space-y-1">
+                                        {p.lessonsDetail.map((lesson) => (
+                                          <div key={lesson.id} className="flex items-center justify-between text-xs py-0.5">
+                                            <span className="flex items-center gap-1.5 min-w-0">
+                                              {lesson.is_completed ? (
+                                                <CheckCircle className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                                              ) : lesson.started_at ? (
+                                                <PlayCircle className="h-3.5 w-3.5 text-yellow-600 flex-shrink-0" />
+                                              ) : (
+                                                <XCircle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                                              )}
+                                              <span className="truncate text-gray-700">{lesson.title}</span>
+                                            </span>
+                                            <span className="text-muted-foreground flex-shrink-0 ml-2">
+                                              {lesson.is_completed
+                                                ? `Terminée${lesson.completed_at ? ` le ${formatDate(lesson.completed_at)}` : ''}`
+                                                : lesson.started_at
+                                                  ? 'En cours'
+                                                  : 'Non commencée'}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Résultats individuels de chaque test */}
+                                  {p.quizzesDetail.length > 0 && (
+                                    <div className="border-t px-3 py-2 bg-gray-50/70">
+                                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Résultats aux tests</p>
+                                      <div className="space-y-1">
+                                        {p.quizzesDetail.map((quiz) => (
+                                          <div key={quiz.attempt_id} className="flex items-center justify-between text-xs py-0.5">
+                                            <span className="flex items-center gap-1.5 min-w-0">
+                                              {quiz.is_passed === true ? (
+                                                <CheckCircle className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                                              ) : quiz.is_passed === false ? (
+                                                <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                                              ) : (
+                                                <AlertCircle className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                                              )}
+                                              <span className="truncate text-gray-700">{quiz.quiz_title}</span>
+                                            </span>
+                                            <span className="text-muted-foreground flex-shrink-0 ml-2">
+                                              {quiz.score !== null ? `${quiz.score}%` : '—'}
+                                              {quiz.correct_answers !== null && quiz.total_questions !== null && (
+                                                ` (${quiz.correct_answers}/${quiz.total_questions})`
+                                              )}
+                                              {quiz.completed_at && ` • ${formatDate(quiz.completed_at)}`}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )
                             })
