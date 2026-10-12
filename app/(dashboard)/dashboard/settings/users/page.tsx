@@ -435,12 +435,18 @@ function UsersSettingsPageContent() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() =>
+                          onClick={() => {
+                            if (
+                              userItem.is_active &&
+                              !confirm(`Désactiver ${userItem.full_name || userItem.email} ? Son accès au dashboard sera immédiatement coupé.`)
+                            ) {
+                              return
+                            }
                             toggleUserStatusMutation.mutate({
                               userId: userItem.id,
                               isActive: userItem.is_active ?? false,
                             })
-                          }
+                          }}
                           disabled={toggleUserStatusMutation.isPending}
                         >
                           {userItem.is_active ? (

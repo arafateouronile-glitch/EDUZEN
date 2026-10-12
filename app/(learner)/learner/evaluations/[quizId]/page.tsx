@@ -71,8 +71,11 @@ export default function LearnerQuizPage() {
     total: number
     passed: boolean
     answers: Record<string, { correct: boolean; correctAnswer: string | string[]; rating?: number }>
-    isSatisfaction?: boolean
+    /** rating = étoiles (moyenne) ; points = addition des points ; none = pas de notation (expression libre uniquement) */
+    displayMode: 'rating' | 'points' | 'none'
     avgRating?: number
+    pointsEarned?: number
+    pointsTotal?: number
   } | null>(null)
   /** Mode quiz pour une évaluation (grade) avec modèle : l'apprenant passe le quiz */
   const [gradeQuizMode, setGradeQuizMode] = useState(false)
@@ -437,8 +440,18 @@ export default function LearnerQuizPage() {
     }
   }
 
-  /** Évaluations satisfaction (pré/post formation) : uniquement étoiles + expression libre */
-  const isSatisfactionEvaluation = !!grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as GradeEnriched).assessment_type || '')
+  // La notation finale dépend de la composition réelle des questions du modèle
+  // (pas du type d'évaluation global) : un modèle peut mélanger QCM/vrai-faux/
+  // réponse courte/numérique (points), étoiles (satisfaction) et expression
+  // libre (jamais noté), depuis qu'un modèle quelconque peut être associé à
+  // n'importe quel type d'évaluation.
+  const allTemplateQuestions = (grade as GradeEnriched)?.evaluation_template?.questions
+  /** Au moins une question "étoiles" dans le modèle. */
+  const hasRatingQuestion = !!allTemplateQuestions?.some((q: any) => q.question_type === 'rating')
+  /** Au moins une question à points (QCM, vrai/faux, réponse courte, numérique). */
+  const hasPointQuestion = !!allTemplateQuestions?.some((q: any) =>
+    ['multiple_choice', 'true_false', 'short_answer', 'numeric'].includes(q.question_type)
+  )
 
   const questions: Question[] = (() => {
     if (quiz) {
@@ -461,7 +474,7 @@ export default function LearnerQuizPage() {
         .filter((q: any) => q?.id) || []
       
       // Debug : log des questions mappées
-      if (isSatisfactionEvaluation) {
+      if (hasRatingQuestion) {
         logger.info('[Learner Quiz] Questions mappées (satisfaction)', {
           totalQuestions: mapped.length,
           questions: mapped.map((q: Question) => ({
@@ -529,7 +542,7 @@ export default function LearnerQuizPage() {
 
   // Debug : vérifier le type de question pour satisfaction
   useEffect(() => {
-    if (isSatisfactionEvaluation && currentQuestion) {
+    if (hasRatingQuestion && currentQuestion) {
       logger.info('[Learner Quiz] Question satisfaction', {
         questionId: currentQuestion.id,
         questionType: currentQuestion.type,
@@ -538,7 +551,7 @@ export default function LearnerQuizPage() {
         isEssay: currentQuestion.type === 'essay',
       })
     }
-  }, [currentQuestion, isSatisfactionEvaluation])
+  }, [currentQuestion, hasRatingQuestion])
 
   // En mode quiz (grade) : la question courante est-elle répondue ? (pour désactiver "Suivant" et navigation linéaire)
   const hasCurrentAnswer = useMemo(() => {
@@ -562,7 +575,8 @@ export default function LearnerQuizPage() {
 
   const handleAnswer = (questionId: string, answer: string | string[]) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }))
-    if (immediateFeedback && !isSatisfactionEvaluation) {
+    // Pas de feedback immédiat pour étoiles/expression libre : aucune notion de "correct" à révéler.
+    if (immediateFeedback && currentQuestion?.type !== 'rating' && currentQuestion?.type !== 'essay') {
       setFeedbackQuestionId(questionId)
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
       feedbackTimerRef.current = setTimeout(() => {
@@ -602,7 +616,6 @@ export default function LearnerQuizPage() {
 
       // Soumission pour une évaluation (grade) avec modèle : enregistrer dans evaluation_responses
       if (gradeQuizMode && instanceId && studentId && supabase && questions.length > 0) {
-        const isSatisfactionSubmit = !!grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as GradeEnriched).assessment_type || '')
         /** Valeurs d'étoiles envoyées au backend (pour afficher la moyenne même si l'API ne renvoie pas answer_rating) */
         const submittedStarValues: number[] = []
         const submittedRatingByQuestionId: Record<string, number> = {}
@@ -614,25 +627,22 @@ export default function LearnerQuizPage() {
             answer_boolean?: boolean
             answer_rating?: number
           } = {}
-          const starValue = userAnswer != null && userAnswer !== '' ? parseInt(String(userAnswer), 10) : null
-          const isStarAnswer = starValue != null && !Number.isNaN(starValue) && starValue >= 0 && starValue <= 5
-          // Évaluation satisfaction : question expression libre → answer_text ; toute autre question avec valeur 0-5 → answer_rating
-          if (isSatisfactionSubmit) {
-            if (q.type === 'essay') {
-              payload.answer_text = userAnswer != null ? String(userAnswer) : ''
-            } else if (isStarAnswer) {
-              payload.answer_rating = starValue
+          // Le type de CHAQUE question détermine le format de la réponse — un
+          // modèle peut mélanger QCM, étoiles et expression libre.
+          if (q.type === 'essay') {
+            payload.answer_text = userAnswer != null ? String(userAnswer) : ''
+          } else if (q.type === 'rating') {
+            const starValue = userAnswer != null && userAnswer !== '' ? parseInt(String(userAnswer), 10) : null
+            const isStarAnswer = starValue != null && !Number.isNaN(starValue) && starValue >= 0 && starValue <= 5
+            payload.answer_rating = isStarAnswer ? starValue : undefined
+            if (isStarAnswer) {
               submittedStarValues.push(starValue)
               submittedRatingByQuestionId[q.id] = starValue
-            } else {
-              payload.answer_rating = undefined
             }
           } else if (q.type === 'multiple_choice') {
             payload.answer_choice = Array.isArray(userAnswer) ? userAnswer : userAnswer ? [userAnswer] : []
           } else if (q.type === 'true_false') {
             payload.answer_boolean = userAnswer === 'vrai' || userAnswer === 'true' || userAnswer === '1'
-          } else if (q.type === 'rating') {
-            payload.answer_rating = isStarAnswer ? starValue : undefined
           } else {
             payload.answer_text = userAnswer != null ? String(userAnswer) : ''
           }
@@ -649,9 +659,6 @@ export default function LearnerQuizPage() {
         const { error: rpcGradeError } = await (supabase as unknown as { rpc: (fn: string, args: { p_instance_id: string }) => Promise<{ error: unknown }> }).rpc('update_grade_from_instance_for_learner', { p_instance_id: instanceId })
         if (rpcGradeError) logger.warn('[Learner Quiz] update_grade_from_instance_for_learner', { error: rpcGradeError })
         
-        // Vérifier si c'est une évaluation satisfaction (pas de score, uniquement étoiles)
-        const isSatisfactionType = grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as GradeEnriched).assessment_type || '')
-        
         // Récupérer les réponses avec answer_rating pour les questions rating
         const { data: allResponsesRaw } = await supabase
           .from('evaluation_responses')
@@ -659,8 +666,8 @@ export default function LearnerQuizPage() {
           .eq('instance_id', instanceId)
           .eq('student_id', studentId)
         const allResponses = ((allResponsesRaw || []) as unknown) as Array<{ question_id: string; is_correct?: boolean; answer_rating?: number | null }>
-        
-        if (isSatisfactionType) {
+
+        if (hasRatingQuestion) {
           // Moyenne : 1) API, 2) valeurs envoyées dans la boucle (submittedStarValues), 3) answers en secours
           const ratingsFromApi = allResponses
             .map((r: { question_id: string; answer_rating?: number | null }) => r.answer_rating)
@@ -704,7 +711,7 @@ export default function LearnerQuizPage() {
             total: 5,
             passed: true, // Satisfaction : toujours "réussi" (pas de notion d'échec)
             answers: answerResults,
-            isSatisfaction: true,
+            displayMode: 'rating',
             avgRating: avgRating,
           })
           setShowResults(true)
@@ -715,12 +722,13 @@ export default function LearnerQuizPage() {
             title: 'Évaluation enregistrée',
             description: `Votre satisfaction : ${avgRating.toFixed(1)}/5.`,
           })
-        } else {
-          // Évaluation notée classique
+        } else if (hasPointQuestion) {
+          // Questions à points (QCM/vrai-faux/réponse courte/numérique), sans étoiles :
+          // la notation finale affichée est l'addition des points (pas un pourcentage).
           const { data: scoreRow } = await supabase.rpc('calculate_evaluation_score', { p_instance_id: instanceId })
-          const totalScore = scoreRow?.[0]?.total_score ?? 0
-          const maxScore = scoreRow?.[0]?.max_score ?? 1
-          const percentage = maxScore > 0 ? Math.round((Number(totalScore) / Number(maxScore)) * 100) : 0
+          const totalScore = Number(scoreRow?.[0]?.total_score ?? 0)
+          const maxScore = Number(scoreRow?.[0]?.max_score ?? 1)
+          const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0
           const answerResults: Record<string, { correct: boolean; correctAnswer: string | string[] }> = {}
           questions.forEach((q) => {
             const row = allResponses.find((r) => r.question_id === q.id)
@@ -731,10 +739,12 @@ export default function LearnerQuizPage() {
           })
           setResults({
             score: percentage,
-            total: Number(maxScore),
+            total: maxScore,
             passed: percentage >= ((grade as GradeEnriched)?.evaluation_template?.passing_score ?? 70),
             answers: answerResults,
-            isSatisfaction: false,
+            displayMode: 'points',
+            pointsEarned: totalScore,
+            pointsTotal: maxScore,
           })
           setShowResults(true)
           queryClient.invalidateQueries({ queryKey: ['learner-grade', quizId] })
@@ -742,7 +752,28 @@ export default function LearnerQuizPage() {
           addToast({
             type: 'success',
             title: 'Évaluation enregistrée',
-            description: `Votre score : ${percentage}%.`,
+            description: `Votre score : ${totalScore}/${maxScore} points.`,
+          })
+        } else {
+          // Ni points ni étoiles (expression libre uniquement) : rien à noter.
+          const answerResults: Record<string, { correct: boolean; correctAnswer: string | string[] }> = {}
+          questions.forEach((q) => {
+            answerResults[q.id] = { correct: true, correctAnswer: '' }
+          })
+          setResults({
+            score: 0,
+            total: 0,
+            passed: true,
+            answers: answerResults,
+            displayMode: 'none',
+          })
+          setShowResults(true)
+          queryClient.invalidateQueries({ queryKey: ['learner-grade', quizId] })
+          queryClient.invalidateQueries({ queryKey: ['learner-evaluation-responses', quizId, studentId] })
+          addToast({
+            type: 'success',
+            title: 'Évaluation enregistrée',
+            description: 'Vos réponses ont été enregistrées.',
           })
         }
         setIsSubmitting(false)
@@ -807,7 +838,9 @@ export default function LearnerQuizPage() {
         total: totalPoints,
         passed,
         answers: answerResults,
-        isSatisfaction: false,
+        displayMode: 'points',
+        pointsEarned: correctCount,
+        pointsTotal: totalPoints,
       })
       setShowResults(true)
 
@@ -874,28 +907,32 @@ export default function LearnerQuizPage() {
 
   // Afficher les détails du grade (évaluation) si c'est un grade, pas un quiz, et pas encore en mode "passer le quiz"
   if (grade && !quiz && !lessonQuizFallback && !gradeQuizMode) {
-    const isSatisfactionType = ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes(grade.assessment_type || '')
     const hasGradedAt = grade.graded_at !== null && grade.graded_at !== undefined
     const hasScore = grade.score !== null && grade.score !== undefined
     const hasRating = grade.rating !== null && grade.rating !== undefined
+    const hasResponses = !!evaluationResponses && evaluationResponses.length > 0
     // Pour satisfaction : afficher la moyenne depuis les réponses si grade.rating est 0 ou null
     const satisfactionRatingsFromResponses = ((evaluationResponses || []) as Array<{ answer_rating?: number | null }>)
       .map((r) => r.answer_rating)
       .filter((v: unknown): v is number => typeof v === 'number' && v >= 0 && v <= 5)
-    const displayRating: number | null = isSatisfactionType && satisfactionRatingsFromResponses.length > 0
+    const displayRating: number | null = hasRatingQuestion && satisfactionRatingsFromResponses.length > 0
       ? Math.round((satisfactionRatingsFromResponses.reduce((a, b) => a + b, 0) / satisfactionRatingsFromResponses.length) * 10) / 10
       : (grade.rating != null ? grade.rating : null)
-    // Satisfaction : terminée si grade.rating renseigné ou réponses avec answer_rating présentes
-    const isCompleted = isSatisfactionType ? (hasRating || satisfactionRatingsFromResponses.length > 0) : (hasScore && hasGradedAt)
-    
-    const percentage = grade.percentage !== null && grade.percentage !== undefined 
-      ? grade.percentage 
+    // Terminée si : étoiles renseignées (satisfaction), score+date (points), ou simplement des
+    // réponses enregistrées (ni points ni étoiles — rien d'autre à vérifier).
+    const isCompleted = hasRatingQuestion
+      ? (hasRating || satisfactionRatingsFromResponses.length > 0)
+      : hasPointQuestion
+        ? (hasScore && hasGradedAt)
+        : hasResponses
+
+    const percentage = grade.percentage !== null && grade.percentage !== undefined
+      ? grade.percentage
       : (hasScore && grade.max_score ? Math.round(((grade.score ?? 0) / grade.max_score) * 100) : null)
-    
+
     // Vérifier si l'évaluation a un modèle avec des questions
     const evaluationTemplate = (grade as GradeEnriched).evaluation_template
     const hasQuestions = evaluationTemplate?.questions && Array.isArray(evaluationTemplate.questions) && evaluationTemplate.questions.length > 0
-    const hasResponses = evaluationResponses && evaluationResponses.length > 0
     const canComplete = hasQuestions && !isCompleted && !hasResponses
     
     // Log pour déboguer
@@ -955,17 +992,21 @@ export default function LearnerQuizPage() {
               </div>
             </div>
             {isCompleted ? (
-              isSatisfactionType ? (
+              hasRatingQuestion ? (
                 <Badge className="text-base px-4 py-2 bg-amber-100 text-amber-700">
                   Satisfaction {displayRating != null ? displayRating : '—'}/5
                 </Badge>
-              ) : (
+              ) : hasPointQuestion ? (
                 <Badge className={`text-base px-4 py-2 ${
                   (percentage || 0) >= 80 ? 'bg-green-100 text-green-700' :
                   (percentage || 0) >= 60 ? 'bg-blue-100 text-blue-700' :
                   'bg-red-100 text-red-700'
                 }`}>
-                  {percentage !== null ? `${percentage}%` : 'Terminée'}
+                  {grade.score !== null ? `${grade.score}${grade.max_score ? `/${grade.max_score}` : ''} pts` : 'Terminée'}
+                </Badge>
+              ) : (
+                <Badge className="text-base px-4 py-2 bg-gray-100 text-gray-700">
+                  Réponses enregistrées
                 </Badge>
               )
             ) : (
@@ -975,10 +1016,10 @@ export default function LearnerQuizPage() {
             )}
           </div>
 
-          {/* Score ou satisfaction selon le type */}
-          {isCompleted && (
+          {/* Score ou satisfaction selon le type ; rien si ni points ni étoiles */}
+          {isCompleted && (hasRatingQuestion || hasPointQuestion) && (
             <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-              {isSatisfactionType ? (
+              {hasRatingQuestion ? (
                 <>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Satisfaction</p>
@@ -996,7 +1037,7 @@ export default function LearnerQuizPage() {
               ) : (
                 <>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Note</p>
+                    <p className="text-sm text-gray-500 mb-1">Note (addition des points)</p>
                     <p className="text-2xl font-bold text-gray-900">
                       {grade.score !== null ? grade.score : '-'}
                       {grade.max_score && ` / ${grade.max_score}`}
@@ -1016,6 +1057,12 @@ export default function LearnerQuizPage() {
                   )}
                 </>
               )}
+            </div>
+          )}
+          {isCompleted && !hasRatingQuestion && !hasPointQuestion && grade.notes && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-500 mb-1">Commentaires</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{grade.notes}</p>
             </div>
           )}
 
@@ -1202,7 +1249,7 @@ export default function LearnerQuizPage() {
 
   // Écran de résultats
   if (showResults && results) {
-    const isSatisfaction = results.isSatisfaction === true
+    const displayMode = results.displayMode
     return (
       <div className="max-w-2xl mx-auto space-y-6 pb-24 lg:pb-8">
         <GlassCard className="p-8 text-center">
@@ -1211,9 +1258,13 @@ export default function LearnerQuizPage() {
             animate={{ scale: 1 }}
             transition={{ type: 'spring', damping: 15 }}
           >
-            {isSatisfaction ? (
+            {displayMode === 'rating' ? (
               <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
                 <Star className="h-12 w-12 text-amber-600 fill-amber-600" />
+              </div>
+            ) : displayMode === 'none' ? (
+              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+                <CheckCircle2 className="h-12 w-12 text-gray-500" />
               </div>
             ) : results.passed ? (
               <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
@@ -1227,13 +1278,15 @@ export default function LearnerQuizPage() {
           </motion.div>
 
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            {isSatisfaction ? 'Merci pour votre retour !' : results.passed ? 'Félicitations !' : 'Quiz terminé'}
+            {displayMode === 'rating' ? 'Merci pour votre retour !'
+              : displayMode === 'none' ? 'Réponses enregistrées'
+              : results.passed ? 'Félicitations !' : 'Quiz terminé'}
           </h1>
           <p className="text-gray-500 mb-6">
             {quiz?.title || (grade as GradeEnriched)?.subject || 'Évaluation'}
           </p>
 
-          {isSatisfaction ? (
+          {displayMode === 'rating' ? (
             <div className="mb-8">
               <div className="text-center">
                 <div className="text-4xl font-bold text-amber-600 flex items-center justify-center gap-2">
@@ -1244,28 +1297,33 @@ export default function LearnerQuizPage() {
                 <p className="text-sm text-gray-500 mt-2">Votre satisfaction moyenne</p>
               </div>
             </div>
-          ) : (
+          ) : displayMode === 'points' ? (
             <div className="flex justify-center gap-8 mb-8">
               <div className="text-center">
                 <div className={`text-4xl font-bold ${results.passed ? 'text-green-600' : 'text-red-600'}`}>
-                  {results.score}%
+                  {results.pointsEarned ?? 0}/{results.pointsTotal ?? results.total}
                 </div>
-                <p className="text-sm text-gray-500">Votre score</p>
+                <p className="text-sm text-gray-500">Points obtenus</p>
               </div>
               <div className="w-px bg-gray-200" />
               <div className="text-center">
                 <div className="text-4xl font-bold text-gray-400">
-                  {quiz?.passing_score || 70}%
+                  {(grade as GradeEnriched)?.evaluation_template?.passing_score ?? quiz?.passing_score ?? 70}%
                 </div>
                 <p className="text-sm text-gray-500">Score requis</p>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {isSatisfaction ? (
+          {displayMode === 'rating' ? (
             <Badge className="bg-amber-100 text-amber-700 text-base px-4 py-2">
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Évaluation enregistrée
+            </Badge>
+          ) : displayMode === 'none' ? (
+            <Badge className="bg-gray-100 text-gray-700 text-base px-4 py-2">
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Réponses enregistrées
             </Badge>
           ) : results.passed ? (
             <Badge className="bg-green-100 text-green-700 text-base px-4 py-2">
@@ -1336,13 +1394,13 @@ export default function LearnerQuizPage() {
 
         {/* Actions */}
         <div className="flex gap-4">
-          {!results.isSatisfaction && !results.passed && (
+          {results.displayMode === 'points' && !results.passed && (
             <Button onClick={handleRetry} className="flex-1">
               <RotateCcw className="h-4 w-4 mr-2" />
               Réessayer
             </Button>
           )}
-          <Link href="/learner/evaluations" className={results.isSatisfaction || results.passed ? "flex-1" : "flex-1"}>
+          <Link href="/learner/evaluations" className="flex-1">
             <Button variant="outline" className="w-full">
               <Home className="h-4 w-4 mr-2" />
               Retour aux évaluations
@@ -1396,7 +1454,7 @@ export default function LearnerQuizPage() {
             <span className="text-sm text-gray-500">
               {answeredCount} répondu{answeredCount > 1 ? 'es' : 'e'}
             </span>
-            {!isSatisfactionEvaluation && answeredCount === 0 && (
+            {(!grade || hasPointQuestion) && answeredCount === 0 && (
               <button
                 type="button"
                 onClick={() => setImmediateFeedback((v) => !v)}
@@ -1526,9 +1584,9 @@ export default function LearnerQuizPage() {
               </div>
             )}
 
-            {/* Étoiles 0 à 5 (satisfaction) */}
-            {/* Pour satisfaction : afficher les étoiles pour toutes les questions sauf essay */}
-            {(currentQuestion?.type === 'rating' || (isSatisfactionEvaluation && currentQuestion?.type !== 'essay')) && (
+            {/* Étoiles 0 à 5 : uniquement pour les questions réellement de type "rating" — chaque
+                question s'affiche selon son propre type, pas selon le type d'évaluation global. */}
+            {currentQuestion?.type === 'rating' && (
               <div className="space-y-3">
                 <p className="text-sm text-gray-500 mb-4">Choisissez de 0 à 5 étoiles</p>
                 <div className="flex items-center gap-3 flex-wrap justify-center">

@@ -144,6 +144,11 @@ export default function LoginPage() {
         type: 'error',
         message: 'Le lien est invalide ou a déjà été utilisé. Demandez un nouveau lien via "Mot de passe oublié".',
       })
+    } else if (queryError === 'account-disabled') {
+      setUrlBanner({
+        type: 'error',
+        message: 'Votre compte a été désactivé. Contactez un administrateur de votre organisation.',
+      })
     }
     // Nettoyer le hash de l'URL sans recharger la page
     if (hash) window.history.replaceState(null, '', window.location.pathname + window.location.search)

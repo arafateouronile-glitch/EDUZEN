@@ -14,7 +14,7 @@ const getLayoutData = (userId: string) =>
 
       const { data: userData } = await supabase
         .from('users')
-        .select('organization_id')
+        .select('organization_id, is_active')
         .eq('id', userId)
         .single()
 
@@ -69,13 +69,22 @@ export default async function DashboardLayout({
     redirect('/auth/login?redirect=' + encodeURIComponent(pathname))
   }
 
+  // Chargé avant toute route (y compris onboarding/subscribe) : un compte
+  // désactivé par un admin (bouton "Désactiver" dans Paramètres > Utilisateurs)
+  // ne doit avoir accès à AUCUNE page du dashboard — jusqu'ici ce champ n'était
+  // jamais vérifié après la connexion, la désactivation restait sans effet.
+  const cached = await getLayoutData(authUser.id)
+
+  if (cached?.userData?.is_active === false) {
+    await supabase.auth.signOut().catch(() => {})
+    redirect('/auth/login?error=account-disabled')
+  }
+
   const isOnboardingRoute = pathname.startsWith('/dashboard/onboarding')
   const isSubscribeRoute = pathname.startsWith('/dashboard/subscribe')
 
   if (!isOnboardingRoute && !isSubscribeRoute) {
     try {
-      const cached = await getLayoutData(authUser.id)
-
       // Pas de profil en base → onboarding non fait, rediriger
       if (!cached?.userData?.organization_id) {
         redirect('/dashboard/onboarding')
