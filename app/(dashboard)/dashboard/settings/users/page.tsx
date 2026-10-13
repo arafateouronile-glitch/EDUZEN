@@ -173,6 +173,32 @@ function UsersSettingsPageContent() {
     },
   })
 
+  // Envoi manuel d'un email de connexion (lien de définition de mot de passe) —
+  // réutilise le même mécanisme que "Mot de passe oublié" plutôt que de
+  // manipuler un mot de passe en clair depuis le dashboard.
+  const sendLoginEmailMutation = useMutation({
+    mutationFn: async (userEmail: string) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_data, userEmail) => {
+      addToast({
+        title: 'Email envoyé',
+        description: `Un email de connexion a été envoyé à ${userEmail}.`,
+        type: 'success',
+      })
+    },
+    onError: (error: unknown) => {
+      addToast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Erreur lors de l\'envoi de l\'email',
+        type: 'error',
+      })
+    },
+  })
+
   // Statistiques
   const stats = {
     total: users.length,
@@ -466,6 +492,15 @@ function UsersSettingsPageContent() {
                             <Edit className="h-4 w-4 mr-2" />
                             Modifier
                           </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => sendLoginEmailMutation.mutate(userItem.email)}
+                          disabled={sendLoginEmailMutation.isPending}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Envoyer un email de connexion
                         </Button>
                       </div>
                     </div>

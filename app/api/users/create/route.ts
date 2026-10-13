@@ -273,6 +273,7 @@ async function postCreateUser(request: NextRequest) {
       });
 
       // Envoyer un email de confirmation automatiquement (sauf pour les étudiants)
+      let confirmationEmailSent = false;
       if (userRole !== 'student') {
         try {
           // Récupérer les informations de l'organisation pour l'email
@@ -295,7 +296,7 @@ async function postCreateUser(request: NextRequest) {
             const resend = new Resend(resendApiKey);
             const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'EDUZEN <noreply@eduzen.io>';
 
-            await resend.emails.send({
+            const { error: resendError } = await resend.emails.send({
               from: fromEmail,
               to: String(email),
               subject: `Votre compte EDUZEN a été créé - ${organization?.name || 'EDUZEN'}`,
@@ -362,6 +363,18 @@ async function postCreateUser(request: NextRequest) {
               `,
             });
 
+            if (resendError) {
+              // Resend ne lève pas d'exception sur un rejet applicatif (domaine non
+              // vérifié, mode bac à sable, etc.) — il faut vérifier `error` explicitement,
+              // sinon l'email échoue silencieusement tout en loggant un faux succès.
+              const rawMessage =
+                typeof resendError === "object" && resendError !== null && "message" in resendError
+                  ? String((resendError as { message: unknown }).message)
+                  : "Erreur Resend";
+              throw new Error(rawMessage);
+            }
+
+            confirmationEmailSent = true;
             logger.info("User Create - Confirmation email sent successfully via Resend", {
               email: String(email),
             });
@@ -375,16 +388,29 @@ async function postCreateUser(request: NextRequest) {
             });
           }
         } catch (emailError) {
-          logger.error("User Create - Failed to send confirmation email", emailError as Error);
-          // Ne pas bloquer la création si l'envoi d'email échoue
+          const msg = emailError instanceof Error ? emailError.message : String(emailError);
+          const friendlyHint =
+            msg.includes("only send testing emails to your own")
+              ? " (compte Resend en mode test : vérifiez un domaine sur https://resend.com/domains pour envoyer à d'autres adresses que la vôtre)"
+              : msg.includes("domain is not verified")
+                ? " (domaine d'envoi non vérifié sur https://resend.com/domains)"
+                : "";
+          logger.error(`User Create - Failed to send confirmation email${friendlyHint}`, emailError as Error, {
+            email: String(email),
+          });
+          // Ne pas bloquer la création si l'envoi d'email échoue — mais le signaler
+          // honnêtement dans la réponse plutôt que de prétendre qu'il est parti.
         }
       }
 
       return NextResponse.json({
         user: newUser,
-        message: userRole !== 'student'
+        emailSent: confirmationEmailSent,
+        message: confirmationEmailSent
           ? "Utilisateur créé avec succès. Un email de confirmation a été envoyé."
-          : "Utilisateur créé avec succès",
+          : userRole !== 'student'
+            ? "Utilisateur créé avec succès, mais l'email de confirmation n'a pas pu être envoyé — communiquez le mot de passe manuellement."
+            : "Utilisateur créé avec succès",
       });
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string; errors?: unknown; details?: unknown; hint?: string; status?: number }

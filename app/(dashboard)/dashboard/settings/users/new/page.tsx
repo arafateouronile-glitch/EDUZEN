@@ -98,25 +98,35 @@ export default function NewUserPage() {
 
       return response.json()
     },
-    onSuccess: () => {
+    onSuccess: (data: { emailSent?: boolean; message?: string }) => {
       // Invalider toutes les queries liées aux utilisateurs de l'organisation
       // Utiliser queryKey avec prefixMatch pour invalider toutes les variantes
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['organization-users'],
         exact: false, // Invalider toutes les queries qui commencent par cette clé
       })
-      
+
       // Forcer le refetch immédiat
-      queryClient.refetchQueries({ 
+      queryClient.refetchQueries({
         queryKey: ['organization-users'],
         exact: false,
       })
-      
-      addToast({
-        type: 'success',
-        title: 'Succès',
-        description: 'L\'utilisateur a été créé avec succès',
-      })
+
+      // L'email de confirmation peut échouer (Resend) sans bloquer la création —
+      // le signaler clairement plutôt que d'afficher un succès générique trompeur.
+      if (data?.emailSent === false) {
+        addToast({
+          type: 'warning',
+          title: 'Utilisateur créé',
+          description: data.message || 'L\'email de confirmation n\'a pas pu être envoyé — communiquez le mot de passe manuellement.',
+        })
+      } else {
+        addToast({
+          type: 'success',
+          title: 'Succès',
+          description: 'L\'utilisateur a été créé avec succès',
+        })
+      }
       
       // Attendre un peu avant de rediriger pour laisser le temps au refetch
       setTimeout(() => {
