@@ -698,8 +698,11 @@ export function PhysicalAttendanceSheetDownloader({
           const isSelected = selectedSlots.has(slot.id)
           const isCurrentlyGenerating = generatingSlotId === slot.id
 
-          // Trouver la session électronique correspondant à ce créneau (par date)
-          const eSession = electronicSessions.find((es) => es.date === slot.date)
+          // Trouver la session électronique correspondant à CE créneau précis.
+          // Filtrer uniquement par date faisait toujours retrouver la première
+          // séance du jour (le matin) même pour l'après-midi — même lien/QR
+          // affiché pour les deux, une signature comptant pour les deux créneaux.
+          const eSession = electronicSessions.find((es) => es.date === slot.date && es.start_time === slot.start_time)
           const eRequests = eSession?.requests ?? []
 
           const learners = students.map((s) => {

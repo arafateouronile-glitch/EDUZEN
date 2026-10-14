@@ -42,14 +42,20 @@ export async function POST(request: NextRequest) {
 
     const organizationId = userData.organization_id
 
-    // Vérifier si une session électronique existe déjà pour ce créneau
-    const { data: existing } = await supabase
+    // Vérifier si une session électronique existe déjà pour CE créneau précis.
+    // Filtrer uniquement par session_id+date (sans l'heure) faisait retrouver
+    // la séance du matin lors du lancement de celle de l'après-midi — les deux
+    // partageaient alors le même lien public, et une signature comptait pour
+    // les deux créneaux du jour.
+    let existingQuery = supabase
       .from('electronic_attendance_sessions')
       .select('id, status')
       .eq('session_id', sessionId)
       .eq('date', date)
       .eq('organization_id', organizationId)
-      .maybeSingle()
+    existingQuery = startTime ? existingQuery.eq('start_time', startTime) : existingQuery.is('start_time', null)
+    existingQuery = endTime ? existingQuery.eq('end_time', endTime) : existingQuery.is('end_time', null)
+    const { data: existing } = await existingQuery.maybeSingle()
 
     if (existing?.status === 'active') {
       return NextResponse.json({
