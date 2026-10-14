@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { evaluationService } from '@/lib/services/evaluation.service.client'
@@ -10,10 +10,11 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
-import { 
+import { QRCodeModal } from '@/components/ui/QRCodeModal'
+import {
   Plus, Search, Download, Filter, X, FileCheck, Calendar,
-  User, BookOpen, TrendingUp, Award, BarChart3, Edit, Trash2,
-  CheckCircle, XCircle, Clock, FileText, ArrowRight, Star, Layout, Mail
+  User, Users, BookOpen, TrendingUp, Award, BarChart3, Edit, Trash2,
+  CheckCircle, XCircle, Clock, FileText, ArrowRight, Star, Layout, Mail, QrCode, Loader2, Eye
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, cn } from '@/lib/utils'
@@ -64,6 +65,8 @@ export default function EvaluationsPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null)
+  const [qrModal, setQrModal] = useState<{ url: string; title: string } | null>(null)
+  const [expandedBatchKey, setExpandedBatchKey] = useState<string | null>(null)
 
   // React Hook Form avec validation Zod
   const {
@@ -356,6 +359,40 @@ export default function EvaluationsPage() {
     ? Array.from(new Set((evaluations as GradeWithRelations[]).map((e) => e.subject))).sort()
     : []
 
+  // Regroupe les évaluations individuelles (une par apprenant) en un seul bloc
+  // par lot (même session/sujet/type/date) — qu'elles aient été créées une à
+  // une ou en mode collectif. La liste des apprenants ne doit apparaître
+  // qu'après avoir scanné le QR, pas ici : un seul bloc = un seul QR.
+  const evaluationBatches = useMemo(() => {
+    const map = new Map<string, {
+      key: string
+      subject: string
+      assessment_type: string | null
+      session_id: string | null
+      session_name: string | null
+      graded_at: string | null
+      items: GradeWithRelations[]
+    }>()
+    for (const ev of (evaluations as GradeWithRelations[] | undefined) ?? []) {
+      const key = `${ev.session_id ?? ''}|${ev.subject}|${ev.assessment_type ?? ''}|${ev.graded_at ?? ''}`
+      let batch = map.get(key)
+      if (!batch) {
+        batch = {
+          key,
+          subject: ev.subject,
+          assessment_type: ev.assessment_type,
+          session_id: ev.session_id,
+          session_name: ev.sessions?.name ?? null,
+          graded_at: ev.graded_at,
+          items: [],
+        }
+        map.set(key, batch)
+      }
+      batch.items.push(ev)
+    }
+    return Array.from(map.values())
+  }, [evaluations])
+
   // Envoie l'email "nouvelle évaluation" à un apprenant — passe par
   // /learner/access/[id] pour établir la session apprenant (cookie +
   // secureSessionStorage) avant de renvoyer sur /learner/evaluations. Un lien
@@ -554,6 +591,39 @@ export default function EvaluationsPage() {
       await queryClient.invalidateQueries({ queryKey: ['evaluations'] })
       await queryClient.invalidateQueries({ queryKey: ['evaluation-stats'] })
       addToast({ type: 'success', title: 'Succès', description: 'Évaluation supprimée.' })
+    },
+    onError: (error: Error) => addToast({ type: 'error', title: 'Erreur', description: error.message })
+  })
+
+  // QR code public — l'apprenant scanne, choisit son nom et accède directement
+  // à son évaluation dans son espace personnel (même lot : session/sujet/
+  // type/date identiques, qu'elle ait été créée seule ou en mode collectif).
+  const qrLinkMutation = useMutation({
+    mutationFn: async (evaluation: GradeWithRelations) => {
+      const res = await fetch('/api/evaluations/public-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: evaluation.session_id,
+          subject: evaluation.subject,
+          assessment_type: evaluation.assessment_type,
+          graded_at: evaluation.graded_at,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de la génération du lien')
+      return data as { token: string }
+    },
+    onSuccess: (data, evaluation) => {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const typeLabel = ASSESSMENT_TYPES.find((t) => t.value === evaluation.assessment_type)?.label || evaluation.assessment_type || 'Évaluation'
+      const sessionName = evaluation.sessions?.name
+      // Type + session affichés ensemble dans le titre, pour confirmer sans
+      // ambiguïté quelle évaluation/session ce QR concerne avant de le diffuser.
+      setQrModal({
+        url: `${baseUrl}/evaluations/${data.token}`,
+        title: sessionName ? `${typeLabel} — ${sessionName}` : typeLabel,
+      })
     },
     onError: (error: Error) => addToast({ type: 'error', title: 'Erreur', description: error.message })
   })
@@ -936,7 +1006,7 @@ export default function EvaluationsPage() {
               <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
             ))}
           </div>
-        ) : !evaluations || evaluations.length === 0 ? (
+        ) : evaluationBatches.length === 0 ? (
           <GlassCard variant="default" className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <FileCheck className="h-8 w-8 text-gray-400" />
@@ -951,91 +1021,137 @@ export default function EvaluationsPage() {
         ) : (
           <GlassCard variant="default" className="overflow-hidden p-0">
             <div className="divide-y divide-gray-100">
-              {(evaluations as GradeWithRelations[]).map((evaluation) => {
-                const student = evaluation.students
-                const session = evaluation.sessions
-                const typeInfo = ASSESSMENT_TYPES.find((t) => t.value === evaluation.assessment_type)
+              {evaluationBatches.map((batch) => {
+                const typeInfo = ASSESSMENT_TYPES.find((t) => t.value === batch.assessment_type)
+                const isExpanded = expandedBatchKey === batch.key
+                const scored = batch.items.filter((e) => e.percentage !== null)
+                const avgPercentage = scored.length > 0
+                  ? Math.round(scored.reduce((sum, e) => sum + (e.percentage || 0), 0) / scored.length)
+                  : null
 
                 return (
-                  <motion.div
-                    key={evaluation.id}
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    className="p-4 hover:bg-gray-50/50 transition-colors flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center text-2xl">
-                        {typeInfo?.icon || '📄'}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-gray-900 truncate">
-                            {evaluation.subject}
-                          </h3>
-                          {typeInfo && (
-                            <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-md font-medium">
-                              {typeInfo.label}
-                            </span>
-                          )}
+                  <div key={batch.key}>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 1 }}
+                      viewport={{ once: true }}
+                      className="p-4 hover:bg-gray-50/50 transition-colors flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">
+                          {typeInfo?.icon || '📄'}
                         </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          {student && (
-                            <div className="flex items-center gap-1.5">
-                              <User className="h-3.5 w-3.5" />
-                              <span className="font-medium text-gray-700">
-                                {student.first_name} {student.last_name}
-                              </span>
-                            </div>
-                          )}
-                          {evaluation.graded_at && (
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="h-3.5 w-3.5" />
-                              <span>{formatDate(evaluation.graded_at)}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="flex items-center gap-2 justify-end">
-                          <span className="text-lg font-bold text-gray-900">
-                            {evaluation.score}
-                            {evaluation.max_score && <span className="text-gray-400 text-sm font-normal">/{evaluation.max_score}</span>}
-                          </span>
-                          {getGradeIcon(evaluation.percentage)}
+                        {/* Sujet / Type / Session empilés dans un seul bloc */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-900 truncate">{batch.subject}</h3>
+                          {typeInfo && <p className="text-sm text-gray-600">{typeInfo.label}</p>}
+                          {batch.session_name && (
+                            <p className="text-sm text-gray-500 flex items-center gap-1.5 truncate">
+                              <BookOpen className="h-3.5 w-3.5 flex-shrink-0" />
+                              {batch.session_name}
+                            </p>
+                          )}
                         </div>
-                        {evaluation.percentage !== null && (
-                          <p className={cn("text-xs font-medium", getGradeColor(evaluation.percentage))}>
-                            {evaluation.percentage}% réussite
-                          </p>
-                        )}
                       </div>
 
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(evaluation)}
-                          className="h-8 w-8 text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(evaluation.id)}
-                          className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 justify-end text-sm text-gray-500">
+                            <Users className="h-3.5 w-3.5" />
+                            {batch.items.length} apprenant{batch.items.length > 1 ? 's' : ''}
+                          </div>
+                          {batch.graded_at && (
+                            <div className="flex items-center gap-1.5 justify-end text-xs text-gray-400 mt-0.5">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(batch.graded_at)}
+                            </div>
+                          )}
+                          {avgPercentage !== null && (
+                            <p className={cn("text-xs font-medium mt-0.5", getGradeColor(avgPercentage))}>
+                              {avgPercentage}% réussite moy.
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {batch.session_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => qrLinkMutation.mutate(batch.items[0])}
+                              disabled={qrLinkMutation.isPending}
+                              title="Générer le QR code pour que les apprenants accèdent directement à leur évaluation"
+                              className="h-8 w-8 text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost"
+                            >
+                              {qrLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setExpandedBatchKey(isExpanded ? null : batch.key)}
+                          >
+                            <Eye className="h-4 w-4 mr-1.5" />
+                            {isExpanded ? 'Masquer' : 'Détails'}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
+                    </motion.div>
+
+                    {/* Détail par apprenant — visible seulement en dépliant, modification/suppression individuelle */}
+                    {isExpanded && (
+                      <div className="bg-gray-50/50 border-t border-gray-100 divide-y divide-gray-100">
+                        {batch.items.map((evaluation) => {
+                          const student = evaluation.students
+                          return (
+                            <div key={evaluation.id} className="pl-20 pr-4 py-3 flex items-center justify-between group">
+                              <div className="flex items-center gap-1.5 text-sm">
+                                <User className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="font-medium text-gray-700">
+                                  {student ? `${student.first_name} ${student.last_name}` : 'Apprenant'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                  <div className="flex items-center gap-2 justify-end">
+                                    <span className="text-sm font-bold text-gray-900">
+                                      {evaluation.score}
+                                      {evaluation.max_score && <span className="text-gray-400 font-normal">/{evaluation.max_score}</span>}
+                                    </span>
+                                    {getGradeIcon(evaluation.percentage)}
+                                  </div>
+                                  {evaluation.percentage !== null && (
+                                    <p className={cn("text-xs font-medium", getGradeColor(evaluation.percentage))}>
+                                      {evaluation.percentage}% réussite
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEdit(evaluation)}
+                                    className="h-8 w-8 text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDelete(evaluation.id)}
+                                    className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>
@@ -1258,6 +1374,16 @@ export default function EvaluationsPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {qrModal && (
+        <QRCodeModal
+          open={!!qrModal}
+          onClose={() => setQrModal(null)}
+          url={qrModal.url}
+          title={qrModal.title}
+          filenamePrefix="Evaluation"
+        />
+      )}
     </motion.div>
   )
 }

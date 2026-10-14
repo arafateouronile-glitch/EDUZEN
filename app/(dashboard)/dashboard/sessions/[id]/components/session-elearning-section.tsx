@@ -89,8 +89,6 @@ interface QuizAttemptDetail {
   score: number | null
   is_passed: boolean | null
   completed_at: string | null
-  correct_answers: number | null
-  total_questions: number | null
 }
 
 interface StudentProgress {
@@ -103,6 +101,8 @@ interface StudentProgress {
   quiz_score: number | null
   last_activity: string | null
   status: 'not_started' | 'in_progress' | 'completed'
+  /** Durée estimée totale du cours (heures), pour afficher le temps au prorata de l'avancement */
+  course_duration_hours: number | null
   /** Détail leçon par leçon, pour l'affichage nominatif détaillé */
   lessonsDetail: LessonDetail[]
   /** Résultats individuels de chaque test passé (pas seulement la moyenne) */
@@ -235,10 +235,11 @@ export function SessionElearningSection({
           if (!isMissingTableError(progressError)) logger.warn('Error fetching lesson progress', sanitizeError(progressError))
         }
 
-        // Récupérer le détail des leçons (titre + ordre, pour l'affichage leçon par leçon)
+        // Récupérer le détail des leçons (titre + ordre + contenu, pour l'affichage
+        // leçon par leçon et pour noter les quiz intégrés — voir note ci-dessous).
         const { data: lessons, error: lessonsError } = await supabase
           .from('lessons')
-          .select('id, course_id, title, order_index')
+          .select('id, course_id, title, order_index, content')
           .in('course_id', courseIds)
           .order('order_index', { ascending: true })
 
@@ -246,19 +247,56 @@ export function SessionElearningSection({
           if (!isMissingTableError(lessonsError)) logger.warn('Error fetching lessons', sanitizeError(lessonsError))
         }
 
-        // Récupérer les résultats de quiz, avec le titre du quiz (pour afficher chaque test individuellement)
-        // eslint-disable-next-line
-        const qQuiz: any = supabase
-          .from('quiz_attempts')
-          .select('*, quizzes(id, title, lesson_id, lessons(course_id))')
-          .in('student_id', studentIds)
-          // Le schéma actuel utilise `completed_at` (pas `is_completed`)
-          .not('completed_at', 'is', null)
-          .order('completed_at', { ascending: false })
-        const { data: quizAttempts, error: quizError } = await qQuiz
+        // Les résultats de quiz ne viennent PAS de la table quiz_attempts (système
+        // legacy, vide en production — jamais alimenté par le parcours actuel).
+        // Le quiz réellement utilisé est intégré comme bloc dans lessons.content
+        // (blocs { type: 'quiz', data: { options: [{ id, text, isCorrect }] } }),
+        // et la réponse de l'apprenant est stockée dans
+        // lesson_progress.quiz_responses ({ [blockId]: { answer, answered_at } }).
+        // Même logique de notation que app/(learner)/learner/elearning/[slug]/page.tsx
+        // (inlineLessonScore), répliquée ici pour le staff.
+        const scoreInlineQuizzes = (
+          lessonContent: string | null,
+          quizResponses: Record<string, { answer?: string; answered_at?: string }> | null
+        ): { total: number; correct: number; percentage: number; graded: boolean; lastAnsweredAt: string | null } => {
+          if (!lessonContent) return { total: 0, correct: 0, percentage: 0, graded: false, lastAnsweredAt: null }
+          try {
+            const parsed = JSON.parse(lessonContent)
+            if (!Array.isArray(parsed)) return { total: 0, correct: 0, percentage: 0, graded: false, lastAnsweredAt: null }
+            const quizBlocks = parsed.filter((b: any) => b?.type === 'quiz')
+            if (!quizBlocks.length) return { total: 0, correct: 0, percentage: 0, graded: false, lastAnsweredAt: null }
 
-        if (quizError) {
-          if (!isMissingTableError(quizError)) logger.warn('Error fetching quiz attempts', sanitizeError(quizError))
+            const responses = quizResponses || {}
+            let total = 0
+            let correct = 0
+            let lastAnsweredAt: string | null = null
+
+            quizBlocks.forEach((block: any, i: number) => {
+              const blockId = String(block?.id || `quiz-${i}`)
+              const response = responses[blockId]
+              const selected = response?.answer
+              if (response?.answered_at && (!lastAnsweredAt || response.answered_at > lastAnsweredAt)) {
+                lastAnsweredAt = response.answered_at
+              }
+
+              const options = (block?.data?.options || []).map((opt: any, optIdx: number) => ({
+                id: String(opt?.id || `${blockId}-opt-${optIdx}`),
+                text: String(opt?.text || ''),
+                isCorrect: !!opt?.isCorrect,
+              }))
+              const correctOptions = options.filter((o: any) => o.isCorrect)
+              if (!correctOptions.length) return // bloc non corrigé (pas de bonne réponse définie)
+
+              total += 1
+              const selectedOption = options.find((o: any) => (o.id || o.text) === selected)
+              if (selected && selectedOption?.isCorrect) correct += 1
+            })
+
+            const graded = total > 0
+            return { total, correct, percentage: graded ? Math.round((correct / total) * 100) : 0, graded, lastAnsweredAt }
+          } catch {
+            return { total: 0, correct: 0, percentage: 0, graded: false, lastAnsweredAt: null }
+          }
         }
 
         // Calculer la progression pour chaque apprenant et chaque cours
@@ -280,19 +318,12 @@ export function SessionElearningSection({
 
             const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
-            // Score moyen des quiz pour ce cours
-            const courseQuizAttempts = (quizAttempts || []).filter(
-              (qa: any) => qa.student_id === enrollment.student_id && qa.quizzes?.lessons?.course_id === courseId
-            )
-            const quizScore = courseQuizAttempts.length > 0
-              ? Math.round(courseQuizAttempts.reduce((sum: number, qa: any) => sum + (qa.score || 0), 0) / courseQuizAttempts.length)
-              : null
-
             const lastProgress = studentLessonProgress.sort((a: any, b: any) =>
               new Date(b.last_accessed_at || b.started_at || b.completed_at || 0).getTime() - new Date(a.last_accessed_at || a.started_at || a.completed_at || 0).getTime()
             )[0]
 
             // Détail leçon par leçon (toutes les leçons du cours, même non commencées)
+            // + notation des quiz intégrés à chaque leçon, à partir des réponses enregistrées.
             const lessonsDetail: LessonDetail[] = courseLessons.map((lesson) => {
               const lp = studentLessonProgress.find((x: any) => x.lesson_id === lesson.id)
               return {
@@ -305,16 +336,25 @@ export function SessionElearningSection({
               }
             }).sort((a, b) => a.order_index - b.order_index)
 
-            // Résultat individuel de chaque test passé (pas seulement la moyenne)
-            const quizzesDetail: QuizAttemptDetail[] = courseQuizAttempts.map((qa: any) => ({
-              attempt_id: qa.id,
-              quiz_title: qa.quizzes?.title || 'Test',
-              score: qa.score,
-              is_passed: qa.is_passed,
-              completed_at: qa.completed_at,
-              correct_answers: qa.correct_answers,
-              total_questions: qa.total_questions,
-            }))
+            const quizzesDetail: QuizAttemptDetail[] = courseLessons
+              .map((lesson): QuizAttemptDetail | null => {
+                const lp = studentLessonProgress.find((x: any) => x.lesson_id === lesson.id)
+                const result = scoreInlineQuizzes(lesson.content, lp?.quiz_responses)
+                if (!result.graded) return null
+                return {
+                  attempt_id: `${enrollment.student_id}-${lesson.id}`,
+                  quiz_title: lesson.title,
+                  score: result.percentage,
+                  is_passed: null, // pas de seuil de réussite défini pour les quiz intégrés
+                  completed_at: result.lastAnsweredAt || lp?.completed_at || null,
+                }
+              })
+              .filter((q): q is QuizAttemptDetail => q !== null)
+
+            // Score moyen des quiz pour ce cours
+            const quizScore = quizzesDetail.length > 0
+              ? Math.round(quizzesDetail.reduce((sum, q) => sum + (q.score || 0), 0) / quizzesDetail.length)
+              : null
 
             let status: 'not_started' | 'in_progress' | 'completed' = 'not_started'
             if (completedLessons > 0 && completedLessons >= totalLessons) {
@@ -334,6 +374,7 @@ export function SessionElearningSection({
                 quiz_score: quizScore,
                 last_activity: lastProgress?.last_accessed_at || lastProgress?.started_at || lastProgress?.completed_at || null,
                 status,
+                course_duration_hours: sessionCourse.course?.estimated_duration_hours ?? null,
                 lessonsDetail,
                 quizzesDetail,
               })
@@ -401,6 +442,15 @@ export function SessionElearningSection({
       toast.error(error.message || 'Erreur lors de la suppression du cours')
     },
   })
+
+  // Durée (en heures) effectuée au prorata de l'avancement — ex. cours de
+  // 10h, 30% d'avancement → "3h effectuées sur 10h"
+  const formatProratedDuration = (progress: number, totalHours: number | null): string | null => {
+    if (!totalHours) return null
+    const doneHours = Math.round((progress / 100) * totalHours * 10) / 10
+    const formatHours = (h: number) => (Number.isInteger(h) ? `${h}h` : `${h.toFixed(1).replace('.', ',')}h`)
+    return `${formatHours(doneHours)} sur ${formatHours(totalHours)}`
+  }
 
   // Calculer les statistiques globales
   const getGlobalStats = () => {
@@ -691,6 +741,11 @@ export function SessionElearningSection({
                                       <div className="w-24">
                                         <Progress value={p.progress} className="h-2" />
                                         <p className="text-xs text-center mt-1">{p.progress}%</p>
+                                        {formatProratedDuration(p.progress, p.course_duration_hours) && (
+                                          <p className="text-[11px] text-center text-muted-foreground">
+                                            {formatProratedDuration(p.progress, p.course_duration_hours)}
+                                          </p>
+                                        )}
                                       </div>
                                       {p.quiz_score !== null && (
                                         <div className="text-center">
@@ -753,9 +808,6 @@ export function SessionElearningSection({
                                             </span>
                                             <span className="text-muted-foreground flex-shrink-0 ml-2">
                                               {quiz.score !== null ? `${quiz.score}%` : '—'}
-                                              {quiz.correct_answers !== null && quiz.total_questions !== null && (
-                                                ` (${quiz.correct_answers}/${quiz.total_questions})`
-                                              )}
                                               {quiz.completed_at && ` • ${formatDate(quiz.completed_at)}`}
                                             </span>
                                           </div>
@@ -909,6 +961,11 @@ export function SessionElearningSection({
                                     <div className="w-24">
                                       <Progress value={progress.progress} className="h-2" />
                                       <p className="text-xs text-center mt-1">{progress.progress}%</p>
+                                      {formatProratedDuration(progress.progress, progress.course_duration_hours) && (
+                                        <p className="text-[11px] text-center text-muted-foreground">
+                                          {formatProratedDuration(progress.progress, progress.course_duration_hours)}
+                                        </p>
+                                      )}
                                     </div>
                                     {progress.quiz_score !== null && (
                                       <div className="text-center">

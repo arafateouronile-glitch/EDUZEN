@@ -12,9 +12,11 @@ interface QRCodeModalProps {
   url: string
   title: string
   organizationName?: string
+  /** Préfixe du nom de fichier téléchargé (défaut : "Emargement") */
+  filenamePrefix?: string
 }
 
-export function QRCodeModal({ open, onClose, url, title, organizationName }: QRCodeModalProps) {
+export function QRCodeModal({ open, onClose, url, title, organizationName, filenamePrefix = 'Emargement' }: QRCodeModalProps) {
   const [displayUrl, setDisplayUrl] = useState<string | null>(null)
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
 
@@ -30,7 +32,7 @@ export function QRCodeModal({ open, onClose, url, title, organizationName }: QRC
     if (!downloadUrl) return
     const link = document.createElement('a')
     const safeName = title.replace(/[^a-zA-Z0-9\s-_]/g, '').replace(/\s+/g, '_')
-    link.download = `QR_Emargement_${safeName}.png`
+    link.download = `QR_${filenamePrefix}_${safeName}.png`
     link.href = downloadUrl
     link.click()
   }
