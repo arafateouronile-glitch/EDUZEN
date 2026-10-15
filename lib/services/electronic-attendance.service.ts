@@ -544,21 +544,29 @@ export class ElectronicAttendanceService {
         locationVerified = validation.verified
       }
 
-      // Créer l'entrée d'émargement dans la table attendance
-      const attendanceData = {
-        organization_id: request.organization_id,
-        student_id: request.student_id,
-        session_id: session?.session_id,
-        date: session?.date,
-        status: 'present' as const,
-        signature_url: signatureData,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
-        location_accuracy: location?.accuracy,
-        location_verified: locationVerified,
-      }
+      // Créer l'entrée d'émargement dans la table attendance — concept propre
+      // aux apprenants (student_id) ; une request de formateur (student_id
+      // null, cf. migration electronic_attendance_trainer_support) reste
+      // enregistrée dans electronic_attendance_requests mais ne crée pas de
+      // ligne attendance (sa clé de conflit est basée sur student_id, pas
+      // adaptée à un enregistrement formateur).
+      let attendance: { id: string } | null = null
+      if (request.student_id) {
+        const attendanceData = {
+          organization_id: request.organization_id,
+          student_id: request.student_id,
+          session_id: session?.session_id,
+          date: session?.date,
+          status: 'present' as const,
+          signature_url: signatureData,
+          latitude: location?.latitude,
+          longitude: location?.longitude,
+          location_accuracy: location?.accuracy,
+          location_verified: locationVerified,
+        }
 
-      const attendance = await this.attendanceService.upsert(attendanceData as Parameters<AttendanceService['upsert']>[0])
+        attendance = await this.attendanceService.upsert(attendanceData as Parameters<AttendanceService['upsert']>[0])
+      }
 
       // Mettre à jour la demande d'émargement
       const { data: updatedRequest, error: updateError } = await this.supabase
@@ -567,7 +575,7 @@ export class ElectronicAttendanceService {
           status: 'signed',
           signature_data: signatureData,
           signed_at: new Date().toISOString(),
-          attendance_id: attendance.id,
+          attendance_id: attendance?.id ?? null,
           latitude: location?.latitude || null,
           longitude: location?.longitude || null,
           location_accuracy: location?.accuracy || null,
@@ -584,7 +592,7 @@ export class ElectronicAttendanceService {
       logger.info('Émargement électronique signé', {
         requestId: request.id,
         studentId: request.student_id,
-        attendanceId: attendance.id,
+        attendanceId: attendance?.id ?? null,
         locationVerified,
       })
 
@@ -848,7 +856,7 @@ export class ElectronicAttendanceService {
    */
   async submitPublicEmargement(
     token: string,
-    learnerId: string,
+    requestId: string,
     signatureData: string,
     ipAddress: string | null
   ) {
@@ -872,16 +880,20 @@ export class ElectronicAttendanceService {
         throw errorHandler.createValidationError('Ce lien a expiré', 'expires_at')
       }
 
-      // Vérifier que cet apprenant a bien une request pour cette session
+      // Identifier par l'id de la request (unique, PK) plutôt que par student_id :
+      // les formateurs n'ont pas de student_id (ils ont un user_id à la place,
+      // cf. migration 20260616000001_electronic_attendance_trainer_support),
+      // donc filtrer sur student_id excluait silencieusement les formateurs de
+      // l'émargement public — l'id de la request fonctionne pour les deux.
       const { data: existingRequest, error: reqError } = await this.supabase
         .from('electronic_attendance_requests')
-        .select('id, status, signed_at, student_name')
+        .select('id, status, signed_at, student_name, student_id')
         .eq('attendance_session_id', session.id)
-        .eq('student_id', learnerId)
+        .eq('id', requestId)
         .single()
 
       if (reqError || !existingRequest) {
-        throw errorHandler.createNotFoundError('Cet apprenant n\'est pas inscrit à cette session', { learnerId })
+        throw errorHandler.createNotFoundError('Cette personne n\'est pas inscrite à cette session', { requestId })
       }
 
       // Double signature bloquée (Option A)
@@ -901,23 +913,27 @@ export class ElectronicAttendanceService {
         token,
         session_id: session.id,
         action: 'sign',
-        learner_id: learnerId,
+        learner_id: existingRequest.student_id,
         ip_address: ipAddress,
       })
 
-      // Créer l'enregistrement d'émargement dans la table attendance
+      // Créer l'enregistrement d'émargement dans la table attendance — concept
+      // propre aux apprenants (student_id), pas aux formateurs : on saute cette
+      // étape pour une request de formateur (student_id null).
       let attendanceId: string | null = null
-      try {
-        const att = await this.attendanceService.upsert({
-          organization_id: session.organization_id,
-          student_id: learnerId,
-          session_id: session.session_id,
-          date: session.date,
-          status: 'present',
-        } as Parameters<AttendanceService['upsert']>[0])
-        attendanceId = att?.id ?? null
-      } catch {
-        // Non-bloquant : la signature reste dans electronic_attendance_requests
+      if (existingRequest.student_id) {
+        try {
+          const att = await this.attendanceService.upsert({
+            organization_id: session.organization_id,
+            student_id: existingRequest.student_id,
+            session_id: session.session_id,
+            date: session.date,
+            status: 'present',
+          } as Parameters<AttendanceService['upsert']>[0])
+          attendanceId = att?.id ?? null
+        } catch {
+          // Non-bloquant : la signature reste dans electronic_attendance_requests
+        }
       }
 
       // Mettre à jour la request avec la signature
@@ -933,7 +949,7 @@ export class ElectronicAttendanceService {
         } as ElectronicAttendanceRequestUpdate)
         .eq('id', existingRequest.id)
 
-      logger.info('Signature publique enregistrée', { sessionId: session.id, learnerId })
+      logger.info('Signature publique enregistrée', { sessionId: session.id, requestId })
 
       return {
         success: true,

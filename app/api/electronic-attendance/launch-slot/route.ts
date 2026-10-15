@@ -140,7 +140,9 @@ export async function POST(request: NextRequest) {
           .single()
 
         for (const req of createdTrainerRequests) {
-          const signingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/attendance/sign/${req.signature_token}`
+          // /attendance/sign/[token] n'existe pas — la page réelle est /attendance/[token]
+          // (app/(public)/attendance/[token]/page.tsx, via /api/electronic-attendance/public/[token]).
+          const signingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/attendance/${req.signature_token}`
           await sendEmailViaResend({
             to: req.student_email,
             subject: `Émargement formateur — ${sessionInfo?.name ?? 'Formation'}`,

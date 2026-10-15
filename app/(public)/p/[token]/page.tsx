@@ -9,7 +9,10 @@ import { CheckCircle, XCircle, Loader2, ChevronLeft, RotateCcw, User } from 'luc
 
 interface AttendanceRequest {
   id: string
-  student_id: string
+  // Null pour une request formateur (identifié par user_id côté base, non
+  // exposé ici) — cf. migration 20260616000001_electronic_attendance_trainer_support.
+  student_id: string | null
+  requester_role: 'student' | 'trainer' | null
   student_name: string
   student_email: string
   status: 'pending' | 'signed' | 'expired' | 'declined'
@@ -286,6 +289,14 @@ function LearnerCard({
       <span className="text-white text-sm font-semibold leading-tight">
         {request.student_name}
       </span>
+      {request.requester_role === 'trainer' && (
+        <span
+          className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full"
+          style={{ background: 'rgba(52,185,238,0.15)', color: '#34B9EE' }}
+        >
+          Formateur
+        </span>
+      )}
       {signed ? (
         <span className="text-green-400 text-xs">
           Signé{signedTime ? ` à ${signedTime}` : ''}
@@ -360,7 +371,7 @@ export default function PublicEmargementPage() {
       const res = await fetch('/api/electronic-attendance/public-sign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, learnerId: selected.student_id, signatureData }),
+        body: JSON.stringify({ token, requestId: selected.id, signatureData }),
       })
       const json = await res.json()
 

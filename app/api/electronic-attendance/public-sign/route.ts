@@ -10,15 +10,15 @@ import { logger } from '@/lib/utils/logger'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { token, learnerId, signatureData } = body as {
+    const { token, requestId, signatureData } = body as {
       token: string
-      learnerId: string
+      requestId: string
       signatureData: string
     }
 
-    if (!token || !learnerId || !signatureData) {
+    if (!token || !requestId || !signatureData) {
       return NextResponse.json(
-        { error: 'token, learnerId et signatureData sont requis' },
+        { error: 'token, requestId et signatureData sont requis' },
         { status: 400 }
       )
     }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient()
     const service = new ElectronicAttendanceService(supabase)
 
-    const result = await service.submitPublicEmargement(token, learnerId, signatureData, ipAddress)
+    const result = await service.submitPublicEmargement(token, requestId, signatureData, ipAddress)
     return NextResponse.json(result)
   } catch (error) {
     logger.error('Erreur public-sign:', error)
