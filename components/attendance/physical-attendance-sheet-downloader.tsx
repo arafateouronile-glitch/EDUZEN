@@ -59,6 +59,7 @@ const ELECTRIC_CYAN = '#34B9EE'
 interface ElectronicRequest {
   id: string
   student_id: string | null
+  requester_role: 'student' | 'trainer' | null
   student_name: string
   student_email: string
   status: string
@@ -357,11 +358,11 @@ export function PhysicalAttendanceSheetDownloader({
     `
   }
 
-  const generateDigitalSheetHTML = (slot: SessionSlot, learners: AttendancePerson[]) => {
+  const generateDigitalSheetHTML = (slot: SessionSlot, learners: AttendancePerson[], trainers: AttendancePerson[] = []) => {
     const formattedDate = format(new Date(slot.date), 'EEEE d MMMM yyyy', { locale: fr })
     const timeLabel = getTimeSlotLabel(slot)
 
-    const rows = learners.map((p, i) => {
+    const buildRows = (people: AttendancePerson[]) => people.map((p, i) => {
       const isAbsent = p.status === 'absent'
       const hasTimestamp = !!p.timestamp
       const parts = hasTimestamp && p.timestamp.includes(' - ') ? p.timestamp.split(' - ') : [p.timestamp, '']
@@ -382,6 +383,24 @@ export function PhysicalAttendanceSheetDownloader({
           <td style="padding:14px 16px;text-align:right;font-size:9pt;color:${isAbsent ? '#ef4444' : '#9ca3af'};white-space:nowrap;line-height:1.4;">${hasTimestamp ? `${date}${time ? `<br>${time}` : ''}` : ''}</td>
         </tr>`
     }).join('')
+
+    const rows = buildRows(learners)
+    const trainerRows = buildRows(trainers)
+    const tableHead = `
+      <thead>
+        <tr style="background:${DEEP_BLUE};color:white;">
+          <th style="padding:10px 16px;text-align:left;font-weight:600;font-size:9pt;">NOM</th>
+          <th style="padding:10px 16px;text-align:left;font-weight:600;font-size:9pt;">EMAIL</th>
+          <th style="padding:10px 16px;text-align:center;font-weight:600;font-size:9pt;width:120px;">SIGNATURE</th>
+          <th style="padding:10px 16px;text-align:right;font-weight:600;font-size:9pt;white-space:nowrap;">DATE / HEURE</th>
+        </tr>
+      </thead>`
+    const trainersSection = trainers.length > 0 ? `
+  <p style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${DEEP_BLUE};margin:0 0 8px 0;">Formateurs <span style="color:${ELECTRIC_CYAN};">(${trainers.length})</span></p>
+  <table style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+    ${tableHead}
+    <tbody>${trainerRows}</tbody>
+  </table>` : ''
 
     return `<!DOCTYPE html>
 <html lang="fr">
@@ -414,16 +433,10 @@ export function PhysicalAttendanceSheetDownloader({
     </div>
     ${slot.location ? `<div><p style="margin:0;font-size:8pt;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Lieu</p><p style="margin:0;font-weight:600;color:#1e293b;">${escapeHtml(slot.location)}</p></div>` : ''}
   </div>
+  ${trainersSection}
   <p style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${DEEP_BLUE};margin:0 0 8px 0;">Apprenants <span style="color:${ELECTRIC_CYAN};">(${learners.length})</span></p>
   <table style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:30px;">
-    <thead>
-      <tr style="background:${DEEP_BLUE};color:white;">
-        <th style="padding:10px 16px;text-align:left;font-weight:600;font-size:9pt;">NOM</th>
-        <th style="padding:10px 16px;text-align:left;font-weight:600;font-size:9pt;">EMAIL</th>
-        <th style="padding:10px 16px;text-align:center;font-weight:600;font-size:9pt;width:120px;">SIGNATURE</th>
-        <th style="padding:10px 16px;text-align:right;font-weight:600;font-size:9pt;white-space:nowrap;">DATE / HEURE</th>
-      </tr>
-    </thead>
+    ${tableHead}
     <tbody>
       ${rows}
       ${learners.length === 0 ? `<tr><td colspan="4" style="padding:40px;text-align:center;color:#9ca3af;">Aucun apprenant inscrit</td></tr>` : ''}
@@ -438,10 +451,10 @@ export function PhysicalAttendanceSheetDownloader({
 </html>`
   }
 
-  const downloadDigitalSheet = async (slot: SessionSlot, learners: AttendancePerson[]) => {
+  const downloadDigitalSheet = async (slot: SessionSlot, learners: AttendancePerson[], trainers: AttendancePerson[] = []) => {
     setGeneratingDigitalSlotId(slot.id)
     try {
-      const html = generateDigitalSheetHTML(slot, learners)
+      const html = generateDigitalSheetHTML(slot, learners, trainers)
       const filename = `Emargement_Numerique_${sessionName.replace(/[^a-zA-Z0-9]/g, '_')}_${format(new Date(slot.date), 'yyyy-MM-dd')}_${slot.time_slot}.pdf`
 
       const containerId = `digital-attendance-${slot.id}-${Date.now()}`
@@ -731,6 +744,27 @@ export function PhysicalAttendanceSheetDownloader({
             }
           })
 
+          // Formateurs : une fois le créneau lancé ("Envoyer"), chaque formateur
+          // assigné à la session reçoit sa propre demande d'émargement
+          // (requester_role='trainer', cf. launch-slot) — affichés au même
+          // endroit que les apprenants plutôt que nulle part.
+          const trainers = eRequests
+            .filter((r) => r.requester_role === 'trainer')
+            .map((req) => {
+              const isSigned = req.status === 'signed'
+              const signedAt = req.signed_at
+                ? format(new Date(req.signed_at), 'dd/MM/yyyy - HH:mm')
+                : null
+              return {
+                id: req.id,
+                name: req.student_name,
+                email: req.student_email || '',
+                status: (isSigned ? 'present' : 'absent') as 'present' | 'absent',
+                timestamp: signedAt ?? '',
+                signatureUrl: isSigned && req.signature_data ? req.signature_data : undefined,
+              }
+            })
+
           return (
             <Card
               key={slot.id}
@@ -843,7 +877,7 @@ export function PhysicalAttendanceSheetDownloader({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadDigitalSheet(slot, learners)}
+                      onClick={() => downloadDigitalSheet(slot, learners, trainers)}
                       disabled={generatingDigitalSlotId === slot.id || isGenerating}
                       className="gap-2"
                       title="Télécharger l'émargement numérique signé"
@@ -911,7 +945,7 @@ export function PhysicalAttendanceSheetDownloader({
 
               {/* Émargement numérique — toujours visible */}
               <div className="border-t border-gray-100 bg-gray-50/50">
-                <DigitalAttendanceSheet learners={learners} trainers={[]} />
+                <DigitalAttendanceSheet learners={learners} trainers={trainers} />
               </div>
             </Card>
           )

@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
           student_name,
           student_email,
           student_id,
+          requester_role,
           status,
           signed_at,
           signed_via,
