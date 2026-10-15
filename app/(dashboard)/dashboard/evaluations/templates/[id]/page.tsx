@@ -29,6 +29,8 @@ interface Question {
   points: number
   explanation?: string
   order_index: number
+  /** Rubrique d'analyse (ex. « Organisation de la formation ») */
+  section?: string
 }
 
 export default function EditEvaluationTemplatePage() {
@@ -112,6 +114,7 @@ export default function EditEvaluationTemplatePage() {
         points: q.points || 1,
         explanation: q.explanation || undefined,
         order_index: q.order_index || 0,
+        section: q.section || undefined,
       }))
       setQuestions(formattedQuestions)
     }
@@ -136,6 +139,8 @@ export default function EditEvaluationTemplatePage() {
           show_correct_answers: formData.show_correct_answers,
         },
         questions.map((q) => ({
+          // Les questions existantes gardent leur id pour conserver les réponses déjà collectées
+          ...(q.id.startsWith('temp-') ? {} : { id: q.id }),
           question_text: q.question_text,
           question_type: q.question_type,
           options: (q.options || null) as any,
@@ -144,6 +149,7 @@ export default function EditEvaluationTemplatePage() {
           points: q.points,
           explanation: q.explanation || null,
           order_index: q.order_index,
+          section: q.section?.trim() || null,
         }))
       )
     },
@@ -464,6 +470,13 @@ export default function EditEvaluationTemplatePage() {
             ) : (
               questions.map((question, index) => (
                 <Card key={question.id} className="border-2">
+                  {index === 0 && (
+                    <datalist id="evaluation-question-sections">
+                      {[...new Set(questions.map((q) => q.section?.trim()).filter(Boolean))].map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                  )}
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">Question {index + 1}</CardTitle>
@@ -486,6 +499,19 @@ export default function EditEvaluationTemplatePage() {
                         rows={2}
                         required
                       />
+                    </div>
+
+                    <div>
+                      <Label>Rubrique (optionnel)</Label>
+                      <Input
+                        value={question.section || ''}
+                        onChange={(e) => updateQuestion(question.id, { section: e.target.value })}
+                        list="evaluation-question-sections"
+                        placeholder="Ex. Organisation de la formation"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Les questions d&apos;une même rubrique sont regroupées avec une note /10 dans le tableau « Suivi qualité ».
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

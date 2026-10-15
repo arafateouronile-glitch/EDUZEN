@@ -46,6 +46,7 @@ const GestionConvocations = lazy(() => import('./sections/gestion-convocations')
 const GestionEvaluations = lazy(() => import('./sections/gestion-evaluations').then(m => ({ default: m.GestionEvaluations })))
 const GestionFinances = lazy(() => import('./sections/gestion-finances').then(m => ({ default: m.GestionFinances })))
 const GestionEspaceEntreprise = lazy(() => import('./sections/gestion-espace-entreprise').then(m => ({ default: m.GestionEspaceEntreprise })))
+const EvaluationAnalyticsView = lazy(() => import('@/components/evaluations/analytics/evaluation-analytics-view').then(m => ({ default: m.EvaluationAnalyticsView })))
 const GestionAutomatisation = lazy(() => import('./sections/gestion-automatisation').then(m => ({ default: m.GestionAutomatisation })))
 const GestionExamen = lazy(() => import('./sections/gestion-examen').then(m => ({ default: m.GestionExamen })))
 
@@ -874,6 +875,12 @@ export default function SessionDetailPage() {
                     sessionId={sessionId}
                     sessionData={sessionData}
                   />
+                </Suspense>
+              )}
+
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'qualite' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <EvaluationAnalyticsView sessionId={sessionId} />
                 </Suspense>
               )}
 

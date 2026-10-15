@@ -8358,6 +8358,7 @@ export type Database = {
           options: Json | null
           order_index: number
           points: number | null
+          section: string | null
           question_text: string
           question_type: string
           template_id: string
@@ -8372,6 +8373,7 @@ export type Database = {
           options?: Json | null
           order_index: number
           points?: number | null
+          section?: string | null
           question_text: string
           question_type?: string
           template_id: string
@@ -8386,6 +8388,7 @@ export type Database = {
           options?: Json | null
           order_index?: number
           points?: number | null
+          section?: string | null
           question_text?: string
           question_type?: string
           template_id?: string

@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils'
 
 type WorkflowStep = 'configuration' | 'gestion' | 'espace_apprenant' | 'suivi'
 type ConfigTab = 'initialisation' | 'dates_prix' | 'apprenants' | 'programme' | 'intervenants'
-type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'finances' | 'espace_entreprise' | 'automatisation' | 'examen'
+type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'qualite' | 'finances' | 'espace_entreprise' | 'automatisation' | 'examen'
 
 interface SessionSidebarProps {
   activeStep: WorkflowStep
@@ -72,6 +72,7 @@ export function SessionSidebar({
         { id: 'conventions', label: 'Conventions', icon: FileText },
         { id: 'convocations', label: 'Convocations', icon: Mail },
         { id: 'evaluations', label: 'Évaluations', icon: ClipboardCheck },
+        { id: 'qualite', label: 'Suivi qualité', icon: BarChart2 },
         { id: 'finances', label: 'Finances', icon: Euro },
         { id: 'espace_entreprise', label: 'Espace Entreprise', icon: Building2 },
         { id: 'automatisation', label: 'Automatisation', icon: Cog },

@@ -151,27 +151,54 @@ export class EvaluationTemplateService {
 
     if (templateError) throw templateError
 
-    // Si des questions sont fournies, les mettre à jour
+    // Si des questions sont fournies, les synchroniser.
+    // Diff par id plutôt que delete-all + insert : evaluation_responses.question_id
+    // est en ON DELETE CASCADE, donc recréer les questions effaçait toutes les
+    // réponses déjà collectées (et vidait le tableau « Suivi qualité »).
     if (questions !== undefined) {
-      // Supprimer les anciennes questions
-      const { error: deleteError } = await this.supabase
+      const { data: existingRows, error: existingError } = await this.supabase
         .from('evaluation_template_questions')
-        .delete()
+        .select('id')
         .eq('template_id', id)
 
-      if (deleteError) throw deleteError
+      if (existingError) throw existingError
 
-      // Insérer les nouvelles questions
-      if (questions.length > 0) {
-        const questionsToInsert = questions.map((q, index) => ({
-          ...q,
-          template_id: id,
-          order_index: q.order_index ?? index + 1,
-        }))
+      const existingIds = new Set((existingRows || []).map((r) => r.id))
+      const normalized = questions.map((q, index) => ({
+        ...q,
+        template_id: id,
+        order_index: q.order_index ?? index + 1,
+      }))
+      const toUpdate = normalized.filter((q) => q.id && existingIds.has(q.id))
+      const toInsert = normalized
+        .filter((q) => !q.id || !existingIds.has(q.id))
+        .map(({ id: _ignored, ...q }) => q)
+      const keptIds = new Set(toUpdate.map((q) => q.id as string))
+      const toDelete = [...existingIds].filter((qid) => !keptIds.has(qid))
 
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await this.supabase
+          .from('evaluation_template_questions')
+          .delete()
+          .in('id', toDelete)
+
+        if (deleteError) throw deleteError
+      }
+
+      for (const q of toUpdate) {
+        const { id: questionId, ...fields } = q
+        const { error: updateError } = await this.supabase
+          .from('evaluation_template_questions')
+          .update(fields)
+          .eq('id', questionId as string)
+
+        if (updateError) throw updateError
+      }
+
+      if (toInsert.length > 0) {
         const { error: insertError } = await this.supabase
           .from('evaluation_template_questions')
-          .insert(questionsToInsert)
+          .insert(toInsert)
 
         if (insertError) throw insertError
       }

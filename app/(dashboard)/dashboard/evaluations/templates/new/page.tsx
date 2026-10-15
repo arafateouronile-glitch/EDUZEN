@@ -30,6 +30,8 @@ interface Question {
   points: number
   explanation?: string
   order_index: number
+  /** Rubrique d'analyse (ex. « Organisation de la formation ») */
+  section?: string
 }
 
 /**
@@ -40,6 +42,7 @@ interface Question {
 const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   {
     question_text: "Dans quelle mesure avez-vous pu mettre en pratique les compétences acquises lors de la formation ?",
+    section: "Impact de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Mesure le transfert des apprentissages en situation réelle (Qualiopi indicateur 14).",
@@ -47,6 +50,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous l'utilité de la formation par rapport à votre activité professionnelle actuelle ?",
+    section: "Impact de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Évalue l'adéquation formation/poste après prise de recul.",
@@ -54,6 +58,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Dans quelle mesure avez-vous atteint les objectifs professionnels que vous vous étiez fixés avant la formation ?",
+    section: "Impact de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Mesure l'atteinte des objectifs apprenants à distance de la formation.",
@@ -61,6 +66,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous l'impact de la formation sur votre performance au travail ?",
+    section: "Impact de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Indicateur d'impact professionnel post-formation.",
@@ -68,6 +74,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Dans quelle mesure l'organisme de formation a-t-il assuré un suivi après la fin de la formation (contact, ressources complémentaires, accompagnement) ?",
+    section: "Suivi post-formation",
     question_type: 'rating',
     points: 1,
     explanation: "Évalue le suivi post-formation de l'OF — preuve que l'organisme s'assure de l'effectivité du transfert (Qualiopi indicateur 14).",
@@ -75,6 +82,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Dans quelle mesure recommanderiez-vous cette formation à un(e) collègue ?",
+    section: "Note générale de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Net Promoter Score (NPS) à froid, reflet de la valeur perçue à long terme.",
@@ -82,6 +90,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Quelles compétences ou connaissances acquises lors de la formation avez-vous concrètement appliquées dans votre travail ? Pouvez-vous donner un exemple ?",
+    section: "Commentaires libres",
     question_type: 'essay',
     points: 0,
     explanation: "Recueille des preuves qualitatives de transfert des apprentissages.",
@@ -89,6 +98,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Quels obstacles avez-vous rencontrés pour mettre en œuvre les acquis de la formation ? (manque de temps, environnement de travail, ressources, autre...)",
+    section: "Commentaires libres",
     question_type: 'essay',
     points: 0,
     explanation: "Identifie les freins au transfert pour améliorer l'ingénierie future.",
@@ -96,6 +106,7 @@ const DEFAULT_COLD_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Avez-vous des suggestions pour améliorer cette formation afin qu'elle soit encore plus utile dans votre contexte professionnel ?",
+    section: "Commentaires libres",
     question_type: 'essay',
     points: 0,
     explanation: "Boucle d'amélioration continue — amélioration de l'offre (Qualiopi indicateur 10).",
@@ -139,6 +150,7 @@ const DEFAULT_INSTRUCTOR_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous votre satisfaction globale concernant le déroulement de cette session ?",
+    section: "Note générale de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Auto-évaluation globale du formateur — indicateur de qualité interne (Qualiopi indicateur 8).",
@@ -325,6 +337,7 @@ const DEFAULT_MANAGER_QUESTIONS: Omit<Question, 'id'>[] = [
 const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   {
     question_text: "Comment évaluez-vous votre niveau actuel sur les thématiques abordées dans cette formation ?",
+    section: "Niveau et prérequis",
     question_type: 'rating',
     points: 1,
     explanation: "Auto-positionnement initial — permet d'adapter le niveau de la formation (Qualiopi indicateur 2).",
@@ -332,6 +345,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Dans quelle mesure maîtrisez-vous les prérequis indiqués pour cette formation ?",
+    section: "Niveau et prérequis",
     question_type: 'rating',
     points: 1,
     explanation: "Vérification des prérequis déclarés dans le programme (Qualiopi indicateur 2).",
@@ -339,6 +353,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Quelle est votre aisance avec les outils ou méthodes qui seront utilisés pendant la formation ?",
+    section: "Niveau et prérequis",
     question_type: 'rating',
     points: 1,
     explanation: "Évalue le niveau d'outillage préalable pour adapter les supports pédagogiques.",
@@ -346,6 +361,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous votre motivation à suivre cette formation ?",
+    section: "Motivation et adéquation",
     question_type: 'rating',
     points: 1,
     explanation: "Indicateur d'engagement initial — utile pour personnaliser l'approche pédagogique.",
@@ -353,6 +369,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Dans quelle mesure pensez-vous que cette formation correspond à vos besoins professionnels actuels ?",
+    section: "Motivation et adéquation",
     question_type: 'rating',
     points: 1,
     explanation: "Mesure l'adéquation perçue entre l'offre et le besoin (Qualiopi indicateur 5).",
@@ -360,6 +377,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Quelles sont vos principales attentes vis-à-vis de cette formation ?",
+    section: "Attentes et profil",
     question_type: 'essay',
     points: 0,
     explanation: "Recueille les attentes individuelles pour personnaliser le parcours (Qualiopi indicateur 2).",
@@ -367,6 +385,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Quelles compétences ou connaissances souhaitez-vous acquérir ou renforcer à l'issue de cette formation ?",
+    section: "Attentes et profil",
     question_type: 'essay',
     points: 0,
     explanation: "Identifie les objectifs personnels de l'apprenant pour les croiser avec les objectifs pédagogiques.",
@@ -374,6 +393,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Quel est votre contexte professionnel actuel ? (poste occupé, missions principales, secteur d'activité)",
+    section: "Attentes et profil",
     question_type: 'essay',
     points: 0,
     explanation: "Permet au formateur d'ancrer les exemples dans la réalité terrain de l'apprenant.",
@@ -381,6 +401,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Y a-t-il des points spécifiques sur lesquels vous souhaiteriez que le formateur insiste particulièrement ?",
+    section: "Attentes et profil",
     question_type: 'essay',
     points: 0,
     explanation: "Personnalisation fine du contenu selon les besoins exprimés (Qualiopi indicateur 5).",
@@ -388,12 +409,14 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Disposez-vous de certifications, diplômes ou expériences professionnelles reconnues en lien avec les thématiques de cette formation ? Si oui, lesquels ?",
+    section: "Attentes et profil",
     question_type: 'essay',
     points: 0,
     explanation: "Identification des acquis antérieurs et VAE potentielle — permet d'adapter le niveau de départ (Qualiopi indicateur 2).",
     order_index: 10,
   },
   {
+    section: "Attentes et profil",
     question_text: "Avez-vous des besoins spécifiques (situation de handicap, troubles cognitifs, contraintes particulières) dont nous devrions tenir compte pour adapter les conditions de formation ?",
     question_type: 'essay',
     points: 0,
@@ -410,6 +433,7 @@ const DEFAULT_PRE_FORMATION_QUESTIONS: Omit<Question, 'id'>[] = [
 const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   {
     question_text: "Comment évaluez-vous votre satisfaction globale concernant cette formation ?",
+    section: "Note générale de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Indicateur global de satisfaction immédiate (Qualiopi indicateur 7).",
@@ -417,6 +441,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous la qualité du contenu pédagogique (clarté, pertinence, richesse) ?",
+    section: "Contenu de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Évalue l'adéquation et la qualité des contenus délivrés.",
@@ -424,6 +449,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous la qualité de l'animation et les compétences du formateur ?",
+    section: "Déroulement de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Mesure la compétence pédagogique du formateur (Qualiopi indicateur 6).",
@@ -431,6 +457,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Dans quelle mesure les exercices pratiques et les exemples étaient-ils adaptés à votre réalité professionnelle ?",
+    section: "Déroulement de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Évalue la mise en pratique et l'ancrage dans le contexte métier.",
@@ -438,6 +465,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Les objectifs annoncés en début de formation ont-ils été atteints à l'issue de celle-ci ?",
+    section: "Efficacité de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Vérification de l'atteinte des objectifs pédagogiques (Qualiopi indicateur 4).",
@@ -445,6 +473,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous les conditions matérielles et logistiques de la formation (espace, outils, supports) ?",
+    section: "Organisation de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Évalue les conditions d'accueil et les ressources mobilisées.",
@@ -452,6 +481,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Comment évaluez-vous les conditions administratives et organisationnelles de la formation (inscription, convocation, documents reçus, information préalable) ?",
+    section: "Préparation de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Évalue la qualité de l'accueil et de l'information délivrée avant et pendant la formation (Qualiopi critère 1 — information des publics).",
@@ -459,6 +489,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Vos éventuels besoins spécifiques (situation de handicap, difficultés particulières) ont-ils été pris en compte de manière satisfaisante ?",
+    section: "Organisation de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Accessibilité et compensation du handicap — exigence transversale obligatoire du référentiel Qualiopi (critère 8).",
@@ -466,6 +497,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Dans quelle mesure recommanderiez-vous cette formation à un(e) collègue ?",
+    section: "Note générale de la formation",
     question_type: 'rating',
     points: 1,
     explanation: "Net Promoter Score (NPS) à chaud.",
@@ -473,6 +505,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Qu'avez-vous le plus apprécié dans cette formation ?",
+    section: "Commentaires libres",
     question_type: 'essay',
     points: 0,
     explanation: "Collecte les points forts perçus pour valoriser les pratiques efficaces.",
@@ -480,6 +513,7 @@ const DEFAULT_HOT_QUESTIONS: Omit<Question, 'id'>[] = [
   },
   {
     question_text: "Quels aspects de la formation mériteraient selon vous d'être améliorés ?",
+    section: "Commentaires libres",
     question_type: 'essay',
     points: 0,
     explanation: "Boucle d'amélioration continue (Qualiopi indicateur 10).",
@@ -625,6 +659,7 @@ export default function NewEvaluationTemplatePage() {
           points: q.points,
           explanation: q.explanation || null,
           order_index: q.order_index,
+          section: q.section?.trim() || null,
         }))
       )
     },
@@ -1025,6 +1060,13 @@ export default function NewEvaluationTemplatePage() {
             ) : (
               questions.map((question, index) => (
                 <Card key={question.id} className="border-2">
+                  {index === 0 && (
+                    <datalist id="evaluation-question-sections">
+                      {[...new Set(questions.map((q) => q.section?.trim()).filter(Boolean))].map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                  )}
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1051,6 +1093,19 @@ export default function NewEvaluationTemplatePage() {
                         rows={2}
                         required
                       />
+                    </div>
+
+                    <div>
+                      <Label>Rubrique (optionnel)</Label>
+                      <Input
+                        value={question.section || ''}
+                        onChange={(e) => updateQuestion(question.id, { section: e.target.value })}
+                        list="evaluation-question-sections"
+                        placeholder="Ex. Organisation de la formation"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Les questions d&apos;une même rubrique sont regroupées avec une note /10 dans le tableau « Suivi qualité ».
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

@@ -1087,6 +1087,26 @@ export default function EvaluationsPage() {
                               {qrLinkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
                             </Button>
                           )}
+                          {batch.session_id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              title="Analyse des réponses (Suivi qualité)"
+                              className="h-8 w-8 text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost"
+                            >
+                              <Link
+                                href={`/dashboard/evaluations/analytics?${new URLSearchParams({
+                                  session_id: batch.session_id,
+                                  subject: batch.subject,
+                                  ...(batch.assessment_type ? { assessment_type: batch.assessment_type } : {}),
+                                  ...(batch.graded_at ? { graded_at: batch.graded_at } : {}),
+                                }).toString()}`}
+                              >
+                                <BarChart3 className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"

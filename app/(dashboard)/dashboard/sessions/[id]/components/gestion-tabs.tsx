@@ -7,11 +7,12 @@ import {
   Award,
   DollarSign,
   Building2,
-  Zap
+  Zap,
+  BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'finances' | 'espace_entreprise' | 'automatisation'
+type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'qualite' | 'finances' | 'espace_entreprise' | 'automatisation'
 
 interface GestionTabsProps {
   activeTab: GestionTab
@@ -22,6 +23,7 @@ const gestionTabs = [
   { id: 'conventions' as const, label: 'Conventions', icon: FileText, color: 'from-purple-500 to-purple-600' },
   { id: 'convocations' as const, label: 'Convocations', icon: Bell, color: 'from-brand-blue to-brand-cyan' },
   { id: 'evaluations' as const, label: 'Évaluations', icon: Award, color: 'from-amber-500 to-amber-600' },
+  { id: 'qualite' as const, label: 'Suivi qualité', icon: BarChart3, color: 'from-green-500 to-green-600' },
   { id: 'finances' as const, label: 'Finances', icon: DollarSign, color: 'from-emerald-500 to-emerald-600' },
   { id: 'espace_entreprise' as const, label: 'Espace entreprise', icon: Building2, color: 'from-blue-500 to-blue-600' },
   { id: 'automatisation' as const, label: 'Automatisation', icon: Zap, color: 'from-orange-500 to-orange-600' },

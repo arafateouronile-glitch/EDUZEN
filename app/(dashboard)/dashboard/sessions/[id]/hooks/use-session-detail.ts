@@ -43,7 +43,7 @@ type SessionSlot = TableRow<'session_slots'>
 
 type WorkflowStep = 'configuration' | 'gestion' | 'espace_apprenant' | 'suivi'
 type ConfigTab = 'initialisation' | 'dates_prix' | 'apprenants' | 'programme' | 'intervenants'
-type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'finances' | 'espace_entreprise' | 'automatisation' | 'examen'
+type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'qualite' | 'finances' | 'espace_entreprise' | 'automatisation' | 'examen'
 
 export interface SessionFormData {
   name: string
@@ -144,7 +144,7 @@ export function useSessionDetail(sessionId: string) {
       // Support aussi du paramètre "tab" pour compatibilité avec "finances"
       const tabFromUrl = params.get('tab') as GestionTab | null
       const finalTab = gestionTabFromUrl || tabFromUrl
-      if (finalTab && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation', 'examen'].includes(finalTab)) {
+      if (finalTab && ['conventions', 'convocations', 'evaluations', 'qualite', 'finances', 'espace_entreprise', 'automatisation', 'examen'].includes(finalTab)) {
         return finalTab
       }
     }
@@ -165,7 +165,7 @@ export function useSessionDetail(sessionId: string) {
       setActiveTab(tabFromUrl)
     }
     
-    if (gestionTabFromUrl && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation', 'examen'].includes(gestionTabFromUrl) && gestionTabFromUrl !== activeGestionTab) {
+    if (gestionTabFromUrl && ['conventions', 'convocations', 'evaluations', 'qualite', 'finances', 'espace_entreprise', 'automatisation', 'examen'].includes(gestionTabFromUrl) && gestionTabFromUrl !== activeGestionTab) {
       setActiveGestionTab(gestionTabFromUrl)
     }
     
