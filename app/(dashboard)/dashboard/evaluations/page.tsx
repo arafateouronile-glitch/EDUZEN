@@ -463,7 +463,7 @@ export default function EvaluationsPage() {
         ...gradeData,
         session_id: data.session_id || null,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
-        score: parseFloat(data.score),
+        score: data.score ? parseFloat(data.score) : null,
         notes: data.notes || null,
         graded_at: data.graded_at || new Date().toISOString(),
         teacher_id: user.id,
@@ -515,7 +515,7 @@ export default function EvaluationsPage() {
         subject: data.subject,
         assessment_type: data.assessment_type,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
-        score: parseFloat(data.score),
+        score: data.score ? parseFloat(data.score) : null,
         notes: data.notes || null,
         graded_at: data.graded_at || new Date().toISOString(),
         teacher_id: user.id,
@@ -569,7 +569,7 @@ export default function EvaluationsPage() {
         ...gradeData,
         session_id: data.session_id || null,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
-        score: parseFloat(data.score),
+        score: data.score ? parseFloat(data.score) : null,
         notes: data.notes || null,
         graded_at: data.graded_at || new Date().toISOString(),
       } as unknown as Parameters<typeof evaluationService.update>[1])
@@ -1135,10 +1135,14 @@ export default function EvaluationsPage() {
                               <div className="flex items-center gap-6">
                                 <div className="text-right">
                                   <div className="flex items-center gap-2 justify-end">
-                                    <span className="text-sm font-bold text-gray-900">
-                                      {evaluation.score}
-                                      {evaluation.max_score && <span className="text-gray-400 font-normal">/{evaluation.max_score}</span>}
-                                    </span>
+                                    {evaluation.score === null || evaluation.score === undefined ? (
+                                      <span className="text-sm text-gray-400 italic">Non notée</span>
+                                    ) : (
+                                      <span className="text-sm font-bold text-gray-900">
+                                        {evaluation.score}
+                                        {evaluation.max_score && <span className="text-gray-400 font-normal">/{evaluation.max_score}</span>}
+                                      </span>
+                                    )}
                                     {getGradeIcon(evaluation.percentage)}
                                   </div>
                                   {evaluation.percentage !== null && (
@@ -1301,15 +1305,14 @@ export default function EvaluationsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Note *</label>
+                      <label className="text-sm font-medium text-gray-700">Note <span className="font-normal text-gray-400">(optionnelle)</span></label>
                       <input
                         type="number"
                         step="0.01"
                         value={formData.score || ''}
                         onChange={(e) => setValue('score', e.target.value)}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
-                        placeholder="0"
-                        required
+                        placeholder="À saisir plus tard"
                       />
                     </div>
 

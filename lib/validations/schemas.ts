@@ -197,7 +197,10 @@ export const evaluationSchema = z.object({
     'project',
     'other',
   ]).default('quiz'),
-  score: z.string().min(1, 'La note est requise').refine((val) => {
+  // Optionnelle : une évaluation peut être créée avant d'être notée (questionnaire
+  // à remplir par l'apprenant, satisfaction, note saisie plus tard).
+  score: z.string().optional().or(z.literal('')).refine((val) => {
+    if (!val) return true
     const num = parseFloat(val)
     return !isNaN(num) && num >= 0
   }, 'La note doit être un nombre valide'),

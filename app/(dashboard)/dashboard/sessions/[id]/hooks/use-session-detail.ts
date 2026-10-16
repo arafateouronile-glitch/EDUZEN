@@ -1586,16 +1586,16 @@ export function useSessionDetail(sessionId: string) {
     }
   }
 
-  // Calcul des statistiques des notes
+  // Calcul des statistiques des notes — moyennes sur les seules évaluations
+  // notées (une évaluation pas encore notée ne compte pas comme un 0)
+  const scoredGrades = ((grades as GradeWithRelations[] | undefined) ?? []).filter((g) => g.score !== null && g.score !== undefined)
   const gradesStats = grades && (grades as GradeWithRelations[]).length > 0
     ? {
         total: (grades as GradeWithRelations[]).length,
-        average: (grades as GradeWithRelations[]).reduce((sum, g) => sum + (Number(g.score) || 0), 0) / (grades as GradeWithRelations[]).length,
-        averagePercentage: (grades as GradeWithRelations[]).reduce((sum, g) => {
-          const maxScore = Number(g.max_score) || 20
-          const score = Number(g.score) || 0
-          return sum + (score / maxScore) * 100
-        }, 0) / (grades as GradeWithRelations[]).length,
+        average: scoredGrades.length > 0 ? scoredGrades.reduce((sum, g) => sum + Number(g.score), 0) / scoredGrades.length : 0,
+        averagePercentage: scoredGrades.length > 0
+          ? scoredGrades.reduce((sum, g) => sum + (Number(g.score) / (Number(g.max_score) || 20)) * 100, 0) / scoredGrades.length
+          : 0,
       }
     : null
 

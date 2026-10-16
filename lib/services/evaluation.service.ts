@@ -420,15 +420,17 @@ export class EvaluationService {
       }
     })
 
-    // Moyennes
-    stats.averageScore = totalMaxScore > 0 ? totalScore / evaluations.length : 0
+    // Moyennes — sur les seules évaluations notées (une évaluation sans note
+    // n'est pas un 0)
+    const scoredCount = evaluations.filter((e) => e.score !== null && e.score !== undefined).length
+    stats.averageScore = totalMaxScore > 0 && scoredCount > 0 ? totalScore / scoredCount : 0
     stats.averagePercentage = validPercentageCount > 0 ? totalPercentage / validPercentageCount : 0
 
     // Moyennes par sujet
     Object.keys(stats.bySubject).forEach((subject) => {
-      const subjectEvals = evaluations.filter((e) => e.subject === subject)
+      const subjectEvals = evaluations.filter((e) => e.subject === subject && e.score !== null && e.score !== undefined)
       const subjectTotal = subjectEvals.reduce((sum, e) => sum + (e.score || 0), 0)
-      stats.bySubject[subject].average = subjectTotal / subjectEvals.length
+      stats.bySubject[subject].average = subjectEvals.length > 0 ? subjectTotal / subjectEvals.length : 0
     })
 
     return stats

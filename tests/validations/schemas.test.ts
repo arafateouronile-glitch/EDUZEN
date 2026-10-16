@@ -141,6 +141,27 @@ describe('evaluationSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('valide une evaluation sans note (notee plus tard)', () => {
+    const result = evaluationSchema.safeParse({
+      session_id: 'sess-1',
+      subject: 'Évaluation à chaud',
+      assessment_type: 'hot',
+      score: '',
+      graded_at: '2024-01-15',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejette une note invalide', () => {
+    const result = evaluationSchema.safeParse({
+      student_id: 'std-1',
+      subject: 'Controle',
+      score: 'abc',
+      graded_at: '2024-01-15',
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('rejette si score superieur a max_score', () => {
     const result = evaluationSchema.safeParse({
       student_id: 'std-1',
