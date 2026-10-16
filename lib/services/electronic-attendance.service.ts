@@ -133,6 +133,31 @@ export class ElectronicAttendanceService {
         throw errorHandler.createAuthError(ErrorCode.AUTH_REQUIRED, 'Utilisateur non authentifié')
       }
 
+      // Idempotence : un même créneau (session+date+heures) ne doit jamais
+      // produire deux lignes electronic_attendance_sessions. Sans ce garde-fou,
+      // un double clic sur "Créer le lien public" (POST direct, sans la
+      // vérification déjà présente dans launch-slot) crée un doublon avec son
+      // propre token — le lien/QR affiché ensuite dépend alors de l'ordre de
+      // retour de la requête et peut changer d'une page à l'autre, donnant
+      // l'impression que la création "ne marche pas".
+      let existingQuery = this.supabase
+        .from('electronic_attendance_sessions')
+        .select('*, session:sessions(id, name, start_date, end_date)')
+        .eq('organization_id', params.organizationId)
+        .eq('session_id', params.sessionId)
+        .eq('date', params.date)
+      existingQuery = params.startTime
+        ? existingQuery.eq('start_time', params.startTime)
+        : existingQuery.is('start_time', null)
+      existingQuery = params.endTime
+        ? existingQuery.eq('end_time', params.endTime)
+        : existingQuery.is('end_time', null)
+      const { data: existingSession } = await existingQuery.maybeSingle()
+
+      if (existingSession) {
+        return existingSession as unknown as AttendanceSessionWithRequests
+      }
+
       // Récupérer les étudiants inscrits à la session
       const { students } = await this.getEligibleEnrolledStudents(params.sessionId)
 
