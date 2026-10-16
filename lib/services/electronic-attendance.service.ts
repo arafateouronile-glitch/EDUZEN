@@ -17,6 +17,8 @@ type ElectronicAttendanceRequestUpdate = TableUpdate<'electronic_attendance_requ
 /** Ligne enrollment avec relation students (select students(id, first_name, last_name, email)) */
 type EnrollmentWithStudents = { students: StudentRef | null }
 type StudentRef = { id: string; first_name?: string; last_name?: string; email?: string }
+/** Formateur assigné à une session (session_teachers -> users) */
+type TrainerRef = { id: string; full_name: string | null; email: string }
 /** Session d'émargement avec champs utilisés côté service */
 type AttendanceSessionRef = {
   status?: string
@@ -124,6 +126,38 @@ export class ElectronicAttendanceService {
   }
 
   /**
+   * Récupère les formateurs assignés à une session (session_teachers) pour
+   * les faire apparaître sur l'émargement au même titre que les apprenants —
+   * même modèle que getEligibleEnrolledStudents, cf. launch-slot/route.ts qui
+   * fait la même chose pour le flux "Envoyer" (avec email, lui). Jamais
+   * bloquant : une erreur ici ne doit jamais empêcher l'émargement apprenant.
+   */
+  private async getAssignedTrainersForEmargement(
+    sessionId: string
+  ): Promise<{ trainers: TrainerRef[]; skippedNoEmail: Array<{ id: string; name: string }> }> {
+    const { data: sessionTeachers, error } = await this.supabase
+      .from('session_teachers')
+      .select('teacher_id, users:teacher_id(id, full_name, email)')
+      .eq('session_id', sessionId)
+
+    if (error) {
+      logger.warn('Erreur récupération formateurs assignés', { sessionId, error: error.message })
+      return { trainers: [], skippedNoEmail: [] }
+    }
+
+    const assigned = (sessionTeachers ?? [])
+      .map((st: { users: TrainerRef | null }) => st.users)
+      .filter((u): u is TrainerRef => !!u)
+
+    const trainers = assigned.filter((u): u is TrainerRef => !!u.email)
+    const skippedNoEmail = assigned
+      .filter((u) => !u.email)
+      .map((u) => ({ id: u.id, name: u.full_name ?? 'Formateur sans nom' }))
+
+    return { trainers, skippedNoEmail }
+  }
+
+  /**
    * Crée une session d'émargement électronique
    */
   async createAttendanceSession(params: CreateAttendanceSessionParams) {
@@ -216,6 +250,32 @@ export class ElectronicAttendanceService {
         await this.supabase
           .from('electronic_attendance_requests')
           .insert(requests as ElectronicAttendanceRequestInsert[])
+      }
+
+      // Créer les demandes d'émargement pour les formateurs assignés à la
+      // session — sans email ni access_token : contrairement à launch-slot,
+      // ce flux (lien public/QR) ne les invite pas, ils se sélectionnent
+      // eux-mêmes dans la liste après avoir scanné. Non bloquant si les
+      // colonnes user_id/requester_role n'existent pas encore en base.
+      const { trainers } = await this.getAssignedTrainersForEmargement(params.sessionId)
+      if (trainers.length > 0) {
+        const trainerRequests = trainers.map((t) => ({
+          attendance_session_id: data.id,
+          student_id: null as unknown as string,
+          user_id: t.id,
+          student_name: t.full_name ?? t.email,
+          student_email: t.email,
+          status: 'pending' as const,
+          organization_id: params.organizationId,
+          signature_token: crypto.randomUUID().replace(/-/g, ''),
+          requester_role: 'trainer' as const,
+        }))
+        const { error: trainerInsertError } = await this.supabase
+          .from('electronic_attendance_requests')
+          .insert(trainerRequests)
+        if (trainerInsertError) {
+          logger.warn('Échec création requests formateurs (lien public)', { error: trainerInsertError.message })
+        }
       }
 
       logger.info('Session d\'émargement créée', {
@@ -816,37 +876,87 @@ export class ElectronicAttendanceService {
       const { students } = await this.getEligibleEnrolledStudents(sessionId)
       const missing = students.filter((s) => !existingIds.has(s.id))
 
-      if (missing.length === 0) return 0
+      if (missing.length > 0) {
+        const newRequests = missing.map((student) => ({
+          attendance_session_id: attendanceSessionId,
+          student_id: student.id,
+          student_name: `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
+          student_email: student.email!,
+          status: 'pending' as const,
+          organization_id: organizationId,
+          signature_token: crypto.randomUUID().replace(/-/g, ''),
+        }))
 
-      const newRequests = missing.map((student) => ({
-        attendance_session_id: attendanceSessionId,
-        student_id: student.id,
-        student_name: `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
-        student_email: student.email!,
-        status: 'pending' as const,
-        organization_id: organizationId,
-        signature_token: crypto.randomUUID().replace(/-/g, ''),
-      }))
+        const { error: insertError } = await this.supabase
+          .from('electronic_attendance_requests')
+          .insert(newRequests as ElectronicAttendanceRequestInsert[])
 
-      const { error: insertError } = await this.supabase
-        .from('electronic_attendance_requests')
-        .insert(newRequests as ElectronicAttendanceRequestInsert[])
+        if (insertError) {
+          logger.error('Échec de la resynchronisation des inscrits sur le lien public', insertError, { attendanceSessionId })
+        } else {
+          // Le compteur "X/Y" du lien public ne doit pas rester sous-évalué après l'ajout.
+          await this.supabase
+            .from('electronic_attendance_sessions')
+            .update({ total_expected: existingIds.size + missing.length } as ElectronicAttendanceSessionUpdate)
+            .eq('id', attendanceSessionId)
 
-      if (insertError) {
-        logger.error('Échec de la resynchronisation des inscrits sur le lien public', insertError, { attendanceSessionId })
-        return 0
+          logger.info('Inscrits manquants resynchronisés sur le lien public', {
+            attendanceSessionId,
+            added: missing.length,
+          })
+        }
       }
 
-      // Le compteur "X/Y" du lien public ne doit pas rester sous-évalué après l'ajout.
-      await this.supabase
-        .from('electronic_attendance_sessions')
-        .update({ total_expected: existingIds.size + missing.length } as ElectronicAttendanceSessionUpdate)
-        .eq('id', attendanceSessionId)
+      // Formateurs : même logique, mais dédoublonnée sur user_id (pas de
+      // student_id pour un formateur) et sans impact sur total_expected —
+      // ce compteur reste strictement apprenants (cf. createAttendanceSession).
+      // Requête et insertion isolées dans leur propre try/catch : tant que la
+      // migration user_id/requester_role n'est pas appliquée, cette partie
+      // échoue (colonnes inexistantes) sans jamais faire échouer la
+      // resynchronisation apprenants ci-dessus, déjà effectuée à ce stade.
+      try {
+        const { data: existingTrainerRows, error: existingTrainerError } = await this.supabase
+          .from('electronic_attendance_requests')
+          .select('user_id')
+          .eq('attendance_session_id', attendanceSessionId)
+          .eq('requester_role', 'trainer')
 
-      logger.info('Inscrits manquants resynchronisés sur le lien public', {
-        attendanceSessionId,
-        added: missing.length,
-      })
+        if (existingTrainerError) throw existingTrainerError
+
+        const existingTrainerIds = new Set(
+          (existingTrainerRows ?? [])
+            .map((r) => (r as { user_id?: string | null }).user_id)
+            .filter((id): id is string => !!id)
+        )
+        const { trainers } = await this.getAssignedTrainersForEmargement(sessionId)
+        const missingTrainers = trainers.filter((t) => !existingTrainerIds.has(t.id))
+
+        if (missingTrainers.length > 0) {
+          const newTrainerRequests = missingTrainers.map((t) => ({
+            attendance_session_id: attendanceSessionId,
+            student_id: null as unknown as string,
+            user_id: t.id,
+            student_name: t.full_name ?? t.email,
+            student_email: t.email,
+            status: 'pending' as const,
+            organization_id: organizationId,
+            signature_token: crypto.randomUUID().replace(/-/g, ''),
+            requester_role: 'trainer' as const,
+          }))
+          const { error: trainerInsertError } = await this.supabase
+            .from('electronic_attendance_requests')
+            .insert(newTrainerRequests)
+          if (trainerInsertError) throw trainerInsertError
+
+          logger.info('Formateurs manquants resynchronisés sur le lien public', {
+            attendanceSessionId,
+            added: missingTrainers.length,
+          })
+        }
+      } catch (trainerSyncError) {
+        logger.error('Échec resynchronisation formateurs sur le lien public', trainerSyncError, { attendanceSessionId })
+      }
+
       return missing.length
     } catch (error) {
       logger.error('Erreur resynchronisation lien public', error, { attendanceSessionId })
