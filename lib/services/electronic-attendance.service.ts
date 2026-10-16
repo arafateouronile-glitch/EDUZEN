@@ -126,15 +126,59 @@ export class ElectronicAttendanceService {
   }
 
   /**
-   * Récupère les formateurs assignés à une session (session_teachers) pour
-   * les faire apparaître sur l'émargement au même titre que les apprenants —
-   * même modèle que getEligibleEnrolledStudents, cf. launch-slot/route.ts qui
-   * fait la même chose pour le flux "Envoyer" (avec email, lui). Jamais
-   * bloquant : une erreur ici ne doit jamais empêcher l'émargement apprenant.
+   * Récupère le(s) formateur(s) devant pouvoir émarger pour un créneau donné.
+   * Priorité à l'assignation par séance (session_slots.teacher_id, posée
+   * depuis l'onglet Intervenants) : si CE créneau précis a un formateur
+   * assigné, lui seul doit apparaître — pas tous les formateurs de la
+   * session, sinon un formateur qui n'intervient que le lundi pourrait aussi
+   * émarger la séance du mardi d'un collègue. Cette granularité par séance
+   * reste minoritaire (135 séances sur 808 à ce jour) : à défaut, on retombe
+   * sur tous les formateurs assignés à la session (session_teachers), comme
+   * avant — cas le plus courant d'un formateur unique sans découpage par
+   * séance. Jamais bloquant : une erreur ici ne doit jamais empêcher
+   * l'émargement apprenant.
    */
   private async getAssignedTrainersForEmargement(
-    sessionId: string
+    sessionId: string,
+    slot?: { date: string; startTime?: string | null; endTime?: string | null }
   ): Promise<{ trainers: TrainerRef[]; skippedNoEmail: Array<{ id: string; name: string }> }> {
+    if (slot) {
+      let slotQuery = this.supabase
+        .from('session_slots')
+        .select('teacher_id')
+        .eq('session_id', sessionId)
+        .eq('date', slot.date)
+      slotQuery = slot.startTime
+        ? slotQuery.eq('start_time', slot.startTime)
+        : slotQuery.is('start_time', null)
+      slotQuery = slot.endTime
+        ? slotQuery.eq('end_time', slot.endTime)
+        : slotQuery.is('end_time', null)
+      const { data: slotRow, error: slotError } = await slotQuery.maybeSingle()
+
+      if (slotError) {
+        logger.warn('Erreur récupération formateur de la séance', { sessionId, slot, error: slotError.message })
+      } else if (slotRow?.teacher_id) {
+        const { data: teacher, error: teacherError } = await this.supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('id', slotRow.teacher_id)
+          .maybeSingle()
+
+        if (teacherError || !teacher) {
+          logger.warn('Formateur assigné à la séance introuvable', { sessionId, teacherId: slotRow.teacher_id })
+          return { trainers: [], skippedNoEmail: [] }
+        }
+        if (!teacher.email) {
+          return {
+            trainers: [],
+            skippedNoEmail: [{ id: teacher.id, name: teacher.full_name ?? 'Formateur sans nom' }],
+          }
+        }
+        return { trainers: [{ id: teacher.id, full_name: teacher.full_name, email: teacher.email }], skippedNoEmail: [] }
+      }
+    }
+
     const { data: sessionTeachers, error } = await this.supabase
       .from('session_teachers')
       .select('teacher_id, users:teacher_id(id, full_name, email)')
@@ -155,6 +199,19 @@ export class ElectronicAttendanceService {
       .map((u) => ({ id: u.id, name: u.full_name ?? 'Formateur sans nom' }))
 
     return { trainers, skippedNoEmail }
+  }
+
+  /**
+   * Variante publique de getAssignedTrainersForEmargement, utilisée par
+   * launch-slot/route.ts (flux "Envoyer" par email) pour n'inviter que le(s)
+   * formateur(s) de CE créneau précis — même règle de priorité
+   * séance > session que pour le lien public.
+   */
+  async getTrainersForSlotEmargement(
+    sessionId: string,
+    slot: { date: string; startTime?: string | null; endTime?: string | null }
+  ): Promise<{ trainers: TrainerRef[]; skippedNoEmail: Array<{ id: string; name: string }> }> {
+    return this.getAssignedTrainersForEmargement(sessionId, slot)
   }
 
   /**
@@ -257,7 +314,11 @@ export class ElectronicAttendanceService {
       // ce flux (lien public/QR) ne les invite pas, ils se sélectionnent
       // eux-mêmes dans la liste après avoir scanné. Non bloquant si les
       // colonnes user_id/requester_role n'existent pas encore en base.
-      const { trainers } = await this.getAssignedTrainersForEmargement(params.sessionId)
+      const { trainers } = await this.getAssignedTrainersForEmargement(params.sessionId, {
+        date: params.date,
+        startTime: params.startTime,
+        endTime: params.endTime,
+      })
       if (trainers.length > 0) {
         const trainerRequests = trainers.map((t) => ({
           attendance_session_id: data.id,
@@ -833,13 +894,17 @@ export class ElectronicAttendanceService {
         .from('electronic_attendance_sessions')
         .update(update as ElectronicAttendanceSessionUpdate)
         .eq('id', attendanceSessionId)
-        .select('id, session_id, organization_id, public_emargement_token, public_emargement_active, public_emargement_expires_at')
+        .select('id, session_id, organization_id, date, start_time, end_time, public_emargement_token, public_emargement_active, public_emargement_expires_at')
         .single()
 
       if (error) throw error
 
       if (options.active && data.session_id && data.organization_id) {
-        await this.syncMissingAttendanceRequests(attendanceSessionId, data.session_id, data.organization_id)
+        await this.syncMissingAttendanceRequests(attendanceSessionId, data.session_id, data.organization_id, {
+          date: data.date,
+          startTime: data.start_time,
+          endTime: data.end_time,
+        })
       }
 
       return data
@@ -859,7 +924,8 @@ export class ElectronicAttendanceService {
   private async syncMissingAttendanceRequests(
     attendanceSessionId: string,
     sessionId: string,
-    organizationId: string
+    organizationId: string,
+    slot?: { date: string; startTime?: string | null; endTime?: string | null }
   ): Promise<number> {
     try {
       const { data: existingRequests } = await this.supabase
@@ -928,7 +994,7 @@ export class ElectronicAttendanceService {
             .map((r) => (r as { user_id?: string | null }).user_id)
             .filter((id): id is string => !!id)
         )
-        const { trainers } = await this.getAssignedTrainersForEmargement(sessionId)
+        const { trainers } = await this.getAssignedTrainersForEmargement(sessionId, slot)
         const missingTrainers = trainers.filter((t) => !existingTrainerIds.has(t.id))
 
         if (missingTrainers.length > 0) {

@@ -89,19 +89,15 @@ export async function POST(request: NextRequest) {
     const launched = await service.launchAttendanceSession(attendanceSessionId, true)
 
     // ── Formateurs ──────────────────────────────────────────────────────────
-    // Récupérer les formateurs assignés à la session de formation
-    const { data: sessionTeachers } = await supabase
-      .from('session_teachers')
-      .select('teacher_id, users:teacher_id(id, full_name, email)')
-      .eq('session_id', sessionId)
-
-    const assignedTrainers = (sessionTeachers ?? []).map((st: any) => st.users).filter(Boolean)
-    const trainers = assignedTrainers.filter(
-      (u: any): u is { id: string; full_name: string | null; email: string } => !!u.email
+    // Formateur(s) de CE créneau précis : priorité à l'assignation par
+    // séance (session_slots.teacher_id, posée depuis l'onglet Intervenants)
+    // — sinon repli sur tous les formateurs de la session. Un formateur qui
+    // n'intervient que le lundi ne doit pas être invité à émarger la séance
+    // du mardi d'un collègue.
+    const { trainers, skippedNoEmail: skippedTrainersNoEmail } = await service.getTrainersForSlotEmargement(
+      sessionId,
+      { date, startTime, endTime }
     )
-    const skippedTrainersNoEmail = assignedTrainers
-      .filter((u: any) => !u.email)
-      .map((u: any) => ({ id: u.id, name: u.full_name ?? 'Formateur sans nom' }))
 
     const failedTrainerSends: Array<{ name: string; email: string }> = []
 
