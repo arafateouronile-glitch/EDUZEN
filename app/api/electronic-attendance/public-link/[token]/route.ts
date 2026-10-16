@@ -31,7 +31,6 @@ export async function GET(
         requests:electronic_attendance_requests(
           id,
           student_id,
-          requester_role,
           student_name,
           student_email,
           status,
