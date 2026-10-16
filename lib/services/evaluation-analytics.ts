@@ -28,6 +28,7 @@ export interface AnalyticsGradeRow {
   id: string
   student_id: string | null
   assessment_type: string | null
+  session_id?: string | null
 }
 
 export interface AnalyticsInstanceRow {
@@ -150,6 +151,8 @@ export interface AssessmentTypeStats {
   assigned: number
   /** Évaluations avec au moins une réponse */
   respondents: number
+  /** respondents / assigned, 0-100 */
+  responseRate: number
   score10: number | null
   templates: TemplateStats[]
 }
@@ -463,6 +466,7 @@ export function buildEvaluationAnalytics(input: EvaluationAnalyticsInput): Evalu
       label: ASSESSMENT_TYPE_LABELS[type] ?? type,
       assigned: grades.length,
       respondents: typeRespondents,
+      responseRate: percent(typeRespondents, grades.length),
       score10: typeScore === null ? null : round1(typeScore),
       templates: templateStats,
     })
@@ -482,4 +486,231 @@ export function buildEvaluationAnalytics(input: EvaluationAnalyticsInput): Evalu
     totalRespondents: types.reduce((n, t) => n + t.respondents, 0),
     types,
   }
+}
+
+// ── Points d'attention ───────────────────────────────────────────────────────
+
+export interface AttentionPoint {
+  id: string
+  level: 'critical' | 'warning'
+  assessmentType: string
+  typeLabel: string
+  label: string
+  score10: number | null
+  detail: string
+  /** id DOM de l'élément à faire défiler (question ou rubrique) */
+  targetId: string | null
+}
+
+export function questionAnchorId(questionId: string): string {
+  return `suivi-qualite-q-${questionId}`
+}
+
+export function sectionAnchorId(templateId: string, sectionName: string): string {
+  return `suivi-qualite-s-${templateId}-${sectionName.replace(/[^a-zA-Z0-9]+/g, '-')}`
+}
+
+/** Part des réponses négatives (≤ 2 étoiles, ou option d'échelle ≤ 1 étoile), 0-100 */
+export function negativeShare(q: QuestionStats): number | null {
+  if (q.respondents === 0) return null
+  if (q.kind === 'rating') {
+    const neg = q.distribution.filter((d) => (d.starValue ?? 5) <= 2).reduce((n, d) => n + d.count, 0)
+    return percent(neg, q.respondents)
+  }
+  if (q.kind === 'choice' && q.isScale) {
+    const neg = q.distribution.filter((d) => d.starValue !== undefined && d.starValue <= 1).reduce((n, d) => n + d.count, 0)
+    return percent(neg, q.respondents)
+  }
+  return null
+}
+
+const NEGATIVE_SHARE_THRESHOLD = 20
+const RESPONSE_RATE_THRESHOLD = 50
+
+/**
+ * Liste les éléments qui demandent une action : notes sous le seuil, part
+ * importante de réponses négatives, taux de réponse faible. Critiques d'abord,
+ * puis par note croissante.
+ */
+export function buildAttentionPoints(analytics: EvaluationAnalytics, threshold = 7): AttentionPoint[] {
+  const points: AttentionPoint[] = []
+  const levelFor = (score: number) => (score < threshold - 2 ? 'critical' : 'warning') as AttentionPoint['level']
+
+  for (const type of analytics.types) {
+    const base = { assessmentType: type.assessmentType, typeLabel: type.label }
+
+    if (type.assigned > 0 && type.responseRate < RESPONSE_RATE_THRESHOLD) {
+      points.push({
+        ...base,
+        id: `rate-${type.assessmentType}`,
+        level: type.responseRate < RESPONSE_RATE_THRESHOLD / 2 ? 'critical' : 'warning',
+        label: 'Taux de réponse faible',
+        score10: null,
+        detail: `${type.respondents}/${type.assigned} réponses (${type.responseRate} %)`,
+        targetId: null,
+      })
+    }
+
+    // La préformation mesure le niveau de départ (et les attentes) : une note
+    // basse y est attendue et ne signale pas un problème de qualité.
+    if (type.assessmentType === 'pre_formation') continue
+
+    for (const template of type.templates) {
+      for (const section of template.sections) {
+        if (section.name && section.score10 !== null && section.score10 < threshold) {
+          points.push({
+            ...base,
+            id: `section-${template.templateId}-${section.name}`,
+            level: levelFor(section.score10),
+            label: section.name,
+            score10: section.score10,
+            detail: `Rubrique notée ${section.score10.toFixed(1)}/10`,
+            targetId: sectionAnchorId(template.templateId, section.name),
+          })
+        }
+        for (const q of section.questions) {
+          if (q.score10 !== null && q.score10 < threshold) {
+            points.push({
+              ...base,
+              id: `question-${q.questionId}`,
+              level: levelFor(q.score10),
+              label: q.text,
+              score10: q.score10,
+              detail: `Question notée ${q.score10.toFixed(1)}/10`,
+              targetId: questionAnchorId(q.questionId),
+            })
+            continue
+          }
+          const neg = negativeShare(q)
+          if (neg !== null && neg >= NEGATIVE_SHARE_THRESHOLD) {
+            points.push({
+              ...base,
+              id: `negative-${q.questionId}`,
+              level: 'warning',
+              label: q.text,
+              score10: q.score10,
+              detail: `${neg} % de réponses négatives`,
+              targetId: questionAnchorId(q.questionId),
+            })
+          }
+        }
+      }
+    }
+  }
+
+  const rank = (p: AttentionPoint) => (p.level === 'critical' ? 0 : 1)
+  return points.sort((a, b) => rank(a) - rank(b) || (a.score10 ?? 99) - (b.score10 ?? 99))
+}
+
+// ── Avant / après formation ──────────────────────────────────────────────────
+
+export interface BeforeAfterPair {
+  label: string
+  /** Appariement par nom de rubrique ou par texte de question identique */
+  matchedBy: 'section' | 'question'
+  afterType: string
+  afterTypeLabel: string
+  before10: number
+  after10: number
+  delta: number
+}
+
+export interface BeforeAfterComparison {
+  hasBefore: boolean
+  hasAfter: boolean
+  pairs: BeforeAfterPair[]
+  /** Progression moyenne en points /10, null sans appariement */
+  averageDelta: number | null
+}
+
+const AFTER_TYPES = ['hot', 'cold']
+
+function scoredItems(type: AssessmentTypeStats) {
+  const sections = new Map<string, number>()
+  const questions = new Map<string, { text: string; score: number; section: string | null }>()
+  for (const template of type.templates) {
+    for (const section of template.sections) {
+      if (section.name && section.score10 !== null) sections.set(normalizeLabel(section.name), section.score10)
+      for (const q of section.questions) {
+        if (q.score10 !== null) questions.set(normalizeLabel(q.text), { text: q.text, score: q.score10, section: section.name })
+      }
+    }
+  }
+  return { sections, questions }
+}
+
+/**
+ * Compare la préformation à l'évaluation à chaud / à froid : rubriques de même
+ * nom d'abord, puis questions au texte identique (hors rubriques déjà appariées).
+ */
+export function buildBeforeAfter(analytics: EvaluationAnalytics): BeforeAfterComparison {
+  const pre = analytics.types.find((t) => t.assessmentType === 'pre_formation')
+  const afters = analytics.types.filter((t) => AFTER_TYPES.includes(t.assessmentType))
+  const pairs: BeforeAfterPair[] = []
+
+  if (pre) {
+    const before = scoredItems(pre)
+    for (const after of afters) {
+      const items = scoredItems(after)
+      const pairedSections = new Set<string>()
+      for (const template of after.templates) {
+        for (const section of template.sections) {
+          if (!section.name || section.score10 === null) continue
+          const key = normalizeLabel(section.name)
+          const b = before.sections.get(key)
+          if (b === undefined || pairedSections.has(key)) continue
+          pairedSections.add(key)
+          pairs.push({
+            label: section.name,
+            matchedBy: 'section',
+            afterType: after.assessmentType,
+            afterTypeLabel: after.label,
+            before10: b,
+            after10: section.score10,
+            delta: round1(section.score10 - b),
+          })
+        }
+      }
+      for (const [key, a] of items.questions) {
+        const b = before.questions.get(key)
+        if (!b) continue
+        if (a.section && pairedSections.has(normalizeLabel(a.section))) continue
+        pairs.push({
+          label: a.text,
+          matchedBy: 'question',
+          afterType: after.assessmentType,
+          afterTypeLabel: after.label,
+          before10: b.score,
+          after10: a.score,
+          delta: round1(a.score - b.score),
+        })
+      }
+    }
+  }
+
+  const avg = mean(pairs.map((p) => p.delta))
+  return {
+    hasBefore: !!pre,
+    hasAfter: afters.length > 0,
+    pairs,
+    averageDelta: avg === null ? null : round1(avg),
+  }
+}
+
+/** Réponse de GET /api/sessions/[id]/evaluation-analytics */
+export interface EvaluationAnalyticsResponse extends EvaluationAnalytics {
+  attentionPoints: AttentionPoint[]
+  beforeAfter: BeforeAfterComparison
+  formationId: string | null
+}
+
+/** Point de GET /api/formations/[id]/evaluation-trend */
+export interface EvaluationTrendPoint {
+  sessionId: string
+  name: string
+  startDate: string
+  overall10: number | null
+  /** Note /10 par type d'évaluation (hot, cold…) */
+  byType: Record<string, number | null>
+  respondents: number
 }

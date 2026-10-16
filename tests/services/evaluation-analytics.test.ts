@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
+  buildAttentionPoints,
+  buildBeforeAfter,
   buildEvaluationAnalytics,
   labelToStars,
   parseOptions,
@@ -162,5 +164,83 @@ describe('buildEvaluationAnalytics', () => {
     const empty = buildEvaluationAnalytics({ grades: [], instances: [], templates: [], questions: [], responses: [], students: [] })
     expect(empty.overallScore10).toBeNull()
     expect(empty.types).toEqual([])
+  })
+})
+
+describe('taux de réponse', () => {
+  it('respondents / assigned en %', () => {
+    const hot = buildEvaluationAnalytics(baseInput()).types.find((t) => t.assessmentType === 'hot')!
+    expect(hot.responseRate).toBe(67)
+  })
+})
+
+describe('buildAttentionPoints', () => {
+  function lowInput(): EvaluationAnalyticsInput {
+    const input = baseInput()
+    input.responses = input.responses.map((r) =>
+      r.question_id === 'q-scale' ? { ...r, answer_choice: ['Pas du tout'] } : r
+    )
+    return input
+  }
+
+  it('signale les questions et rubriques sous le seuil, critiques d\'abord', () => {
+    const points = buildAttentionPoints(buildEvaluationAnalytics(lowInput()))
+    const question = points.find((p) => p.id === 'question-q-scale')!
+    expect(question).toMatchObject({ level: 'critical', score10: 0 })
+    expect(question.targetId).toBe('suivi-qualite-q-q-scale')
+    expect(points.find((p) => p.id.startsWith('section-'))).toMatchObject({ label: 'Organisation', score10: 4.5, level: 'critical' })
+    expect(points[0].level).toBe('critical')
+  })
+
+  it('signale une part de réponses négatives ≥ 20 % même si la moyenne passe', () => {
+    const input = baseInput()
+    input.responses.push(resp('i3', 's3', 'q-rating', { answer_rating: 2 }))
+    // notes 5, 4, 2 → 7.3/10 (au-dessus du seuil) mais 33 % négatives
+    const points = buildAttentionPoints(buildEvaluationAnalytics(input))
+    expect(points.find((p) => p.id === 'negative-q-rating')?.detail).toBe('33 % de réponses négatives')
+  })
+
+  it('signale un taux de réponse < 50 %', () => {
+    const input = baseInput()
+    input.grades.push({ id: 'g5', student_id: 's2', assessment_type: 'pre_formation' })
+    input.grades.push({ id: 'g6', student_id: 's3', assessment_type: 'pre_formation' })
+    const points = buildAttentionPoints(buildEvaluationAnalytics(input))
+    expect(points.find((p) => p.id === 'rate-pre_formation')?.detail).toBe('1/3 réponses (33 %)')
+  })
+
+  it('rien à signaler quand tout va bien', () => {
+    expect(buildAttentionPoints(buildEvaluationAnalytics(baseInput()))).toEqual([])
+  })
+})
+
+describe('buildBeforeAfter', () => {
+  function prePostInput(): EvaluationAnalyticsInput {
+    const input = baseInput()
+    input.questions.push(
+      { id: 'pre-niveau', template_id: 'pre-t', question_text: 'Votre niveau en sécurité incendie ?', question_type: 'rating', options: null, correct_answer: null, order_index: 2, section: 'Compétences' },
+      { id: 'pre-motiv', template_id: 'pre-t', question_text: 'Satisfaction', question_type: 'rating', options: null, correct_answer: null, order_index: 3, section: null },
+      { id: 'hot-niveau', template_id: 'hot-t', question_text: 'Votre niveau après la formation ?', question_type: 'rating', options: null, correct_answer: null, order_index: 5, section: 'compétences' },
+    )
+    input.responses.push(
+      resp('i4', 's1', 'pre-niveau', { answer_rating: 2 }),
+      resp('i4', 's1', 'pre-motiv', { answer_rating: 3 }),
+      resp('i1', 's1', 'hot-niveau', { answer_rating: 4 }),
+      resp('i2', 's2', 'hot-niveau', { answer_rating: 5 }),
+    )
+    return input
+  }
+
+  it('apparie par rubrique (casse ignorée) puis par texte de question', () => {
+    const result = buildBeforeAfter(buildEvaluationAnalytics(prePostInput()))
+    expect(result.pairs).toEqual([
+      { label: 'compétences', matchedBy: 'section', afterType: 'hot', afterTypeLabel: 'Évaluation à chaud', before10: 4, after10: 9, delta: 5 },
+      { label: 'Satisfaction', matchedBy: 'question', afterType: 'hot', afterTypeLabel: 'Évaluation à chaud', before10: 6, after10: 9, delta: 3 },
+    ])
+    expect(result.averageDelta).toBe(4)
+  })
+
+  it('sans élément commun → aucune paire', () => {
+    const result = buildBeforeAfter(buildEvaluationAnalytics(baseInput()))
+    expect(result).toMatchObject({ hasBefore: true, hasAfter: true, pairs: [], averageDelta: null })
   })
 })

@@ -2,7 +2,8 @@
 
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { DistributionEntry, QuestionStats } from '@/lib/services/evaluation-analytics'
+import { questionAnchorId, type DistributionEntry, type QuestionStats } from '@/lib/services/evaluation-analytics'
+import { levelColor, NEUTRAL_COLOR } from './chart-colors'
 
 /** Couleur d'une note /10 (vert ≥ 8, ambre ≥ 6, rouge sinon) */
 export function scoreTone(score10: number | null) {
@@ -10,16 +11,6 @@ export function scoreTone(score10: number | null) {
   if (score10 >= 8) return { text: 'text-green-600', bar: 'bg-green-500', pill: 'bg-green-100 text-green-700' }
   if (score10 >= 6) return { text: 'text-amber-600', bar: 'bg-amber-500', pill: 'bg-amber-100 text-amber-700' }
   return { text: 'text-red-600', bar: 'bg-red-500', pill: 'bg-red-100 text-red-700' }
-}
-
-/** Couleur d'un niveau d'étoiles 0-5 (vert → rouge) */
-function starTone(star: number | undefined) {
-  if (star === undefined) return 'bg-violet-500'
-  if (star >= 5) return 'bg-green-500'
-  if (star >= 4) return 'bg-lime-400'
-  if (star >= 3) return 'bg-amber-300'
-  if (star >= 2) return 'bg-orange-300'
-  return 'bg-red-300'
 }
 
 function DistributionBars({
@@ -41,11 +32,11 @@ function DistributionBars({
           </span>
           <div className="relative h-2.5 flex-1 min-w-[3rem] max-w-[12rem] rounded-full bg-gray-100 overflow-hidden">
             <div
-              className={cn(
-                'absolute inset-y-0 left-0 rounded-full',
-                e.isCorrect ? 'bg-green-500' : colorBy === 'star' ? starTone(e.starValue) : 'bg-violet-500'
-              )}
-              style={{ width: `${e.percent}%` }}
+              className={cn('absolute inset-y-0 left-0 rounded-full', e.isCorrect && 'bg-green-500')}
+              style={{
+                width: `${e.percent}%`,
+                ...(e.isCorrect ? {} : { backgroundColor: colorBy === 'star' ? levelColor(e.starValue) : NEUTRAL_COLOR }),
+              }}
             />
           </div>
           <span className="tabular-nums font-semibold text-violet-700 w-6 text-right">{e.count}</span>
@@ -58,7 +49,7 @@ function DistributionBars({
 
 export function QuestionStatsCard({ stats }: { stats: QuestionStats }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
+    <div id={questionAnchorId(stats.questionId)} className="rounded-xl border border-gray-200 bg-white p-4 scroll-mt-24 transition-shadow">
       <p className="font-semibold text-gray-900 text-sm mb-3 whitespace-pre-line">{stats.text}</p>
 
       {stats.respondents === 0 ? (
