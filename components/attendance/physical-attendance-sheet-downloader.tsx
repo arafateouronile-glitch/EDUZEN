@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -79,6 +80,12 @@ interface ElectronicSession {
   requests: ElectronicRequest[]
 }
 
+interface SessionTeacherInfo {
+  id: string
+  full_name: string | null
+  email: string | null
+}
+
 export function PhysicalAttendanceSheetDownloader({
   sessionId,
   sessionName,
@@ -93,6 +100,7 @@ export function PhysicalAttendanceSheetDownloader({
   const [generatingSlotId, setGeneratingSlotId] = useState<string | null>(null)
   const [generatingDigitalSlotId, setGeneratingDigitalSlotId] = useState<string | null>(null)
   const [electronicSessions, setElectronicSessions] = useState<ElectronicSession[]>([])
+  const [sessionTeachers, setSessionTeachers] = useState<SessionTeacherInfo[]>([])
   const [sendingSlotId, setSendingSlotId] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
   const [sendWarning, setSendWarning] = useState<string | null>(null)
@@ -118,6 +126,39 @@ export function PhysicalAttendanceSheetDownloader({
       .then((data: ElectronicSession[]) => setElectronicSessions(Array.isArray(data) ? data : []))
       .catch(() => {})
   }, [sessionId])
+
+  // Formateurs assignés à la session (pour la feuille physique/par défaut) —
+  // mêmes données que config-intervenants.tsx, lues directement via le
+  // client Supabase comme le fait déjà cet onglet.
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('session_teachers')
+      .select('teacher_id, users:teacher_id(id, full_name, email)')
+      .eq('session_id', sessionId)
+      .then(({ data }) => {
+        const teachers = ((data ?? []) as Array<{ users: SessionTeacherInfo | null }>)
+          .map((st) => st.users)
+          .filter((u): u is SessionTeacherInfo => !!u)
+        setSessionTeachers(teachers)
+      })
+  }, [sessionId])
+
+  // Formateur(s) de CE créneau précis : priorité à l'assignation par séance
+  // (slot.teacher_id, posée depuis l'onglet Intervenants) — sinon repli sur
+  // tous les formateurs de la session. Même règle que côté serveur
+  // (getAssignedTrainersForEmargement) pour rester cohérent sur tous les
+  // supports (lien public, feuille numérique, feuille physique par défaut).
+  const getTrainersForSlot = useCallback(
+    (slot: SessionSlot): SessionTeacherInfo[] => {
+      if (slot.teacher_id) {
+        const assigned = sessionTeachers.find((t) => t.id === slot.teacher_id)
+        if (assigned) return [assigned]
+      }
+      return sessionTeachers
+    },
+    [sessionTeachers]
+  )
 
   const handleCreatePublicLink = async (slot: SessionSlot) => {
     setCreatingLinkSlotId(slot.id)
@@ -208,10 +249,40 @@ export function PhysicalAttendanceSheetDownloader({
     return 'Journée complète'
   }
 
-  const generateSheetHTML = (slot: SessionSlot) => {
+  const generateSheetHTML = (slot: SessionSlot, trainers: SessionTeacherInfo[] = []) => {
     const formattedDate = format(new Date(slot.date), 'EEEE d MMMM yyyy', { locale: fr })
     const timeLabel = getTimeSlotLabel(slot)
     const timeRange = slot.start_time && slot.end_time ? `${slot.start_time} - ${slot.end_time}` : ''
+
+    const trainerRows = trainers
+      .map((t, i) => `
+        <tr style="border-bottom: 1px solid #e5e7eb; ${i % 2 === 0 ? 'background: white;' : 'background: #f9fafb;'}">
+          <td style="padding: 14px 12px; font-weight: 600; color: #111827;">${escapeHtml(t.full_name || t.email || '')}</td>
+          <td style="padding: 14px 12px; color: #6b7280; font-size: 0.9em;">${escapeHtml(t.email || '')}</td>
+          <td style="padding: 14px 12px; width: 180px;">
+            <div style="height: 40px; border: 1px dashed #d1d5db; border-radius: 6px; background: #fafafa;"></div>
+          </td>
+        </tr>
+      `)
+      .join('')
+
+    const trainerTable = trainers.length > 0 ? `
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <thead>
+          <tr style="background: ${DEEP_BLUE}; color: white;">
+            <th colspan="3" style="padding: 8px 12px; text-align: left; font-weight: 700; font-size: 8pt; letter-spacing: 1px; text-transform: uppercase;">
+              Formateur${trainers.length > 1 ? 's' : ''}
+            </th>
+          </tr>
+          <tr style="background: #eef2f7;">
+            <th style="padding: 10px 12px; text-align: left; font-weight: 600; font-size: 9pt; color: ${DEEP_BLUE};">NOM ET PRÉNOM</th>
+            <th style="padding: 10px 12px; text-align: left; font-weight: 600; font-size: 9pt; color: ${DEEP_BLUE};">EMAIL</th>
+            <th style="padding: 10px 12px; text-align: center; font-weight: 600; font-size: 9pt; width: 180px; color: ${DEEP_BLUE};">SIGNATURE</th>
+          </tr>
+        </thead>
+        <tbody>${trainerRows}</tbody>
+      </table>
+    ` : ''
 
     const studentRows = students
       .map((s, i) => {
@@ -305,6 +376,9 @@ export function PhysicalAttendanceSheetDownloader({
           </div>
         </div>
 
+        <!-- Formateur(s) -->
+        ${trainerTable}
+
         <!-- Students Table -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
           <thead>
@@ -330,10 +404,12 @@ export function PhysicalAttendanceSheetDownloader({
 
         <!-- Footer Section -->
         <div style="display: flex; gap: 20px; margin-top: 30px;">
-          <div style="flex: 1;">
-            <p style="margin: 0 0 8px 0; font-size: 9pt; color: #6b7280;">Signature du formateur :</p>
-            <div style="height: 60px; border: 1px dashed #d1d5db; border-radius: 6px; background: #fafafa;"></div>
-          </div>
+          ${trainers.length === 0 ? `
+            <div style="flex: 1;">
+              <p style="margin: 0 0 8px 0; font-size: 9pt; color: #6b7280;">Signature du formateur :</p>
+              <div style="height: 60px; border: 1px dashed #d1d5db; border-radius: 6px; background: #fafafa;"></div>
+            </div>
+          ` : ''}
           <div style="flex: 1;">
             <p style="margin: 0 0 8px 0; font-size: 9pt; color: #6b7280;">Observations :</p>
             <div style="height: 60px; border: 1px dashed #d1d5db; border-radius: 6px; background: #fafafa;"></div>
@@ -535,7 +611,7 @@ export function PhysicalAttendanceSheetDownloader({
   const downloadSingleSheet = async (slot: SessionSlot) => {
     setGeneratingSlotId(slot.id)
     try {
-      const html = generateSheetHTML(slot)
+      const html = generateSheetHTML(slot, getTrainersForSlot(slot))
       const filename = `Emargement_${sessionName.replace(/[^a-zA-Z0-9]/g, '_')}_${format(new Date(slot.date), 'yyyy-MM-dd')}_${slot.time_slot}.pdf`
 
       // Créer un élément temporaire pour le rendu
