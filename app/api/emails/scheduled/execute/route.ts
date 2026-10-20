@@ -5,8 +5,17 @@
 
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { EmailScheduleService } from '@/lib/services/email-schedule.service'
+import { alreadyRanToday, runStatus } from '@/lib/services/email-schedule-run'
+import { DocumentTemplateService } from '@/lib/services/document-template.service'
+import type { DocumentTemplate } from '@/lib/types/document-templates'
+import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
+import { renderTemplatePdf } from '@/lib/utils/document-generation/render-template-pdf.server'
+import { fetchStudentCompany } from '@/lib/utils/document-generation/student-company'
+import {
+  isSchedulableDocumentType,
+  scheduledDocumentFilename,
+} from '@/lib/utils/document-generation/schedulable-document-types'
 import { EmailTemplateService } from '@/lib/services/email-template.service'
 import { type EmailType } from '@/lib/services/email-template.service.client'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -18,6 +27,12 @@ import type { Database } from '@/types/database.types'
 
 type EmailSchedule = Database['public']['Tables']['email_schedules']['Row']
 type Recipient = { email: string; name?: string; type: string; context?: Record<string, unknown> }
+
+// Génération de documents joints : plusieurs PDF par exécution
+export const maxDuration = 300
+
+/** Documents générés en parallèle (Gotenberg) */
+const DOCUMENT_CONCURRENCY = 3
 
 // Clé secrète pour sécuriser l'endpoint (obligatoire en production)
 const CRON_SECRET = process.env.CRON_SECRET || process.env.EMAIL_SCHEDULE_SECRET
@@ -55,6 +70,9 @@ async function getMatchingSessions(
     .from('sessions')
     .select('*, formations(*), programs(*)')
     .eq('is_active', true)
+    // Client service role : sans ce filtre, une règle viserait les sessions
+    // de tous les organismes
+    .eq('organization_id', schedule.organization_id)
 
   // Filtrer par formation ou programme si spécifié
   if (schedule.formation_id) {
@@ -166,6 +184,9 @@ async function getMatchingEvaluations(
   // Filtrer selon le type de déclencheur
 
   const matchingEvaluations = (evaluations as any[]).filter((evaluation: any) => {
+    // Client service role : uniquement les évaluations de l'organisme de la règle
+    const evaluationOrgId = evaluation.organization_id ?? evaluation.sessions?.organization_id
+    if (evaluationOrgId !== schedule.organization_id) return false
     if (!evaluation.start_date || !evaluation.end_date) return false
 
     const startDate = new Date(evaluation.start_date)
@@ -444,6 +465,88 @@ function replaceTemplateVariables(
   return { subject, bodyHtml, bodyText }
 }
 
+/**
+ * Modèle de document à joindre : celui choisi dans la règle, ou à défaut le
+ * modèle par défaut du type (anciennes règles). Erreur explicite sinon — la
+ * règle est alors journalisée en échec, sans envoyer d'email sans le document.
+ */
+async function resolveDocumentTemplate(
+  service: DocumentTemplateService,
+  schedule: EmailSchedule
+): Promise<DocumentTemplate> {
+  let template: DocumentTemplate | null = null
+  if (schedule.document_template_id) {
+    template = (await service.getTemplateById(schedule.document_template_id).catch(() => null)) as DocumentTemplate | null
+    if (template && template.organization_id && template.organization_id !== schedule.organization_id) {
+      template = null
+    }
+  } else if (schedule.document_type && isSchedulableDocumentType(schedule.document_type)) {
+    template = (await service.getDefaultTemplate(schedule.organization_id, schedule.document_type)) as DocumentTemplate | null
+  }
+
+  if (!template) {
+    throw new Error('Modèle de document à joindre introuvable : choisissez un modèle dans la règle d\'envoi')
+  }
+  if (!isSchedulableDocumentType(template.type)) {
+    throw new Error(`Le modèle « ${template.name} » ne peut pas être généré pour un apprenant`)
+  }
+  return template
+}
+
+/**
+ * Génère le document nominatif d'un apprenant (données de l'apprenant, de sa
+ * session, de la formation, du programme et de son entreprise).
+ */
+async function buildStudentDocument(
+  supabase: any,
+  template: DocumentTemplate,
+  recipient: Recipient,
+  organization: any,
+  sessionCache: Map<string, Promise<any>>,
+  now: Date
+): Promise<{ filename: string; content: Buffer }> {
+  const context = (recipient.context ?? {}) as { session?: any; evaluation?: any; student?: any }
+  const student = context.student
+  if (!student) throw new Error('Apprenant introuvable pour le document')
+
+  // Session avec formation et programme (évaluations : session rechargée)
+  let session = context.session
+  const sessionId = session?.id ?? context.evaluation?.session_id
+  if (!session?.formations && sessionId) {
+    if (!sessionCache.has(sessionId)) {
+      sessionCache.set(
+        sessionId,
+        supabase
+          .from('sessions')
+          .select('*, formations(*), programs(*)')
+          .eq('id', sessionId)
+          .eq('organization_id', organization?.id)
+          .maybeSingle()
+          .then((r: { data: unknown }) => r.data)
+      )
+    }
+    session = (await sessionCache.get(sessionId)) ?? session
+  }
+
+  const formation = Array.isArray(session?.formations) ? session.formations[0] : session?.formations
+  const program = Array.isArray(session?.programs) ? session.programs[0] : session?.programs
+
+  const variables = extractDocumentVariables({
+    student,
+    session: session ? { ...session, formations: formation } : undefined,
+    organization,
+    program: program
+      ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: formation.duration_hours }] : undefined }
+      : undefined,
+    company: await fetchStudentCompany(supabase, student.id),
+    language: 'fr',
+    issueDate: now.toISOString(),
+  } as Parameters<typeof extractDocumentVariables>[0])
+
+  const content = await renderTemplatePdf(template, variables)
+  return { filename: scheduledDocumentFilename(template.type, student), content }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Exiger CRON_SECRET pour éviter l'exécution non autorisée (audit P0 2026-02-28)
@@ -459,12 +562,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    // Cron : pas de cookies → client service role partout (le client à
+    // cookies ne lisait rien sous RLS). Chaque requête filtre l'organisation.
     const adminSupabase = createAdminClient()
-
-    // Instancier les services avec le client serveur
-    const emailScheduleService = new EmailScheduleService(supabase)
-    const emailTemplateService = new EmailTemplateService(supabase)
+    const emailScheduleService = new EmailScheduleService(adminSupabase)
+    const emailTemplateService = new EmailTemplateService(adminSupabase)
+    const documentTemplateService = new DocumentTemplateService(adminSupabase)
 
     // Récupérer toutes les règles actives
     const schedules = await emailScheduleService.getActiveSchedulesToExecute()
@@ -476,6 +579,12 @@ export async function POST(request: NextRequest) {
       try {
         // Vérifier si la règle doit être exécutée
         if (!shouldExecuteSchedule(schedule, now)) {
+          continue
+        }
+
+        // Pas de double envoi si le cron est rappelé le même jour
+        if (alreadyRanToday(schedule.last_run_at, schedule.last_run_status, now)) {
+          logger.info(`Schedule ${schedule.id} already executed today — skipped`)
           continue
         }
 
@@ -508,19 +617,31 @@ export async function POST(request: NextRequest) {
             continue
           }
 
-          // Récupérer l'organisation
+          // Organisation complète : nécessaire aux variables {ecole_*} des documents
           const { data: organization } = await adminSupabase
             .from('organizations')
-            .select('id, name, email, phone')
+            .select('*')
             .eq('id', schedule.organization_id)
             .single()
+
+          // Document à joindre (généré pour chaque apprenant)
+          const documentTemplate = schedule.send_document
+            ? await resolveDocumentTemplate(documentTemplateService, schedule)
+            : null
+          const sessionCache = new Map<string, Promise<any>>()
+
+          if (!process.env.RESEND_API_KEY) {
+            throw new Error('RESEND_API_KEY not configured')
+          }
+          const resend = new Resend(process.env.RESEND_API_KEY)
+          const fromEmail = organization?.email || process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@eduzen.fr'
 
           // Envoyer les emails
           let successfulSends = 0
           let failedSends = 0
           const errors: Array<{ email: string; error: string }> = []
 
-          for (const recipient of recipients) {
+          const sendToRecipient = async (recipient: Recipient) => {
             try {
               // Remplacer les variables du template
               const { subject, bodyHtml, bodyText } = replaceTemplateVariables(
@@ -529,20 +650,23 @@ export async function POST(request: NextRequest) {
                 organization
               )
 
-              // Envoyer l'email directement via Resend (pour le cron job, pas d'authentification requise)
-              if (!process.env.RESEND_API_KEY) {
-                throw new Error('RESEND_API_KEY not configured')
+              // Document nominatif : uniquement pour les apprenants. En cas
+              // d'échec de génération, l'email n'est pas envoyé sans le document.
+              const attachments: Array<{ filename: string; content: Buffer }> = []
+              if (documentTemplate && recipient.type === 'student') {
+                attachments.push(
+                  await buildStudentDocument(adminSupabase, documentTemplate, recipient, organization, sessionCache, now)
+                )
               }
 
-              const resend = new Resend(process.env.RESEND_API_KEY)
-              const fromEmail = organization?.email || process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@eduzen.fr'
-              
-              const { data: emailData, error: emailError } = await resend.emails.send({
+              // Envoyer l'email directement via Resend (pour le cron job, pas d'authentification requise)
+              const { error: emailError } = await resend.emails.send({
                 from: `${organization?.name || 'EDUZEN'} <${fromEmail}>`,
                 to: recipient.email,
                 subject,
                 html: bodyHtml || bodyText,
                 text: bodyText,
+                ...(attachments.length > 0 ? { attachments } : {}),
               })
 
               if (emailError) {
@@ -560,18 +684,19 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          // Par lots quand des PDF sont générés (Gotenberg), sinon séquentiel comme avant
+          const batchSize = documentTemplate ? DOCUMENT_CONCURRENCY : 1
+          for (let i = 0; i < recipients.length; i += batchSize) {
+            await Promise.all(recipients.slice(i, i + batchSize).map(sendToRecipient))
+          }
+
           // Enregistrer le log d'exécution
           await emailScheduleService.logExecution(
             schedule.id,
             schedule.organization_id,
             {
               scheduleId: schedule.id,
-              status:
-                failedSends === 0
-                  ? 'success'
-                  : failedSends === successfulSends
-                    ? 'failed'
-                    : 'partial',
+              status: runStatus(successfulSends, failedSends),
               totalRecipients: recipients.length,
               successfulSends,
               failedSends,

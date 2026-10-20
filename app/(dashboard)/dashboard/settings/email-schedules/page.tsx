@@ -6,6 +6,8 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { emailScheduleService } from '@/lib/services/email-schedule.service.client'
 import { emailTemplateService } from '@/lib/services/email-template.service.client'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
+import { getDocumentTypeConfig } from '@/app/(dashboard)/dashboard/settings/document-templates/[type]/edit/utils/document-type-config'
+import { isSchedulableDocumentType } from '@/lib/utils/document-generation/schedulable-document-types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -758,65 +760,18 @@ function CreateScheduleForm({
                   />
                 </div>
                 {formData.send_document && (
-                  <>
-                    <div>
-                      <Label htmlFor="document_type">Type de document *</Label>
-                      <select
-                        id="document_type"
-                        value={formData.document_type || ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            document_type: (e.target.value || undefined) as DocumentType | undefined,
-                          })
-                        }
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        required={formData.send_document}
-                      >
-                        <option value="">Sélectionner un type</option>
-                        <option value="convocation">Convocation</option>
-                        <option value="certificat_realisation">Certificat de réalisation</option>
-                        <option value="evaluation_pre_formation">Évaluation pré-formation</option>
-                        <option value="evaluation_post_formation">Évaluation post-formation</option>
-                        <option value="attestation">Attestation</option>
-                        <option value="bulletin">Bulletin</option>
-                        <option value="releve_notes">Relevé de notes</option>
-                        <option value="certificat_presence">Certificat de présence</option>
-                      </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="document_template_id">Modèle de document</Label>
-                      <select
-                        id="document_template_id"
-                        value={formData.document_template_id || ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            document_template_id: e.target.value || undefined,
-                          })
-                        }
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                      >
-                        <option value="">Modèle par défaut</option>
-                        {documentTemplates
-                          .filter((template) => {
-                            // Filtrer par type de document si sélectionné
-                            if (formData.document_type) {
-                              return template.type === formData.document_type
-                            }
-                            return true
-                          })
-                          .map((template) => (
-                            <option key={template.id} value={template.id}>
-                              {template.name} ({template.type})
-                            </option>
-                          ))}
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Sélectionnez un modèle personnalisé ou laissez vide pour utiliser le modèle par défaut
-                      </p>
-                    </div>
-                  </>
+                  <DocumentTemplatePicker
+                    id="document_template_id"
+                    templates={documentTemplates}
+                    value={formData.document_template_id}
+                    onChange={(template) =>
+                      setFormData({
+                        ...formData,
+                        document_template_id: template?.id,
+                        document_type: template?.type as DocumentType | undefined,
+                      })
+                    }
+                  />
                 )}
               </div>
             </div>
@@ -1006,6 +961,22 @@ function ScheduleCard({
                   Coordinateurs
                 </span>
               )}
+              {schedule.send_document && (() => {
+                const attached =
+                  documentTemplates.find((t) => t.id === schedule.document_template_id) ??
+                  documentTemplates.find((t) => t.id === defaultTemplateIdForType(documentTemplates, schedule.document_type))
+                return (
+                  <span
+                    className={cn(
+                      'px-2 py-1 text-xs rounded',
+                      attached ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'
+                    )}
+                    title={attached ? `Document joint : ${attached.name}` : 'Aucun modèle de document : modifiez la règle pour en choisir un'}
+                  >
+                    📎 {attached ? attached.name : 'Modèle de document manquant'}
+                  </span>
+                )
+              })()}
             </div>
           </div>
 
@@ -1067,7 +1038,11 @@ function EditScheduleForm({
     send_to_coordinators: schedule.send_to_coordinators,
     send_document: schedule.send_document ?? false,
     document_type: schedule.document_type || undefined,
-    document_template_id: schedule.document_template_id || undefined,
+    // Anciennes règles (type choisi sans modèle) : modèle par défaut de ce type
+    document_template_id:
+      schedule.document_template_id ||
+      defaultTemplateIdForType(documentTemplates, schedule.document_type) ||
+      undefined,
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1241,65 +1216,18 @@ function EditScheduleForm({
                 />
               </div>
               {formData.send_document && (
-                <>
-                  <div>
-                    <Label htmlFor="edit-document_type">Type de document *</Label>
-                    <select
-                      id="edit-document_type"
-                      value={formData.document_type || ''}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          document_type: (e.target.value || undefined) as DocumentType | undefined,
-                        })
-                      }
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                      required={formData.send_document}
-                    >
-                      <option value="">Sélectionner un type</option>
-                      <option value="convocation">Convocation</option>
-                      <option value="certificat_realisation">Certificat de réalisation</option>
-                      <option value="evaluation_pre_formation">Évaluation pré-formation</option>
-                      <option value="evaluation_post_formation">Évaluation post-formation</option>
-                      <option value="attestation">Attestation</option>
-                      <option value="bulletin">Bulletin</option>
-                      <option value="releve_notes">Relevé de notes</option>
-                      <option value="certificat_presence">Certificat de présence</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-document_template_id">Modèle de document</Label>
-                    <select
-                      id="edit-document_template_id"
-                      value={formData.document_template_id || ''}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          document_template_id: e.target.value || undefined,
-                        })
-                      }
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                    >
-                      <option value="">Modèle par défaut</option>
-                      {documentTemplates
-                        .filter((template) => {
-                          // Filtrer par type de document si sélectionné
-                          if (formData.document_type) {
-                            return template.type === formData.document_type
-                          }
-                          return true
-                        })
-                        .map((template) => (
-                          <option key={template.id} value={template.id}>
-                            {template.name} ({template.type})
-                          </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Sélectionnez un modèle personnalisé ou laissez vide pour utiliser le modèle par défaut
-                    </p>
-                  </div>
-                </>
+                <DocumentTemplatePicker
+                  id="edit-document_template_id"
+                  templates={documentTemplates}
+                  value={formData.document_template_id}
+                  onChange={(template) =>
+                    setFormData({
+                      ...formData,
+                      document_template_id: template?.id,
+                      document_type: template?.type as DocumentType | undefined,
+                    })
+                  }
+                />
               )}
             </div>
           </div>
@@ -1365,5 +1293,99 @@ function EditScheduleForm({
         </form>
       </CardContent>
     </Card>
+  )
+}
+
+// ─── Document joint : choix du modèle ─────────────────────────────────────────
+
+interface PickableTemplate {
+  id: string
+  name: string
+  type: string
+  is_default?: boolean | null
+  is_active?: boolean | null
+}
+
+/** Modèles actifs joignables à un envoi programmé (documents nominatifs apprenant) */
+function schedulableTemplates(templates: PickableTemplate[]): PickableTemplate[] {
+  return templates.filter((t) => t.is_active !== false && isSchedulableDocumentType(t.type))
+}
+
+function documentTypeLabel(type: string): string {
+  try {
+    return getDocumentTypeConfig(type as DocumentType)?.name || type
+  } catch {
+    return type
+  }
+}
+
+/** Modèle par défaut d'un type (anciennes règles enregistrées avec un type seul) */
+function defaultTemplateIdForType(templates: PickableTemplate[], type: string | null | undefined): string | undefined {
+  if (!type) return undefined
+  const ofType = schedulableTemplates(templates).filter((t) => t.type === type)
+  return (ofType.find((t) => t.is_default) ?? ofType[0])?.id
+}
+
+/**
+ * Sélecteur unique du document joint : les modèles de l'organisation,
+ * groupés par type. Le type du document découle du modèle choisi.
+ */
+function DocumentTemplatePicker({
+  id,
+  templates,
+  value,
+  onChange,
+}: {
+  id: string
+  templates: PickableTemplate[]
+  value?: string
+  onChange: (template: PickableTemplate | undefined) => void
+}) {
+  const available = schedulableTemplates(templates)
+  const groups = new Map<string, PickableTemplate[]>()
+  for (const t of available) {
+    const list = groups.get(t.type) ?? []
+    list.push(t)
+    groups.set(t.type, list)
+  }
+  const sortedGroups = [...groups.entries()].sort(([a], [b]) =>
+    documentTypeLabel(a).localeCompare(documentTypeLabel(b), 'fr')
+  )
+
+  return (
+    <div>
+      <Label htmlFor={id}>Modèle de document *</Label>
+      <select
+        id={id}
+        value={value || ''}
+        onChange={(e) => onChange(available.find((t) => t.id === e.target.value))}
+        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+        required
+      >
+        <option value="">Sélectionner un modèle</option>
+        {sortedGroups.map(([type, list]) => (
+          <optgroup key={type} label={documentTypeLabel(type)}>
+            {list
+              .sort((a, b) => Number(!!b.is_default) - Number(!!a.is_default) || a.name.localeCompare(b.name, 'fr'))
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                  {t.is_default ? ' (par défaut)' : ''}
+                </option>
+              ))}
+          </optgroup>
+        ))}
+      </select>
+      {available.length === 0 ? (
+        <p className="text-xs text-amber-700 mt-1">
+          Aucun modèle de document disponible. Créez-en un dans Paramètres → Modèles de documents.
+        </p>
+      ) : (
+        <p className="text-xs text-gray-500 mt-1">
+          Le document est généré pour chaque apprenant destinataire, avec ses données et celles de sa session, puis joint à son
+          email. Formateurs et coordinateurs reçoivent l&apos;email sans pièce jointe.
+        </p>
+      )}
+    </div>
   )
 }

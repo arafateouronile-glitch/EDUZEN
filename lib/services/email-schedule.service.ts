@@ -28,15 +28,12 @@ export type EmailScheduleTargetType =
   | 'teacher'
   | 'all'
 
-export type DocumentType = 
-  | 'convocation'
-  | 'certificat_realisation'
-  | 'evaluation_pre_formation'
-  | 'evaluation_post_formation'
-  | 'attestation'
-  | 'bulletin'
-  | 'releve_notes'
-  | 'certificat_presence'
+/**
+ * Type du document joint = type du modèle choisi (document_templates.type),
+ * renseigné automatiquement depuis le modèle dans le formulaire.
+ */
+import type { DocumentType } from '@/lib/types/document-templates'
+export type { DocumentType }
 
 export interface CreateEmailScheduleInput {
   name: string
