@@ -20,6 +20,14 @@ export interface JuryMember {
   last_name: string
   email: string
   company: string | null
+  /** Qualité (fonction / titre) — attestation de défraiement */
+  qualite?: string | null
+  address?: string | null
+  postal_code?: string | null
+  city?: string | null
+  /** Coordonnées bancaires pour le virement du défraiement */
+  iban?: string | null
+  bic?: string | null
   created_at: string
   updated_at: string
 }
@@ -42,6 +50,12 @@ export interface CreateJuryMemberInput {
   last_name: string
   email: string
   company?: string
+  qualite?: string
+  address?: string
+  postal_code?: string
+  city?: string
+  iban?: string
+  bic?: string
 }
 
 // ─── Jury Members ────────────────────────────────────────────────────────────
@@ -89,9 +103,12 @@ async function createJuryMember(
   return data
 }
 
+/** null efface le champ (ex. IBAN supprimé de la fiche) */
+export type UpdateJuryMemberInput = { [K in keyof CreateJuryMemberInput]?: CreateJuryMemberInput[K] | null }
+
 async function updateJuryMember(
   id: string,
-  input: Partial<CreateJuryMemberInput>
+  input: UpdateJuryMemberInput
 ): Promise<JuryMember> {
   const supabase = createClient()
   const { data, error } = await db(supabase)

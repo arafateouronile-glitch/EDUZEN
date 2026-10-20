@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { juryService, type SessionJury, type JuryMember } from '@/lib/services/jury.service'
+import { JuryExpenses } from './jury-expenses'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ const newMemberSchema = z.object({
   last_name:  z.string().min(1, 'Nom requis'),
   email:      z.string().email('Email invalide'),
   company:    z.string().optional(),
+  qualite:    z.string().optional(),
 })
 type NewMemberForm = z.infer<typeof newMemberSchema>
 
@@ -176,6 +178,10 @@ export function GestionExamen({ sessionId, sessionData }: GestionExamenProps) {
       juryService.removeJuryFromSession(sessionJuryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['session-jury', sessionId] })
+      // Le défraiement et sa charge de session sont supprimés en cascade
+      queryClient.invalidateQueries({ queryKey: ['jury-expenses', sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['session-charges', sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['session-charges-summary', sessionId] })
       addToast({ type: 'success', title: 'Jury retiré', description: 'Le membre du jury a été retiré de la session.' })
     },
     onError: (e) =>
@@ -372,9 +378,15 @@ export function GestionExamen({ sessionId, sessionData }: GestionExamenProps) {
                     <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
                   )}
                 </div>
-                <div>
-                  <Label htmlFor="jm_company">Entreprise / Organisme</Label>
-                  <Input id="jm_company" {...register('company')} placeholder="Ex : Ministère du Travail" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="jm_company">Entreprise / Organisme</Label>
+                    <Input id="jm_company" {...register('company')} placeholder="Ex : Ministère du Travail" />
+                  </div>
+                  <div>
+                    <Label htmlFor="jm_qualite">Qualité / fonction</Label>
+                    <Input id="jm_qualite" {...register('qualite')} placeholder="Ex : Professionnel du secteur" />
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => { setShowNewForm(false); reset() }}>
@@ -564,6 +576,9 @@ export function GestionExamen({ sessionId, sessionData }: GestionExamenProps) {
           </div>
         )}
       </GlassCard>
+
+      {/* ── Défraiements du jury ───────────────────────────────────────────── */}
+      <JuryExpenses sessionId={sessionId} sessionJury={sessionJury} sessionData={sessionData} />
 
     </div>
   )

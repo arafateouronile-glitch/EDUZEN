@@ -85,6 +85,12 @@ function documentTypeToTemplateType(docType: string): string {
   return docType
 }
 
+/** Préfixe du fichier PDF signé (stockage + pièce jointe de l'email) */
+function signedFilePrefix(docType: string): string {
+  if (docType === 'attestation_defraiement') return 'attestation_defraiement_signee'
+  return 'convention_signee'
+}
+
 export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
@@ -674,6 +680,16 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Attestation de défraiement d'un membre du jury : le défraiement passe à
+      // « signé » (onglet Examen & Jury). Ne doit jamais faire échouer la signature.
+      if (docType === 'attestation_defraiement') {
+        const { error: expenseErr } = await db
+          .from('session_jury_expenses')
+          .update({ status: 'signed', signed_at: signedAt })
+          .eq('document_id', docId)
+        if (expenseErr) logger.error('Erreur mise à jour défraiement jury (non-fatal):', expenseErr)
+      }
+
       // Suivi commercial CRM : un devis/une convention signé fait progresser
       // automatiquement le statut du prospect. Ne doit jamais faire échouer la
       // signature côté signataire externe (pas de session ici, client admin uniquement).
@@ -787,7 +803,7 @@ export async function POST(request: NextRequest) {
             sealedPdf = sp
             pdfIntegrityHash = ph
 
-            const signedPath = `signed/${orgId}/convention_signee_${docId}.pdf`
+            const signedPath = `signed/${orgId}/${signedFilePrefix(docType)}_${docId}.pdf`
             const { error: upErr } = await supabase.storage
               .from('documents')
               .upload(signedPath, sealedPdf, {
@@ -855,7 +871,7 @@ export async function POST(request: NextRequest) {
           adminEmail: adminEmail || undefined,
           documentTitle: docTitle,
           signedPdfBuffer: sealedPdf,
-          signedFilename: `convention_signee_${docId}.pdf`,
+          signedFilename: `${signedFilePrefix(docType)}_${docId}.pdf`,
         }).catch((e) => logger.error('Erreur envoi email PDF signé (non-fatal):', e))
       } else {
         // PDF non disponible : envoyer notification simple sans pièce jointe

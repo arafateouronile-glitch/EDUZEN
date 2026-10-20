@@ -48,13 +48,14 @@ export async function POST(request: NextRequest) {
     const {
       pdfBase64, // PDF en base64 généré côté client
       documentTitle,
-      type, // 'contract' | 'convention' | 'convention_formateur'
+      type, // 'contract' | 'convention' | 'convention_formateur' | 'attestation_defraiement'
       enrollmentId,   // optionnel (absent pour les documents formateurs)
       sessionId,      // optionnel
       recipientEmail,
       recipientName,
       recipientId,
-      recipientType,  // 'student' | 'teacher' (défaut : 'student')
+      recipientType,  // 'student' | 'teacher' | 'other' (défaut : 'student') — 'other' : membre du jury
+      metadata: extraMetadata, // optionnel : métadonnées métier (ex. jury_expense_id)
       subject,
       message,
       expiresAt,
@@ -101,8 +102,8 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(filePath)
 
     // Résoudre le type de destinataire
-    const resolvedRecipientType: 'student' | 'teacher' =
-      recipientType === 'teacher' ? 'teacher' : 'student'
+    const resolvedRecipientType: 'student' | 'teacher' | 'other' =
+      recipientType === 'teacher' ? 'teacher' : recipientType === 'other' ? 'other' : 'student'
 
     // Récupérer l'étudiant si c'est un document étudiant
     let studentId: string | null = null
@@ -115,8 +116,10 @@ export async function POST(request: NextRequest) {
       studentId = studentData?.id || null
     }
 
-    // Mapper le type de document
-    const docType = type === 'contract' ? 'contract' : 'convention'
+    // Mapper le type de document. L'attestation de défraiement garde son type :
+    // /api/sign/submit y cherche les zones de signature de son propre modèle.
+    const docType =
+      type === 'contract' ? 'contract' : type === 'attestation_defraiement' ? 'attestation_defraiement' : 'convention'
 
     // Créer le document dans la base de données
     const document = await documentService.create({
@@ -126,6 +129,7 @@ export async function POST(request: NextRequest) {
       organization_id: userData.organization_id,
       student_id: studentId,
       metadata: {
+        ...(extraMetadata && typeof extraMetadata === 'object' && !Array.isArray(extraMetadata) ? extraMetadata : {}),
         session_id: sessionId || null,
         enrollment_id: enrollmentId || null,
         recipient_type: resolvedRecipientType,

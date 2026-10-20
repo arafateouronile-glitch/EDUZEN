@@ -2611,7 +2611,7 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       <div style="background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px; margin-bottom: 10px;">
         <p style="font-weight: bold; font-size: 10.5pt; margin: 0 0 4px 0;">{examen_nom}</p>
         <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Type : {examen_type}</p>
-        <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Session : {session_nom} — Réf. {session_nom}</p>
+        <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Session : {session_nom}</p>
         <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Date(s) : {examen_date}</p>
         <p style="font-size: 9.5pt; color: #333; margin: 0;">Lieu : {examen_lieu}</p>
       </div>
@@ -2706,18 +2706,21 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
           Fait en deux exemplaires, à {ecole_ville}, le {date_aujourd_hui}
         </p>
         <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-          <div style="width: 45%; text-align: center;">
-            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Pour l'Organisme</p>
-            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{ecole_nom}<br/>{ecole_representant}</p>
-            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
-              <p style="font-size: 8.5pt; color: #666;">Signature et cachet</p>
-            </div>
-          </div>
+          <!-- Membre du jury à gauche, organisme à droite : même disposition que
+               les zones de signature par défaut du scellement (sig_stagiaire /
+               sig_of, lib/utils/seal-pdf.ts) -->
           <div style="width: 45%; text-align: center;">
             <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Le Membre du Jury</p>
             <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{jury_prenom} {jury_nom}<br/>Lu et approuvé — Bon pour paiement</p>
             <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
               <p style="font-size: 8.5pt; color: #666;">Signature</p>
+            </div>
+          </div>
+          <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Pour l'Organisme</p>
+            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{ecole_nom}<br/>{ecole_representant}</p>
+            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+              <p style="font-size: 8.5pt; color: #666;">Signature et cachet</p>
             </div>
           </div>
         </div>
