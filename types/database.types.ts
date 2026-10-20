@@ -9514,6 +9514,8 @@ export type Database = {
           published_online: boolean | null
           quality: string | null
           satisfaction_score_override: number | null
+          satisfaction_responses_count: number
+          satisfaction_score_auto: number | null
           subtitle: string | null
           training_action_type: string | null
           training_content: string | null
@@ -9556,6 +9558,8 @@ export type Database = {
           published_online?: boolean | null
           quality?: string | null
           satisfaction_score_override?: number | null
+          satisfaction_responses_count?: number
+          satisfaction_score_auto?: number | null
           subtitle?: string | null
           training_action_type?: string | null
           training_content?: string | null
@@ -9598,6 +9602,8 @@ export type Database = {
           published_online?: boolean | null
           quality?: string | null
           satisfaction_score_override?: number | null
+          satisfaction_responses_count?: number
+          satisfaction_score_auto?: number | null
           subtitle?: string | null
           training_action_type?: string | null
           training_content?: string | null
@@ -10713,33 +10719,51 @@ export type Database = {
       }
       jury_members: {
         Row: {
+          address: string | null
+          bic: string | null
+          city: string | null
           company: string | null
           created_at: string | null
           email: string
           first_name: string
+          iban: string | null
           id: string
           last_name: string
           organization_id: string
+          postal_code: string | null
+          qualite: string | null
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
+          bic?: string | null
+          city?: string | null
           company?: string | null
           created_at?: string | null
           email: string
           first_name: string
+          iban?: string | null
           id?: string
           last_name: string
           organization_id: string
+          postal_code?: string | null
+          qualite?: string | null
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
+          bic?: string | null
+          city?: string | null
           company?: string | null
           created_at?: string | null
           email?: string
           first_name?: string
+          iban?: string | null
           id?: string
           last_name?: string
           organization_id?: string
+          postal_code?: string | null
+          qualite?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -14230,6 +14254,9 @@ export type Database = {
           published_online: boolean | null
           quality: string | null
           satisfaction_rate: number | null
+          satisfaction_rate_auto: number | null
+          satisfaction_rate_manual: number | null
+          satisfaction_responses_count: number
           subtitle: string | null
           success_rate: number | null
           total_learners: number | null
@@ -14278,6 +14305,9 @@ export type Database = {
           published_online?: boolean | null
           quality?: string | null
           satisfaction_rate?: number | null
+          satisfaction_rate_auto?: number | null
+          satisfaction_rate_manual?: number | null
+          satisfaction_responses_count?: number
           subtitle?: string | null
           success_rate?: number | null
           total_learners?: number | null
@@ -14326,6 +14356,9 @@ export type Database = {
           published_online?: boolean | null
           quality?: string | null
           satisfaction_rate?: number | null
+          satisfaction_rate_auto?: number | null
+          satisfaction_rate_manual?: number | null
+          satisfaction_responses_count?: number
           subtitle?: string | null
           success_rate?: number | null
           total_learners?: number | null
@@ -17990,6 +18023,139 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_jury_expenses: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          distance_km: number
+          document_id: string | null
+          fees: number | null
+          hourly_rate: number
+          hours: number
+          id: string
+          jury_member_id: string
+          km_rate: number
+          lodging: number
+          meals: number
+          notes: string | null
+          organization_id: string
+          other_transport: number
+          reference: string | null
+          sent_at: string | null
+          session_charge_id: string | null
+          session_id: string
+          session_jury_id: string
+          signature_request_id: string | null
+          signed_at: string | null
+          status: string
+          total: number | null
+          transport: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          distance_km?: number
+          document_id?: string | null
+          fees?: never
+          hourly_rate?: number
+          hours?: number
+          id?: string
+          jury_member_id: string
+          km_rate?: number
+          lodging?: number
+          meals?: number
+          notes?: string | null
+          organization_id: string
+          other_transport?: number
+          reference?: string | null
+          sent_at?: string | null
+          session_charge_id?: string | null
+          session_id: string
+          session_jury_id: string
+          signature_request_id?: string | null
+          signed_at?: string | null
+          status?: string
+          total?: never
+          transport?: never
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          distance_km?: number
+          document_id?: string | null
+          fees?: never
+          hourly_rate?: number
+          hours?: number
+          id?: string
+          jury_member_id?: string
+          km_rate?: number
+          lodging?: number
+          meals?: number
+          notes?: string | null
+          organization_id?: string
+          other_transport?: number
+          reference?: string | null
+          sent_at?: string | null
+          session_charge_id?: string | null
+          session_id?: string
+          session_jury_id?: string
+          signature_request_id?: string | null
+          signed_at?: string | null
+          status?: string
+          total?: never
+          transport?: never
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_jury_expenses_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_jury_expenses_jury_member_id_fkey"
+            columns: ["jury_member_id"]
+            isOneToOne: false
+            referencedRelation: "jury_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_jury_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_jury_expenses_session_charge_id_fkey"
+            columns: ["session_charge_id"]
+            isOneToOne: false
+            referencedRelation: "session_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_jury_expenses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_jury_expenses_session_jury_id_fkey"
+            columns: ["session_jury_id"]
+            isOneToOne: true
+            referencedRelation: "session_jury"
             referencedColumns: ["id"]
           },
         ]

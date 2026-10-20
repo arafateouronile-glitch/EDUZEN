@@ -172,49 +172,6 @@ export default function FormationDetailPage() {
     enabled: !!formationId && !!user?.organization_id && !!formation,
   })
 
-  // Score de satisfaction calculé automatiquement depuis les évaluations à chaud/froid de toutes les sessions
-  const { data: autoSatisfactionScore } = useQuery<number | null>({
-    queryKey: ['formation-satisfaction-score', formationId],
-    queryFn: async () => {
-      // Récupérer les sessions de la formation
-      const { data: fSessions } = await supabase
-        .from('sessions')
-        .select('id')
-        .eq('formation_id', formationId)
-      const sIds = (fSessions ?? []).map((s: any) => s.id).filter(Boolean)
-      if (!sIds.length) return null
-
-      // Grades satisfaction (hot + cold) liés à ces sessions
-      const { data: gList } = await supabase
-        .from('grades')
-        .select('id')
-        .in('session_id', sIds)
-        .in('assessment_type', ['hot', 'cold'])
-      const gIds = (gList ?? []).map((g: any) => g.id)
-      if (!gIds.length) return null
-
-      // Instances de ces grades
-      const { data: instances } = await supabase
-        .from('evaluation_template_instances')
-        .select('id')
-        .in('grade_id', gIds)
-      const iIds = (instances ?? []).map((i: any) => i.id)
-      if (!iIds.length) return null
-
-      // Réponses avec note étoile
-      const { data: responses } = await supabase
-        .from('evaluation_responses')
-        .select('answer_rating')
-        .in('instance_id', iIds)
-        .not('answer_rating', 'is', null)
-
-      const ratings = (responses ?? []).map((r: any) => Number(r.answer_rating)).filter((n) => !isNaN(n))
-      if (!ratings.length) return null
-      return Math.round((ratings.reduce((a, c) => a + c, 0) / ratings.length) * 10) / 10
-    },
-    enabled: !!formationId,
-  })
-
   const updateScoreMutation = useMutation({
     mutationFn: async (value: number | null) => {
       return formationService.updateFormation(formationId, { satisfaction_score_override: value })
@@ -389,9 +346,15 @@ export default function FormationDetailPage() {
 
       {/* Score de satisfaction */}
       {(() => {
-        const overrideScore = (formationData as any).satisfaction_score_override as number | null
-        const displayScore = overrideScore ?? autoSatisfactionScore
-        const isOverridden = overrideScore !== null && overrideScore !== undefined
+        // Moyenne des réponses étoiles des évaluations à chaud/froid (colonne
+        // tenue à jour par trigger) ; la note manuelle ne sert qu'en l'absence
+        // de réponse.
+        const autoSatisfactionScore = ((formationData as any).satisfaction_score_auto ?? null) as number | null
+        const responsesCount = ((formationData as any).satisfaction_responses_count ?? 0) as number
+        const overrideScore = ((formationData as any).satisfaction_score_override ?? null) as number | null
+        const displayScore = autoSatisfactionScore ?? overrideScore
+        const isOverridden = overrideScore !== null
+        const usesManual = autoSatisfactionScore === null && isOverridden
 
         const handleSave = () => {
           const val = parseFloat(scoreInput.replace(',', '.'))
@@ -436,27 +399,31 @@ export default function FormationDetailPage() {
                         </Button>
                         {isOverridden && (
                           <Button size="sm" variant="ghost" className="h-8 text-xs text-gray-400 hover:text-red-500" onClick={() => updateScoreMutation.mutate(null)}>
-                            Réinitialiser (auto)
+                            Supprimer la note manuelle
                           </Button>
                         )}
                       </div>
                     ) : displayScore !== null ? (
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl font-bold text-gray-900">{displayScore}/5</span>
+                        <span className="text-2xl font-bold text-gray-900">{Number(displayScore).toFixed(1)}/5</span>
                         <span className="flex items-center gap-0.5">
                           {[1, 2, 3, 4, 5].map((s) => (
                             <Star key={s} className={`h-4 w-4 ${s <= Math.round(displayScore ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
                           ))}
                         </span>
-                        {isOverridden && (
+                        {usesManual ? (
                           <span className="text-xs bg-violet-100 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 font-medium">
-                            Corrigé manuellement
+                            Note manuelle
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-500">
+                            Moyenne de {responsesCount} réponse{responsesCount > 1 ? 's' : ''} aux évaluations à chaud et à froid
                           </span>
                         )}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-400 mt-0.5">
-                        {autoSatisfactionScore === null ? 'Aucune évaluation à chaud/froid pour cette formation' : '…'}
+                        Aucune réponse aux évaluations à chaud/froid pour cette formation
                       </p>
                     )}
                   </div>
@@ -468,17 +435,17 @@ export default function FormationDetailPage() {
                       variant="outline"
                       className="gap-1.5 text-xs"
                       onClick={() => {
-                        setScoreInput(String(overrideScore ?? autoSatisfactionScore ?? ''))
+                        setScoreInput(String(overrideScore ?? ''))
                         setEditingScore(true)
                       }}
                     >
                       <Pencil className="h-3.5 w-3.5" />
-                      {isOverridden ? 'Modifier' : 'Corriger manuellement'}
+                      {isOverridden ? 'Modifier la note manuelle' : 'Saisir une note manuelle'}
                     </Button>
                   )}
-                  {autoSatisfactionScore !== null && (
-                    <span className="text-xs text-gray-400">
-                      Score calculé : {autoSatisfactionScore}/5
+                  {autoSatisfactionScore !== null && isOverridden && (
+                    <span className="text-xs text-gray-400" title="La note manuelle n'est utilisée que tant qu'aucune évaluation n'a reçu de réponse">
+                      Note manuelle ({overrideScore}/5) non utilisée
                     </span>
                   )}
                 </div>

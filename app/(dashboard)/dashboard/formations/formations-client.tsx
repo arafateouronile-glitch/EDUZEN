@@ -779,17 +779,30 @@ function FormationsPageContent() {
                           </p>
                         )}
 
-                        {(formation as any).satisfaction_score_override !== null &&
-                          (formation as any).satisfaction_score_override !== undefined && (
-                          <div className="flex items-center gap-1.5 mt-3">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star key={s} className={`h-3.5 w-3.5 ${s <= Math.round((formation as any).satisfaction_score_override) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
-                            ))}
-                            <span className="text-xs font-semibold text-gray-600 ml-1">
-                              {(formation as any).satisfaction_score_override}/5
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          // Moyenne des évaluations à chaud/froid d'abord, note manuelle en repli
+                          const auto = (formation as any).satisfaction_score_auto as number | null | undefined
+                          const manual = (formation as any).satisfaction_score_override as number | null | undefined
+                          const score = auto ?? manual
+                          if (score === null || score === undefined) return null
+                          const count = (formation as any).satisfaction_responses_count as number | undefined
+                          return (
+                            <div
+                              className="flex items-center gap-1.5 mt-3"
+                              title={auto != null ? `Moyenne de ${count ?? 0} réponse${(count ?? 0) > 1 ? 's' : ''} aux évaluations à chaud et à froid` : 'Note saisie manuellement'}
+                            >
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} className={`h-3.5 w-3.5 ${s <= Math.round(score) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                              ))}
+                              <span className="text-xs font-semibold text-gray-600 ml-1">
+                                {Number(score).toFixed(1)}/5
+                              </span>
+                              {auto != null && count ? (
+                                <span className="text-xs text-gray-400">({count} réponse{count > 1 ? "s" : ""})</span>
+                              ) : null}
+                            </div>
+                          )
+                        })()}
                       </div>
 
                       <motion.div

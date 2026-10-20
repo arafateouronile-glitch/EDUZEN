@@ -152,7 +152,9 @@ export default function EditProgramPage() {
         pedagogical_methods: program.pedagogical_methods || '',
         // Statistiques
         success_rate: (program as any).success_rate?.toString() || '',
-        satisfaction_rate: (program as any).satisfaction_rate?.toString() || '',
+        // On édite la note manuelle (repli) : la note publiée est la moyenne des
+        // évaluations à chaud/froid dès qu'il y a des réponses (trigger SQL).
+        satisfaction_rate: ((program as any).satisfaction_rate_manual ?? (program as any).satisfaction_rate)?.toString() || '',
         total_learners: (program as any).total_learners?.toString() || '',
         completion_rate: (program as any).completion_rate?.toString() || '',
       })
@@ -1219,7 +1221,17 @@ export default function EditProgramPage() {
                       />
                       <span className="text-lg font-bold text-gray-400">/ 5</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">Note moyenne des évaluations</p>
+                    {(program as any)?.satisfaction_rate_auto != null ? (
+                      <p className="text-xs text-gray-600 mt-2">
+                        Note publiée : <strong>{Number((program as any).satisfaction_rate_auto).toFixed(1)}/5</strong>, moyenne de{' '}
+                        {(program as any).satisfaction_responses_count} réponse{(program as any).satisfaction_responses_count > 1 ? 's' : ''} aux
+                        évaluations à chaud et à froid. La note saisie ici ne sert que s&apos;il n&apos;y a aucune réponse.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Note manuelle, remplacée automatiquement par la moyenne des évaluations à chaud et à froid dès les premières réponses.
+                      </p>
+                    )}
                   </div>
 
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-100">

@@ -1134,7 +1134,9 @@ export default function NewProgramPage() {
                       />
                       <span className="text-lg font-bold text-gray-400">/ 5</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">Note moyenne des évaluations</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Note manuelle, remplacée automatiquement par la moyenne des évaluations à chaud et à froid dès les premières réponses.
+                    </p>
                   </div>
 
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-100">
