@@ -6,7 +6,16 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { EmailScheduleService } from '@/lib/services/email-schedule.service'
-import { alreadyRanToday, runStatus } from '@/lib/services/email-schedule-run'
+import {
+  alreadyRanToday,
+  EMAIL_AUTOMATION_ENROLLMENT_STATUSES,
+  isTriggerDay,
+  resolveScheduleScope,
+  runStatus,
+  studentsWithPendingHotEvaluation,
+} from '@/lib/services/email-schedule-run'
+import { AUTOMATION_EMAIL_DEFAULTS, AUTOMATION_EMAIL_FALLBACK_TYPE } from '@/lib/constants/automation-email-defaults'
+import { sendEmailViaResend, verifiedSenderAddress } from '@/lib/utils/send-email-resend'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
 import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
@@ -19,7 +28,6 @@ import {
 import { EmailTemplateService } from '@/lib/services/email-template.service'
 import { type EmailType } from '@/lib/services/email-template.service.client'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { Resend } from 'resend'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { APP_URLS } from '@/lib/config/app-config'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -41,7 +49,7 @@ const CRON_SECRET = process.env.CRON_SECRET || process.env.EMAIL_SCHEDULE_SECRET
  * Détermine si une règle doit être exécutée maintenant
  */
 function shouldExecuteSchedule(schedule: EmailSchedule, now: Date = new Date()): boolean {
-  const { trigger_type, trigger_datetime, trigger_days, trigger_time } = schedule
+  const { trigger_type, trigger_datetime } = schedule
 
   if (trigger_type === 'fixed_date') {
     if (!trigger_datetime) return false
@@ -55,105 +63,50 @@ function shouldExecuteSchedule(schedule: EmailSchedule, now: Date = new Date()):
   return true
 }
 
+type SessionRule = { session_id: string | null; email_type: string }
+
 /**
- * Récupère les sessions qui correspondent aux critères de la règle
+ * Sessions de l'organisme dont c'est aujourd'hui (heure de Paris) le jour
+ * d'envoi pour cette règle, en tenant compte des règles propres à une session.
+ * Une erreur de requête est remontée (la règle est journalisée en échec).
  */
 async function getMatchingSessions(
   schedule: EmailSchedule,
-
   supabase: any,
-  now: Date
-
+  now: Date,
+  sessionRules: SessionRule[]
 ): Promise<any[]> {
-
+  // Pas de colonne is_active ni de lien programs sur sessions : le programme
+  // passe par la formation.
   let query: any = supabase
     .from('sessions')
-    .select('*, formations(*), programs(*)')
-    .eq('is_active', true)
+    .select('*, formations(*, programs(*))')
     // Client service role : sans ce filtre, une règle viserait les sessions
     // de tous les organismes
     .eq('organization_id', schedule.organization_id)
 
-  // Filtrer par formation ou programme si spécifié
-  if (schedule.formation_id) {
-    query = query.eq('formation_id', schedule.formation_id)
-  }
-  if (schedule.program_id) {
-    query = query.eq('program_id', schedule.program_id)
-  }
-
-  // Filtrer par statut si spécifié
+  if (schedule.session_id) query = query.eq('id', schedule.session_id)
+  if (schedule.formation_id) query = query.eq('formation_id', schedule.formation_id)
   if (schedule.session_status && schedule.session_status.length > 0) {
     query = query.in('status', schedule.session_status)
+  } else {
+    query = query.neq('status', 'cancelled')
   }
 
   const { data: sessions, error } = await query
+  if (error) throw new Error(`Lecture des sessions impossible : ${error.message}`)
 
-  if (error) {
-    logger.error('Error fetching sessions:', error)
-    return []
-  }
+  const candidates = ((sessions ?? []) as any[])
+    .map((session) => {
+      const formation = Array.isArray(session.formations) ? session.formations[0] : session.formations
+      const program = Array.isArray(formation?.programs) ? formation.programs[0] : formation?.programs
+      // Formes attendues par buildStudentDocument / extractDocumentVariables
+      return { ...session, formations: formation ?? null, programs: program ?? null }
+    })
+    .filter((session) => !schedule.program_id || session.formations?.program_id === schedule.program_id)
+    .filter((session) => isTriggerDay(schedule.trigger_type, session, schedule.trigger_days, now))
 
-  if (!sessions) return []
-
-  // Filtrer selon le type de déclencheur
-
-  const matchingSessions = (sessions as any[]).filter((session: any) => {
-    if (!session.start_date || !session.end_date) return false
-
-    const startDate = new Date(session.start_date)
-    const endDate = new Date(session.end_date)
-
-    if (schedule.trigger_type === 'before_session_start') {
-      const daysBefore = schedule.trigger_days || 0
-      const targetDate = new Date(startDate)
-      targetDate.setDate(targetDate.getDate() - daysBefore)
-
-      // Vérifier si on est dans la fenêtre d'exécution (jour même, à l'heure spécifiée)
-      const today = new Date(now)
-      today.setHours(0, 0, 0, 0)
-      const targetDay = new Date(targetDate)
-      targetDay.setHours(0, 0, 0, 0)
-
-      if (targetDay.getTime() === today.getTime()) {
-        // Vérifier l'heure si spécifiée
-        if (schedule.trigger_time) {
-          const [hours, minutes] = schedule.trigger_time.split(':').map(Number)
-          const triggerTime = new Date(now)
-          triggerTime.setHours(hours, minutes || 0, 0, 0)
-          return now >= triggerTime && now < new Date(triggerTime.getTime() + 60 * 60 * 1000) // Fenêtre d'1h
-        }
-        return true
-      }
-      return false
-    }
-
-    if (schedule.trigger_type === 'after_session_end') {
-      const daysAfter = schedule.trigger_days || 0
-      const targetDate = new Date(endDate)
-      targetDate.setDate(targetDate.getDate() + daysAfter)
-
-      const today = new Date(now)
-      today.setHours(0, 0, 0, 0)
-      const targetDay = new Date(targetDate)
-      targetDay.setHours(0, 0, 0, 0)
-
-      if (targetDay.getTime() === today.getTime()) {
-        if (schedule.trigger_time) {
-          const [hours, minutes] = schedule.trigger_time.split(':').map(Number)
-          const triggerTime = new Date(now)
-          triggerTime.setHours(hours, minutes || 0, 0, 0)
-          return now >= triggerTime && now < new Date(triggerTime.getTime() + 60 * 60 * 1000)
-        }
-        return true
-      }
-      return false
-    }
-
-    return false
-  })
-
-  return matchingSessions
+  return resolveScheduleScope(schedule, candidates, sessionRules)
 }
 
 /**
@@ -161,85 +114,65 @@ async function getMatchingSessions(
  */
 async function getMatchingEvaluations(
   schedule: EmailSchedule,
-
   supabase: any,
   now: Date
-
 ): Promise<any[]> {
-
-  let query: any = supabase
+  const { data: evaluations, error } = await supabase
     .from('evaluations')
     .select('*, sessions(*), formations(*)')
     .eq('is_active', true)
-
-  const { data: evaluations, error } = await query
 
   if (error) {
     logger.error('Error fetching evaluations:', error)
     return []
   }
 
-  if (!evaluations) return []
-
-  // Filtrer selon le type de déclencheur
-
-  const matchingEvaluations = (evaluations as any[]).filter((evaluation: any) => {
+  return ((evaluations ?? []) as any[]).filter((evaluation: any) => {
     // Client service role : uniquement les évaluations de l'organisme de la règle
     const evaluationOrgId = evaluation.organization_id ?? evaluation.sessions?.organization_id
     if (evaluationOrgId !== schedule.organization_id) return false
-    if (!evaluation.start_date || !evaluation.end_date) return false
-
-    const startDate = new Date(evaluation.start_date)
-    const endDate = new Date(evaluation.end_date)
-
-    if (schedule.trigger_type === 'before_evaluation_start') {
-      const daysBefore = schedule.trigger_days || 0
-      const targetDate = new Date(startDate)
-      targetDate.setDate(targetDate.getDate() - daysBefore)
-
-      const today = new Date(now)
-      today.setHours(0, 0, 0, 0)
-      const targetDay = new Date(targetDate)
-      targetDay.setHours(0, 0, 0, 0)
-
-      if (targetDay.getTime() === today.getTime()) {
-        if (schedule.trigger_time) {
-          const [hours, minutes] = schedule.trigger_time.split(':').map(Number)
-          const triggerTime = new Date(now)
-          triggerTime.setHours(hours, minutes || 0, 0, 0)
-          return now >= triggerTime && now < new Date(triggerTime.getTime() + 60 * 60 * 1000)
-        }
-        return true
-      }
-      return false
-    }
-
-    if (schedule.trigger_type === 'after_evaluation_end') {
-      const daysAfter = schedule.trigger_days || 0
-      const targetDate = new Date(endDate)
-      targetDate.setDate(targetDate.getDate() + daysAfter)
-
-      const today = new Date(now)
-      today.setHours(0, 0, 0, 0)
-      const targetDay = new Date(targetDate)
-      targetDay.setHours(0, 0, 0, 0)
-
-      if (targetDay.getTime() === today.getTime()) {
-        if (schedule.trigger_time) {
-          const [hours, minutes] = schedule.trigger_time.split(':').map(Number)
-          const triggerTime = new Date(now)
-          triggerTime.setHours(hours, minutes || 0, 0, 0)
-          return now >= triggerTime && now < new Date(triggerTime.getTime() + 60 * 60 * 1000)
-        }
-        return true
-      }
-      return false
-    }
-
-    return false
+    return isTriggerDay(schedule.trigger_type, evaluation, schedule.trigger_days, now)
   })
+}
 
-  return matchingEvaluations
+/** Factures impayées de la session (relance paiement) */
+async function getUnpaidInvoices(supabase: any, sessionId: string): Promise<{ count: number; amount: number; currency: string }> {
+  const { data: enrollments } = await supabase.from('enrollments').select('id').eq('session_id', sessionId)
+  const enrollmentIds = ((enrollments ?? []) as Array<{ id: string }>).map((e) => e.id)
+  if (enrollmentIds.length === 0) return { count: 0, amount: 0, currency: 'EUR' }
+
+  const { data: invoices, error } = await supabase
+    .from('invoices')
+    .select('total_amount, currency, document_type, status')
+    .in('enrollment_id', enrollmentIds)
+    .in('status', ['sent', 'overdue', 'partial'])
+  if (error) throw new Error(`Lecture des factures impossible : ${error.message}`)
+
+  const unpaid = ((invoices ?? []) as Array<{ total_amount: number; currency?: string; document_type?: string | null }>).filter(
+    (i) => (i.document_type ?? 'invoice') === 'invoice'
+  )
+  return {
+    count: unpaid.length,
+    amount: unpaid.reduce((sum, i) => sum + Number(i.total_amount ?? 0), 0),
+    currency: unpaid[0]?.currency || 'EUR',
+  }
+}
+
+/** Apprenants de la session dont l'évaluation à chaud n'est pas complétée */
+async function getStudentsToRemind(supabase: any, sessionId: string): Promise<Set<string>> {
+  const { data: grades } = await supabase
+    .from('grades')
+    .select('id, student_id')
+    .eq('session_id', sessionId)
+    .eq('assessment_type', 'hot')
+  const gradeRows = (grades ?? []) as Array<{ id: string; student_id: string | null }>
+  if (gradeRows.length === 0) return new Set()
+
+  const { data: instances } = await supabase
+    .from('evaluation_template_instances')
+    .select('grade_id, completed_at')
+    .in('grade_id', gradeRows.map((g) => g.id))
+  return studentsWithPendingHotEvaluation(gradeRows, (instances ?? []) as Array<{ grade_id: string; completed_at: string | null }>)
 }
 
 /**
@@ -247,163 +180,127 @@ async function getMatchingEvaluations(
  */
 async function getRecipientsForSchedule(
   schedule: EmailSchedule,
-
   supabase: any,
-  now: Date
+  now: Date,
+  sessionRules: SessionRule[]
 ): Promise<Recipient[]> {
   const recipients: Recipient[] = []
 
-  try {
-    // Récupérer l'organisation pour les emails
-    const { data: organization } = await supabase
-      .from('organizations')
-      .select('id, name, email, phone')
-      .eq('id', schedule.organization_id)
-      .single()
-
-    if (schedule.target_type === 'session') {
-      const matchingSessions = await getMatchingSessions(schedule, supabase, now)
-
-      for (const session of matchingSessions) {
-        // Récupérer les étudiants inscrits à cette session
-        if (schedule.send_to_students) {
-          // eslint-disable-next-line
-          const qEnr: any = supabase
-            .from('enrollments')
-            .select('*, students(*)')
-            .eq('session_id', session.id)
-            .eq('status', 'active')
-          const { data: enrollments } = await qEnr
-
-          if (enrollments) {
-            for (const enrollment of enrollments) {
-              const student = enrollment.students
-              if (student?.email) {
-                recipients.push({
-                  email: student.email,
-                  name: `${student.first_name} ${student.last_name}`,
-                  type: 'student',
-                  context: { session, enrollment, student },
-                })
-              }
-            }
-          }
-        }
-
-        // Récupérer les enseignants de la session
-        if (schedule.send_to_teachers && session.teacher_id) {
-          const { data: teacher } = await supabase
-            .from('users')
-            .select('id, email, first_name, last_name')
-            .eq('id', session.teacher_id)
-            .single()
-
-          if (teacher?.email) {
-            recipients.push({
-              email: teacher.email,
-              name: `${teacher.first_name || ''} ${teacher.last_name || ''}`.trim(),
-              type: 'teacher',
-              context: { session, teacher },
-            })
-          }
-        }
-
-        // Récupérer les coordinateurs
-        if (schedule.send_to_coordinators) {
-          const { data: coordinators } = await supabase
-            .from('users')
-            .select('id, email, first_name, last_name')
-            .eq('organization_id', schedule.organization_id)
-            .in('role', ['admin', 'super_admin', 'coordinator'])
-
-          if (coordinators) {
-            for (const coordinator of coordinators) {
-              if (coordinator.email) {
-                recipients.push({
-                  email: coordinator.email,
-                  name: `${coordinator.first_name || ''} ${coordinator.last_name || ''}`.trim(),
-                  type: 'coordinator',
-                  context: { session, coordinator },
-                })
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (schedule.target_type === 'evaluation') {
-      const matchingEvaluations = await getMatchingEvaluations(schedule, supabase, now)
-
-      for (const evaluation of matchingEvaluations) {
-        // Récupérer les étudiants concernés par cette évaluation
-        if (schedule.send_to_students && evaluation.session_id) {
-          // eslint-disable-next-line
-          const qEnr2: any = supabase
-            .from('enrollments')
-            .select('*, students(*)')
-            .eq('session_id', evaluation.session_id)
-            .eq('status', 'active')
-          const { data: enrollments } = await qEnr2
-
-          if (enrollments) {
-            for (const enrollment of enrollments) {
-              const student = enrollment.students
-              if (student?.email) {
-                recipients.push({
-                  email: student.email,
-                  name: `${student.first_name} ${student.last_name}`,
-                  type: 'student',
-                  context: { evaluation, enrollment, student },
-                })
-              }
-            }
-          }
-        }
-
-        // Récupérer les enseignants
-        if (schedule.send_to_teachers) {
-          // eslint-disable-next-line
-          const qSess: any = supabase
-            .from('sessions')
-            .select('*, users(*)')
-            .eq('id', evaluation.session_id)
-            .single()
-          const { data: session } = await qSess
-
-          if (session?.users?.email) {
-            recipients.push({
-              email: session.users.email,
-              name: `${session.users.first_name || ''} ${session.users.last_name || ''}`.trim(),
-              type: 'teacher',
-              context: { evaluation, teacher: session.users },
-            })
-          }
-        }
-      }
-    }
-
-    // Dédupliquer les emails
-    const uniqueRecipients = recipients.reduce((acc, recipient) => {
-      if (!acc.find((r) => r.email === recipient.email)) {
-        acc.push(recipient)
-      }
-      return acc
-    }, [] as typeof recipients)
-
-    return uniqueRecipients
-  } catch (error) {
-    logger.error('Error getting recipients:', error)
-    return recipients
+  const loadStudents = async (sessionId: string) => {
+    const { data: enrollments, error } = await supabase
+      .from('enrollments')
+      .select('*, students(*)')
+      .eq('session_id', sessionId)
+      .in('status', EMAIL_AUTOMATION_ENROLLMENT_STATUSES)
+    if (error) throw new Error(`Lecture des inscriptions impossible : ${error.message}`)
+    return (enrollments ?? []) as any[]
   }
+
+  const loadCoordinators = async () => {
+    const { data: coordinators } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name')
+      .eq('organization_id', schedule.organization_id)
+      // Rôles de gestion (le rôle « coordinator » n'existe pas)
+      .in('role', ['admin', 'super_admin', 'secretary'])
+    return (coordinators ?? []) as any[]
+  }
+
+  if (schedule.target_type === 'session') {
+    const matchingSessions = await getMatchingSessions(schedule, supabase, now, sessionRules)
+
+    for (const session of matchingSessions) {
+      if (schedule.send_to_students) {
+        // Relance d'évaluation : uniquement ceux qui n'ont pas répondu
+        const toRemind = schedule.email_type === 'relance_evaluation' ? await getStudentsToRemind(supabase, session.id) : null
+        for (const enrollment of await loadStudents(session.id)) {
+          const student = enrollment.students
+          if (!student?.email) continue
+          if (toRemind && !toRemind.has(student.id)) continue
+          recipients.push({
+            email: student.email,
+            name: `${student.first_name} ${student.last_name}`,
+            type: 'student',
+            context: { session, enrollment, student },
+          })
+        }
+      }
+
+      if (schedule.send_to_teachers && session.teacher_id) {
+        const { data: teacher } = await supabase
+          .from('users')
+          .select('id, email, first_name, last_name')
+          .eq('id', session.teacher_id)
+          .maybeSingle()
+        if (teacher?.email) {
+          recipients.push({
+            email: teacher.email,
+            name: `${teacher.first_name || ''} ${teacher.last_name || ''}`.trim(),
+            type: 'teacher',
+            context: { session, teacher },
+          })
+        }
+      }
+
+      if (schedule.send_to_coordinators) {
+        // Relance paiement : uniquement s'il reste des factures impayées
+        let unpaid: { count: number; amount: number; currency: string } | null = null
+        if (schedule.email_type === 'relance_paiement') {
+          unpaid = await getUnpaidInvoices(supabase, session.id)
+          if (unpaid.count === 0) continue
+        }
+        for (const coordinator of await loadCoordinators()) {
+          if (!coordinator.email) continue
+          recipients.push({
+            email: coordinator.email,
+            name: `${coordinator.first_name || ''} ${coordinator.last_name || ''}`.trim(),
+            type: 'coordinator',
+            context: { session, coordinator, ...(unpaid ? { unpaid } : {}) },
+          })
+        }
+      }
+    }
+  }
+
+  if (schedule.target_type === 'evaluation') {
+    for (const evaluation of await getMatchingEvaluations(schedule, supabase, now)) {
+      if (schedule.send_to_students && evaluation.session_id) {
+        for (const enrollment of await loadStudents(evaluation.session_id)) {
+          const student = enrollment.students
+          if (!student?.email) continue
+          recipients.push({
+            email: student.email,
+            name: `${student.first_name} ${student.last_name}`,
+            type: 'student',
+            context: { evaluation, enrollment, student },
+          })
+        }
+      }
+    }
+  }
+
+  // Dédupliquer par destinataire et par session (un apprenant de deux sessions
+  // le même jour reçoit les deux emails, chacun avec ses informations)
+  const seen = new Set<string>()
+  return recipients.filter((r) => {
+    const sessionKey = (r.context?.session as { id?: string } | undefined)?.id ?? (r.context?.evaluation as { id?: string } | undefined)?.id ?? ''
+    const key = `${r.email.toLowerCase()}|${sessionKey}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function formatTime(value: string | null | undefined): string {
+  return value ? value.slice(0, 5) : ''
 }
 
 /**
  * Remplace les variables dans le template avec les données du contexte
  */
 function replaceTemplateVariables(
-  template: any,
-  recipient: any,
+  template: { subject?: string | null; body_html?: string | null; body_text?: string | null },
+  recipient: Recipient,
   organization: any
 ): { subject: string; bodyHtml: string; bodyText: string } {
   let subject = template.subject || ''
@@ -418,40 +315,35 @@ function replaceTemplateVariables(
     recipient_email: recipient.email || '',
   }
 
-  // Ajouter les variables du contexte (session, student, etc.)
-  if (recipient.context) {
-    if (recipient.context.session) {
-      const session = recipient.context.session
-      variables.session_name = session.name || ''
-      variables.session_start_date = session.start_date
-        ? new Date(session.start_date).toLocaleDateString('fr-FR')
-        : ''
-      variables.session_end_date = session.end_date
-        ? new Date(session.end_date).toLocaleDateString('fr-FR')
-        : ''
-      variables.session_start_time = session.start_time || ''
-      variables.session_location = session.location || ''
-    }
+  const context = (recipient.context ?? {}) as Record<string, any>
+  if (context.session) {
+    const session = context.session
+    variables.session_name = session.formations?.name || session.name || ''
+    variables.session_start_date = session.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : ''
+    variables.session_end_date = session.end_date ? new Date(session.end_date).toLocaleDateString('fr-FR') : ''
+    variables.session_start_time = formatTime(session.start_time)
+    variables.session_location = session.location || ''
+  }
 
-    if (recipient.context.student) {
-      const student = recipient.context.student
-      variables.student_name = `${student.first_name} ${student.last_name}`
-      variables.student_first_name = student.first_name || ''
-      variables.student_last_name = student.last_name || ''
-      variables.student_email = student.email || ''
-      variables.espace_apprenant = student.id ? `${APP_URLS.getBaseUrl()}/learner/access/${student.id}` : ''
-    }
+  if (context.student) {
+    const student = context.student
+    variables.student_name = `${student.first_name} ${student.last_name}`
+    variables.student_first_name = student.first_name || ''
+    variables.student_last_name = student.last_name || ''
+    variables.student_email = student.email || ''
+    variables.espace_apprenant = student.id ? `${APP_URLS.getBaseUrl()}/learner/access/${student.id}` : ''
+  }
 
-    if (recipient.context.evaluation) {
-      const evaluation = recipient.context.evaluation
-      variables.evaluation_name = evaluation.name || ''
-      variables.evaluation_start_date = evaluation.start_date
-        ? new Date(evaluation.start_date).toLocaleDateString('fr-FR')
-        : ''
-      variables.evaluation_end_date = evaluation.end_date
-        ? new Date(evaluation.end_date).toLocaleDateString('fr-FR')
-        : ''
-    }
+  if (context.evaluation) {
+    const evaluation = context.evaluation
+    variables.evaluation_name = evaluation.name || ''
+    variables.evaluation_start_date = evaluation.start_date ? new Date(evaluation.start_date).toLocaleDateString('fr-FR') : ''
+    variables.evaluation_end_date = evaluation.end_date ? new Date(evaluation.end_date).toLocaleDateString('fr-FR') : ''
+  }
+
+  if (context.unpaid) {
+    variables.factures_impayees = String(context.unpaid.count)
+    variables.montant_impaye = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: context.unpaid.currency || 'EUR' }).format(context.unpaid.amount)
   }
 
   // Remplacer les variables {variable_name}
@@ -463,6 +355,29 @@ function replaceTemplateVariables(
   })
 
   return { subject, bodyHtml, bodyText }
+}
+
+/**
+ * Modèle d'email : celui de la règle, sinon le modèle par défaut de
+ * l'organisme pour ce type, puis pour un type proche, sinon l'email intégré
+ * de l'automatisation — une automatisation activée envoie toujours un email.
+ */
+async function resolveEmailTemplate(
+  service: EmailTemplateService,
+  schedule: EmailSchedule
+): Promise<{ subject?: string | null; body_html?: string | null; body_text?: string | null } | null> {
+  if (schedule.template_id) {
+    const chosen = await service.getById(schedule.template_id).catch(() => null)
+    if (chosen) return chosen
+  }
+  const own = await service.getDefault(schedule.organization_id, schedule.email_type as EmailType).catch(() => null)
+  if (own) return own
+  const fallbackType = AUTOMATION_EMAIL_FALLBACK_TYPE[schedule.email_type]
+  if (fallbackType) {
+    const related = await service.getDefault(schedule.organization_id, fallbackType as EmailType).catch(() => null)
+    if (related) return related
+  }
+  return AUTOMATION_EMAIL_DEFAULTS[schedule.email_type] ?? null
 }
 
 /**
@@ -573,12 +488,25 @@ export async function POST(request: NextRequest) {
     const schedules = await emailScheduleService.getActiveSchedulesToExecute()
     const now = new Date()
 
+    // Règles propres à une session (actives ou non) : elles priment sur la
+    // règle de l'organisme du même type pour leur session
+    const { data: sessionRulesData } = await adminSupabase
+      .from('email_schedules')
+      .select('session_id, email_type')
+      .not('session_id', 'is', null)
+    const sessionRules = (sessionRulesData ?? []) as SessionRule[]
+
     const results = []
 
     for (const schedule of schedules) {
       try {
         // Vérifier si la règle doit être exécutée
         if (!shouldExecuteSchedule(schedule, now)) {
+          continue
+        }
+
+        // Émargement automatique : géré par /api/cron/auto-launch-attendance
+        if (schedule.trigger_type === 'after_seance_start') {
           continue
         }
 
@@ -594,27 +522,16 @@ export async function POST(request: NextRequest) {
           (schedule.target_type === 'session' || schedule.target_type === 'evaluation')
         ) {
           // On va récupérer les destinataires qui incluent aussi le filtrage temporel
-          const recipients = await getRecipientsForSchedule(schedule, adminSupabase, now)
+          const recipients = await getRecipientsForSchedule(schedule, adminSupabase, now, sessionRules)
 
           if (recipients.length === 0) {
             logger.info(`No recipients for schedule ${schedule.id} at this time`)
             continue
           }
 
-          // Récupérer le template d'email
-          let template = null
-          if (schedule.template_id) {
-            template = await emailTemplateService.getById(schedule.template_id)
-          } else {
-            template = await emailTemplateService.getDefault(
-              schedule.organization_id,
-              schedule.email_type as EmailType
-            )
-          }
-
+          const template = await resolveEmailTemplate(emailTemplateService, schedule)
           if (!template) {
-            logger.warn(`No template found for schedule ${schedule.id}`)
-            continue
+            throw new Error(`Aucun modèle d'email pour le type « ${schedule.email_type} »`)
           }
 
           // Organisation complète : nécessaire aux variables {ecole_*} des documents
@@ -630,11 +547,10 @@ export async function POST(request: NextRequest) {
             : null
           const sessionCache = new Map<string, Promise<any>>()
 
-          if (!process.env.RESEND_API_KEY) {
-            throw new Error('RESEND_API_KEY not configured')
-          }
-          const resend = new Resend(process.env.RESEND_API_KEY)
-          const fromEmail = organization?.email || process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@eduzen.fr'
+          // Expéditeur : domaine vérifié dans Resend, au nom de l'organisme ;
+          // les réponses vont à l'organisme
+          const from = `${(organization?.name || 'EDUZEN').replace(/[<>"]/g, '')} <${verifiedSenderAddress()}>`
+          const replyTo = organization?.email || undefined
 
           // Envoyer les emails
           let successfulSends = 0
@@ -659,18 +575,17 @@ export async function POST(request: NextRequest) {
                 )
               }
 
-              // Envoyer l'email directement via Resend (pour le cron job, pas d'authentification requise)
-              const { error: emailError } = await resend.emails.send({
-                from: `${organization?.name || 'EDUZEN'} <${fromEmail}>`,
+              const sent = await sendEmailViaResend({
+                from,
+                replyTo,
                 to: recipient.email,
                 subject,
                 html: bodyHtml || bodyText,
-                text: bodyText,
-                ...(attachments.length > 0 ? { attachments } : {}),
+                text: bodyText || undefined,
+                attachments,
               })
-
-              if (emailError) {
-                throw new Error(`Email send failed: ${emailError.message}`)
+              if (!sent.success) {
+                throw new Error(`Email send failed: ${sent.error ?? 'erreur inconnue'}`)
               }
 
               successfulSends++

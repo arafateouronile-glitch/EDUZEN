@@ -1,14 +1,15 @@
 /**
  * CRON : Envoi automatique des émargements numériques
  *
- * Se déclenche toutes les 5 minutes.
- * Pour chaque séance dont l'heure de début se situe dans la fenêtre
- * [maintenant - 10 min, maintenant - 5 min] et dont aucune session
- * d'émargement électronique n'a encore été lancée aujourd'hui,
- * ce cron crée et active automatiquement la session d'émargement,
- * puis envoie les liens de signature à tous les apprenants inscrits.
+ * Appelé toutes les 5 minutes par le planificateur Supabase (pg_cron + pg_net,
+ * migration 20261026000001 — le plan Vercel Hobby ne permet qu'un passage par
+ * jour ; l'entrée vercel.json ne sert que de filet).
  *
- * Prérequis organisation : settings.automation.auto_attendance_enabled !== false
+ * Pour chaque séance du jour (session_slots, heure de Paris) commencée il y a
+ * 5 à 15 minutes, dont l'automatisation « Signature émargement » est ACTIVÉE
+ * (règle de la session, sinon règle de l'organisme) et qui n'a pas encore son
+ * émargement, crée la session d'émargement active et envoie les liens de
+ * signature aux apprenants inscrits.
  */
 
 import type { NextRequest } from 'next/server'
@@ -17,35 +18,30 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { logger } from '@/lib/utils/logger'
 import { ATTENDANCE_ELIGIBLE_ENROLLMENT_STATUSES } from '@/lib/services/electronic-attendance.service'
+import { parisDay, slotInLaunchWindow } from '@/lib/services/email-schedule-run'
+
+interface SlotRow {
+  id: string
+  date: string
+  start_time: string
+  end_time: string | null
+  session_id: string
+  sessions: {
+    id: string
+    name: string
+    status: string | null
+    organization_id: string
+    formations: { name: string } | { name: string }[] | null
+  } | null
+}
 
 const CRON_SECRET = process.env.CRON_SECRET
-
-interface OrgSettings {
-  automation?: {
-    auto_attendance_enabled?: boolean
-  }
-}
-
-interface SessionRow {
-  id: string
-  name: string
-  start_date: string
-  start_time: string | null
-  end_time: string | null
-  organization_id: string
-  formations: { name: string } | { name: string }[] | null
-  enrollments: { student_id: string }[]
-}
 
 function generateSignatureToken(): string {
   const timestamp = Date.now().toString(36)
   const r1 = Math.random().toString(36).substring(2, 15)
   const r2 = Math.random().toString(36).substring(2, 15)
   return `att-${timestamp}-${r1}-${r2}`
-}
-
-function formatTime(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:00`
 }
 
 function buildAttendanceEmailHtml(params: {
@@ -111,16 +107,12 @@ export async function GET(request: NextRequest) {
 
   const supabaseAdmin = createAdminClient()
   const now = new Date()
-  const todayStr = now.toISOString().split('T')[0]
-
-  // Fenêtre de détection : séances dont l'heure de début est entre now-10min et now-5min
-  const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000)
-  const tenMinAgo = new Date(now.getTime() - 10 * 60 * 1000)
-  const fiveMinAgoTime = formatTime(fiveMinAgo)
-  const tenMinAgoTime = formatTime(tenMinAgo)
+  // Les séances sont saisies en heure de Paris
+  const todayStr = parisDay(now)
 
   const results: {
     sessionId: string
+    slotId: string
     organizationId: string
     launched: boolean
     emailsSent: number
@@ -129,93 +121,74 @@ export async function GET(request: NextRequest) {
   }[] = []
 
   try {
-    // Récupérer les organisations actives
-    const { data: organizations } = await supabaseAdmin
-      .from('organizations')
-      .select('id, settings')
-      .eq('subscription_status', 'active')
+    // Automatisation « Signature émargement » : règles actives (organisme ou session)
+    // et règles de session désactivées (qui priment sur celle de l'organisme)
+    const { data: rules, error: rulesError } = await supabaseAdmin
+      .from('email_schedules')
+      .select('organization_id, session_id, is_active')
+      .eq('email_type', 'emargement_auto')
+    if (rulesError) throw rulesError
 
-    if (!organizations?.length) {
-      return NextResponse.json({ success: true, message: 'No active organizations', results: [] })
+    const orgEnabled = new Set<string>()
+    const sessionRule = new Map<string, boolean>()
+    for (const r of rules ?? []) {
+      if (r.session_id) sessionRule.set(r.session_id, !!r.is_active)
+      else if (r.is_active) orgEnabled.add(r.organization_id)
+    }
+    const orgsWithSessionRule = new Set(
+      (rules ?? []).filter((r) => r.session_id && r.is_active).map((r) => r.organization_id)
+    )
+    const candidateOrgIds = [...new Set([...orgEnabled, ...orgsWithSessionRule])]
+    if (candidateOrgIds.length === 0) {
+      return NextResponse.json({ success: true, message: 'Automatisation désactivée partout', results: [] })
     }
 
-    for (const org of organizations) {
-      const settings = (org.settings as OrgSettings) || {}
+    // Organisations abonnées parmi celles qui ont activé l'automatisation
+    const { data: organizations } = await supabaseAdmin
+      .from('organizations')
+      .select('id')
+      .in('id', candidateOrgIds)
+      .eq('subscription_status', 'active')
 
-      // Vérifier si l'automatisation est activée (opt-out : activée par défaut)
-      if (settings.automation?.auto_attendance_enabled === false) {
+    for (const org of organizations ?? []) {
+      // Séances du jour de l'organisation
+      const { data: slots, error: slotsError } = await supabaseAdmin
+        .from('session_slots')
+        .select('id, date, start_time, end_time, session_id, sessions!inner(id, name, status, organization_id, formations(name))')
+        .eq('date', todayStr)
+        .eq('sessions.organization_id', org.id)
+
+      if (slotsError) {
+        logger.error('auto-launch-attendance: erreur récupération séances', { orgId: org.id, error: slotsError.message })
         continue
       }
 
-      // Récupérer les séances de l'organisation qui démarrent dans la fenêtre
-      const { data: sessions, error: sessionsError } = await supabaseAdmin
-        .from('sessions')
-        .select(`
-          id,
-          name,
-          start_date,
-          start_time,
-          end_time,
-          organization_id,
-          formations(name),
-          enrollments!inner(student_id)
-        `)
-        .eq('organization_id', org.id)
-        .eq('start_date', todayStr)
-        .gte('start_time', tenMinAgoTime)
-        .lte('start_time', fiveMinAgoTime)
-        .in('status', ['active', 'scheduled', 'in_progress', 'planned'])
+      for (const slot of (slots ?? []) as unknown as SlotRow[]) {
+        const session = slot.sessions
+        if (!session || session.status === 'cancelled') continue
+        if (!slotInLaunchWindow(slot.start_time, now)) continue
 
-      if (sessionsError) {
-        logger.error('auto-launch-attendance: erreur récupération sessions', {
-          orgId: org.id,
-          error: sessionsError.message,
-        })
-        continue
-      }
+        const enabled = sessionRule.has(session.id) ? sessionRule.get(session.id) : orgEnabled.has(org.id)
+        if (!enabled) continue
 
-      if (!sessions?.length) continue
-
-      // Charger les toggles par session (email_type = 'emargement_auto')
-      const sessionIds = (sessions as SessionRow[]).map((s) => s.id)
-      const { data: sessionToggles } = await supabaseAdmin
-        .from('email_schedules')
-        .select('session_id, is_active')
-        .eq('email_type', 'emargement_auto')
-        .in('session_id', sessionIds)
-
-      const toggleMap = new Map(
-        (sessionToggles ?? []).map((t) => [t.session_id, t.is_active])
-      )
-
-      for (const session of sessions as SessionRow[]) {
-        // Si un toggle par session existe et est désactivé → on skip
-        if (toggleMap.has(session.id) && toggleMap.get(session.id) === false) {
-          results.push({ sessionId: session.id, organizationId: org.id, launched: false, emailsSent: 0, skipped: 'disabled_by_session_toggle' })
-          continue
-        }
-        const result: {
-          sessionId: string
-          organizationId: string
-          launched: boolean
-          emailsSent: number
-          error?: string
-          skipped?: string
-        } = {
+        const result: (typeof results)[number] = {
           sessionId: session.id,
+          slotId: slot.id,
           organizationId: org.id,
           launched: false,
           emailsSent: 0,
         }
 
         try {
-          // Vérifier qu'aucune session d'émargement n'existe déjà pour cette séance aujourd'hui
+          // Une séance = un émargement : clé session + date + heure de début
+          // (deux séances le même jour ont chacune le leur)
           const { data: existing } = await supabaseAdmin
             .from('electronic_attendance_sessions')
             .select('id')
             .eq('session_id', session.id)
             .eq('date', todayStr)
-            .in('status', ['draft', 'active'])
+            .eq('start_time', slot.start_time)
+            .limit(1)
             .maybeSingle()
 
           if (existing) {
@@ -223,9 +196,7 @@ export async function GET(request: NextRequest) {
             continue
           }
 
-          const formation = Array.isArray(session.formations)
-            ? session.formations[0]
-            : session.formations
+          const formation = Array.isArray(session.formations) ? session.formations[0] : session.formations
           const sessionTitle = (formation?.name ?? session.name) || 'Formation'
 
           // Récupérer les apprenants inscrits avec email
@@ -241,9 +212,7 @@ export async function GET(request: NextRequest) {
             }> | null
           )
             ?.map((e) => e.students)
-            .filter((s): s is { id: string; first_name: string; last_name: string; email: string } =>
-              !!s && !!s.email
-            ) ?? []
+            .filter((s): s is { id: string; first_name: string; last_name: string; email: string } => !!s && !!s.email) ?? []
 
           // Créer la session d'émargement directement en statut 'active'
           const tokenExpiresAt = new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString()
@@ -255,8 +224,8 @@ export async function GET(request: NextRequest) {
               session_id: session.id,
               title: sessionTitle,
               date: todayStr,
-              start_time: session.start_time ?? null,
-              end_time: session.end_time ?? null,
+              start_time: slot.start_time ?? null,
+              end_time: slot.end_time ?? null,
               status: 'active',
               mode: 'electronic',
               require_signature: true,
@@ -305,20 +274,18 @@ export async function GET(request: NextRequest) {
               (createdRequests ?? []).map(async (req) => {
                 const token = (req as { access_token?: string; signature_token: string }).access_token ?? req.signature_token
                 const attendanceUrl = `${baseUrl}/sign/${token}`
-                const student = students.find((s) => s.id === req.student_id)
-                if (!student) return
-
-                return sendEmailViaResend({
+                const sent = await sendEmailViaResend({
                   to: req.student_email,
                   subject: `Émargement : ${sessionTitle} — ${new Date(todayStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`,
                   html: buildAttendanceEmailHtml({
                     studentName: req.student_name,
                     sessionTitle,
                     date: todayStr,
-                    startTime: session.start_time,
+                    startTime: slot.start_time,
                     attendanceUrl,
                   }),
                 })
+                if (!sent.success) throw new Error(sent.error ?? 'Erreur envoi')
               })
             )
 
@@ -328,16 +295,14 @@ export async function GET(request: NextRequest) {
           result.launched = true
           logger.info('auto-launch-attendance: émargement lancé automatiquement', {
             sessionId: session.id,
+            slotId: slot.id,
             attendanceSessionId: attendanceSession.id,
             orgId: org.id,
             emailsSent: result.emailsSent,
           })
-        } catch (sessionError) {
-          result.error = sessionError instanceof Error ? sessionError.message : 'Unknown error'
-          logger.error('auto-launch-attendance: erreur session', {
-            sessionId: session.id,
-            error: result.error,
-          })
+        } catch (slotError) {
+          result.error = slotError instanceof Error ? slotError.message : 'Unknown error'
+          logger.error('auto-launch-attendance: erreur séance', { sessionId: session.id, slotId: slot.id, error: result.error })
         }
 
         results.push(result)
@@ -347,7 +312,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Auto-launch attendance completed',
-      window: { from: tenMinAgoTime, to: fiveMinAgoTime, date: todayStr },
+      date: todayStr,
       results,
       totalLaunched: results.filter((r) => r.launched).length,
       totalSkipped: results.filter((r) => r.skipped).length,

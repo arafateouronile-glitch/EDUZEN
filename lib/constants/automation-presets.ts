@@ -24,6 +24,13 @@ export interface PresetAutomation {
   colorClass: string
   /** Couleur Tailwind text pour l'icône (ex: 'text-blue-600') */
   textColorClass: string
+  /** Document nominatif joint à l'email (modèle par défaut de ce type) */
+  document_type?: 'attestation_assiduite' | 'certificat_realisation'
+}
+
+/** Champs « document joint » à écrire à l'activation d'une automatisation prédéfinie */
+export function presetDocumentFields(preset: PresetAutomation): { send_document?: boolean; document_type?: PresetAutomation['document_type'] } {
+  return preset.document_type ? { send_document: true, document_type: preset.document_type } : {}
 }
 
 export const PRESET_AUTOMATIONS: PresetAutomation[] = [
@@ -107,6 +114,7 @@ export const PRESET_AUTOMATIONS: PresetAutomation[] = [
   },
   {
     email_type: 'attestation_presence',
+    document_type: 'attestation_assiduite',
     name: 'Attestation de présence',
     description: "Envoi automatique de l'attestation de présence 3 jours après la fin.",
     trigger_type: 'after_session_end',
@@ -122,6 +130,7 @@ export const PRESET_AUTOMATIONS: PresetAutomation[] = [
   },
   {
     email_type: 'certificat_realisation',
+    document_type: 'certificat_realisation',
     name: 'Certificat de réalisation',
     description: 'Envoi du certificat de réalisation 5 jours après la fin de la session.',
     trigger_type: 'after_session_end',

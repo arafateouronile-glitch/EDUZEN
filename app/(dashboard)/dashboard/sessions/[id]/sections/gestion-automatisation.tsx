@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   PRESET_AUTOMATIONS,
   PRESET_EMAIL_TYPES,
+  presetDocumentFields,
   type PresetAutomation,
 } from '@/lib/constants/automation-presets'
 
@@ -125,6 +126,7 @@ export function GestionAutomatisation({ sessionId }: GestionAutomatisationProps)
         send_to_students: preset.send_to_students,
         send_to_teachers: preset.send_to_teachers,
         send_to_coordinators: preset.send_to_coordinators,
+        ...presetDocumentFields(preset),
         target_type: preset.target_type,
         session_id: sessionId,
         is_active: true,
@@ -407,7 +409,7 @@ function PresetCard({
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             <Clock className="h-3 w-3" />
-            {triggerLabel} · {preset.trigger_time}
+            {triggerLabel}{preset.trigger_time ? ' · le matin' : ''}
           </span>
           {recipients.map((label) => (
             <span
@@ -503,7 +505,7 @@ function CustomScheduleCard({
           {schedule.trigger_days != null && (
             <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
               <Clock className="h-3 w-3" />
-              {schedule.trigger_days}j · {schedule.trigger_time ?? '09:00'}
+              {schedule.trigger_days}j · le matin
             </span>
           )}
         </div>

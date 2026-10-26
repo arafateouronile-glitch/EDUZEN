@@ -26,6 +26,14 @@ export interface SendEmailViaResendOptions {
   from?: string
   /** ISO 8601 — date d'envoi planifié (ex: new Date(Date.now() + 15 * 60_000).toISOString()) */
   scheduledAt?: string
+  /** Pièces jointes (ex. PDF généré côté serveur) */
+  attachments?: Array<{ filename: string; content: Buffer }>
+}
+
+/** Adresse email seule de l'expéditeur vérifié (« Nom <adresse> » → adresse) */
+export function verifiedSenderAddress(): string {
+  const match = FROM_DEFAULT.match(/<([^>]+)>/)
+  return (match ? match[1] : FROM_DEFAULT).trim()
 }
 
 /**
@@ -60,6 +68,7 @@ export async function sendEmailViaResend(
       text: options.text ?? (options.html ? options.html.replace(/<[^>]*>/g, '') : undefined),
       replyTo: options.replyTo ?? undefined,
       ...(options.scheduledAt ? { scheduledAt: options.scheduledAt } : {}),
+      ...(options.attachments?.length ? { attachments: options.attachments } : {}),
     } as Parameters<typeof resend.emails.send>[0]
 
     let { data, error } = await resend.emails.send(emailPayload)

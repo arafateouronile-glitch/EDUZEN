@@ -51,6 +51,7 @@ import type {
 import {
   PRESET_AUTOMATIONS,
   PRESET_EMAIL_TYPES,
+  presetDocumentFields,
   PRESET_CATEGORIES,
   type PresetAutomation,
 } from '@/lib/constants/automation-presets'
@@ -215,6 +216,7 @@ export default function EmailSchedulesPage() {
         send_to_students: preset.send_to_students,
         send_to_teachers: preset.send_to_teachers,
         send_to_coordinators: preset.send_to_coordinators,
+        ...presetDocumentFields(preset),
         target_type: preset.target_type,
         is_active: true,
         // Pas de session_id → règle globale applicable à toutes les sessions
@@ -400,7 +402,7 @@ export default function EmailSchedulesPage() {
                             <div className="flex flex-wrap gap-1.5">
                               <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                                 <Clock className="h-3 w-3" />
-                                {triggerLabel} · {preset.trigger_time}
+                                {triggerLabel}{preset.trigger_time ? ' · le matin' : ''}
                               </span>
                               {recipients.map((label) => (
                                 <span
@@ -686,13 +688,14 @@ function CreateScheduleForm({
                   </div>
 
                   <div>
-                    <Label htmlFor="trigger_time">Heure d'envoi *</Label>
+                    <Label htmlFor="trigger_time">Heure d'envoi souhaitée</Label>
                     <Input
                       id="trigger_time"
                       type="time"
                       value={formData.trigger_time || ''}
                       onChange={(e) => setFormData({ ...formData, trigger_time: e.target.value })}
                     />
+                    <p className="text-xs text-gray-500 mt-1">Les envois partent le matin du jour prévu (vers 8–9 h, heure de Paris).</p>
                   </div>
                 </>
               )}
@@ -921,7 +924,7 @@ function ScheduleCard({
                   <span>
                     {schedule.trigger_days > 0 ? '+' : ''}
                     {schedule.trigger_days} jour(s)
-                    {schedule.trigger_time && ` à ${schedule.trigger_time}`}
+                    {schedule.trigger_type !== 'fixed_date' && schedule.trigger_type !== 'after_seance_start' && ' · le matin'}
                   </span>
                 </div>
               )}
@@ -1145,13 +1148,14 @@ function EditScheduleForm({
                 </div>
 
                 <div>
-                  <Label htmlFor="edit-trigger_time">Heure d'envoi</Label>
+                  <Label htmlFor="edit-trigger_time">Heure d'envoi souhaitée</Label>
                   <Input
                     id="edit-trigger_time"
                     type="time"
                     value={formData.trigger_time || ''}
                     onChange={(e) => setFormData({ ...formData, trigger_time: e.target.value })}
                   />
+                  <p className="text-xs text-gray-500 mt-1">Les envois partent le matin du jour prévu (vers 8–9 h, heure de Paris).</p>
                 </div>
               </>
             )}
