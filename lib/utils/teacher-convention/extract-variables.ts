@@ -34,6 +34,8 @@ export interface TeacherConventionVariablesOptions {
     period_end?: string | null
     intervention_days?: number | null
     daily_rate?: number | null
+    total_hours?: number | null
+    hourly_rate?: number | null
     location?: string | null
     custom_notes?: string | null
   }
@@ -84,10 +86,11 @@ export function extractTeacherConventionVariables(
     convention_lieu_formation: convention.location || '',
     convention_montant_total: montantTotal,
     convention_notes: convention.custom_notes || '',
-    // Non collectées aujourd'hui (le formulaire ne saisit qu'un tarif
-    // journalier, pas horaire, ni les modalités de paiement).
-    convention_heures_total: '',
-    convention_tarif_horaire: '',
+    convention_heures_total: convention.total_hours != null
+      ? String(Math.round(convention.total_hours * 100) / 100).replace('.', ',')
+      : '',
+    convention_tarif_horaire: convention.hourly_rate != null ? convention.hourly_rate.toFixed(2) : '',
+    // Non collectées aujourd'hui (pas de modalités de paiement dans le formulaire).
     convention_modalites_paiement: '',
   } as DocumentVariables
 }

@@ -424,6 +424,35 @@ export function ConfigIntervenants({
         )
       }
 
+      // Fiche formateur relue au moment de générer : le cache React Query
+      // (refetchOnMount désactivé) garderait l'ancien statut si l'admin vient
+      // de le modifier dans la page Formateurs.
+      const { data: freshTeacherProfile } = await supabase
+        .from('teachers')
+        .select('statut, siret, specialization')
+        .eq('user_id', activeTeacher.id)
+        .eq('organization_id', user.organization_id)
+        .maybeSingle()
+      const profile = freshTeacherProfile ?? teacherProfile ?? null
+
+      // Volume horaire : saisi sur session_teachers, sinon somme des séances
+      // assignées à l'intervenant (ou de toutes les séances si aucune n'est
+      // assignée à un formateur en particulier).
+      const teacherSlots = slots.filter((s) => s.teacher_id === activeTeacher.id)
+      const hoursSlots = teacherSlots.length > 0 ? teacherSlots : slots.every((s) => !s.teacher_id) ? slots : []
+      const slotsHours = hoursSlots.reduce((sum, s) => {
+        if (!s.start_time || !s.end_time) return sum
+        const [sh, sm] = s.start_time.split(':').map(Number)
+        const [eh, em] = s.end_time.split(':').map(Number)
+        return sum + Math.max(0, (eh * 60 + em - (sh * 60 + sm)) / 60)
+      }, 0)
+      const totalHours = sessionTeacher?.total_hours ?? (slotsHours > 0 ? Math.round(slotsHours * 100) / 100 : null)
+      const days = interventionDays ? parseFloat(interventionDays) : null
+      const rate = dailyRate ? parseFloat(dailyRate) : null
+      const hourlyRate =
+        sessionTeacher?.hourly_rate ??
+        (days != null && rate != null && totalHours ? (days * rate) / totalHours : null)
+
       const variables = docType === 'convention_formateur'
         ? extractTeacherConventionVariables({
             organization: org ?? undefined,
@@ -434,12 +463,14 @@ export function ConfigIntervenants({
               email: (activeTeacher as any).email,
               phone: (activeTeacher as any).phone,
             },
-            teacherProfile,
+            teacherProfile: profile,
             convention: {
               period_start: formData.start_date,
               period_end: formData.end_date,
-              intervention_days: interventionDays ? parseFloat(interventionDays) : null,
-              daily_rate: dailyRate ? parseFloat(dailyRate) : null,
+              intervention_days: days,
+              daily_rate: rate,
+              total_hours: totalHours,
+              hourly_rate: hourlyRate,
               location: formData.location,
               custom_notes: null,
             },
@@ -453,14 +484,15 @@ export function ConfigIntervenants({
               email: (activeTeacher as any).email,
               phone: (activeTeacher as any).phone,
             },
-            teacherProfile,
+            teacherProfile: profile,
             mission: {
               session_name: formData.name,
               session_ref: formData.code,
               period_start: formData.start_date,
               period_end: formData.end_date,
               location: formData.location,
-              intervention_days: interventionDays ? parseFloat(interventionDays) : null,
+              intervention_days: days,
+              total_hours: totalHours,
             },
             authorizedBy: { full_name: user.full_name, role: user.role },
           })

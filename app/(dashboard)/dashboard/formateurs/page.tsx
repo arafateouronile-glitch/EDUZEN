@@ -700,6 +700,7 @@ function ProfileTab({ teacher }: { teacher: TeacherWithUser }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['formateurs-list'] })
       queryClient.invalidateQueries({ queryKey: ['teacher-compliance'] })
+      queryClient.invalidateQueries({ queryKey: ['teacher-profile'] })
       addToast({ title: 'Profil mis à jour', type: 'success' })
     },
     onError: (e: any) => addToast({ title: 'Erreur', description: e.message, type: 'error' }),

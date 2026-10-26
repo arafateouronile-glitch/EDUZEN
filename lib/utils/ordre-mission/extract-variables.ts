@@ -45,6 +45,7 @@ export interface OrdreMissionVariablesOptions {
     period_end?: string | null
     location?: string | null
     intervention_days?: number | null
+    total_hours?: number | null
   }
   /** Utilisateur générant le document, utilisé pour "Représenté par" si l'organisation n'a pas de représentant légal renseigné */
   authorizedBy?: {
@@ -104,11 +105,13 @@ export function extractOrdreMissionVariables(
     mission_autorisant_nom: autorisantNom,
     mission_autorisant_qualite: autorisantQualite,
     mission_duree_jours: mission.intervention_days != null ? String(mission.intervention_days) : '',
-    // Non collectés aujourd'hui : horaires, durée en heures, transport
-    // autorisé, barèmes de frais professionnels (km, repas, hébergement,
-    // avance) — aucune donnée équivalente dans l'app à ce jour.
+    mission_duree_heures: mission.total_hours != null
+      ? String(Math.round(mission.total_hours * 100) / 100).replace('.', ',')
+      : '',
+    // Non collectés aujourd'hui : horaires, transport autorisé, barèmes de
+    // frais professionnels (km, repas, hébergement, avance) — aucune donnée
+    // équivalente dans l'app à ce jour.
     mission_horaires: '',
-    mission_duree_heures: '',
     mission_transport_autorise: '',
     mission_distance_aller: '',
     mission_indemnite_km: '',
