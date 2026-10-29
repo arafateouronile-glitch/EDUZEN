@@ -167,6 +167,29 @@ export default function SessionDetailPage() {
     }
   }
 
+  const isArchived = !!(sessionData as { archived_at?: string | null } | undefined)?.archived_at
+  const [isArchiving, setIsArchiving] = useState(false)
+
+  const handleToggleArchive = async () => {
+    if (!sessionId) return
+    setIsArchiving(true)
+    try {
+      await sessionService.setSessionArchived(sessionId, !isArchived)
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      await refetchSessionDetail()
+      if (isArchived) {
+        addToast({ title: 'Session désarchivée', description: 'Elle réapparaît dans la liste des sessions.', type: 'success' })
+      } else {
+        addToast({ title: 'Session archivée', description: 'Retrouvez-la avec le filtre « Archivées » de la liste.', type: 'success' })
+        router.push('/dashboard/sessions')
+      }
+    } catch (err: unknown) {
+      addToast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Impossible d\'archiver la session.', type: 'error' })
+    } finally {
+      setIsArchiving(false)
+    }
+  }
+
   const handleDeleteSession = async () => {
     if (!sessionId) return
     setIsDeleting(true)
@@ -446,8 +469,14 @@ export default function SessionDetailPage() {
                   <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium">
                     <ExternalLink className="w-3.5 h-3.5 mr-2" /> Voir sur le portail
                   </Button>
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium">
-                    <Archive className="w-3.5 h-3.5 mr-2" /> Archiver
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium"
+                    onClick={handleToggleArchive}
+                    disabled={isArchiving}
+                  >
+                    <Archive className="w-3.5 h-3.5 mr-2" /> {isArchived ? 'Désarchiver' : 'Archiver'}
                   </Button>
                   <Button
                     variant="ghost"
@@ -571,9 +600,11 @@ export default function SessionDetailPage() {
                   variant="outline"
                   size="sm"
                   className="hidden md:flex gap-2 h-9 rounded-xl border-gray-200 hover:border-gray-300 text-gray-600"
+                  onClick={handleToggleArchive}
+                  disabled={isArchiving}
                 >
                   <Archive className="w-4 h-4" />
-                  <span className="hidden lg:inline">Archiver</span>
+                  <span className="hidden lg:inline">{isArchived ? 'Désarchiver' : 'Archiver'}</span>
                 </Button>
 
                 <Button

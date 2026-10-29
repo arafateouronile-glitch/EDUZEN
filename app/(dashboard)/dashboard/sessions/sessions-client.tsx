@@ -197,7 +197,8 @@ function SessionsPageContent() {
       if (!user?.organization_id) return { data: [], count: 0, hasMore: false }
       const result = await sessionService.getAllSessions(user.organization_id, {
         formationId: selectedFormationId || undefined,
-        status: statusFilter ? (statusFilter as Session['status']) : undefined,
+        status: statusFilter && statusFilter !== 'archived' ? (statusFilter as Session['status']) : undefined,
+        archived: statusFilter === 'archived',
         search,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
@@ -222,7 +223,8 @@ function SessionsPageContent() {
         queryFn: async () => {
           const result = await sessionService.getAllSessions(orgId, {
             formationId: selectedFormationId || undefined,
-            status: statusFilter ? (statusFilter as Session['status']) : undefined,
+            status: statusFilter && statusFilter !== 'archived' ? (statusFilter as Session['status']) : undefined,
+            archived: statusFilter === 'archived',
             search,
             limit: PAGE_SIZE,
             offset: (page + 1) * PAGE_SIZE,
@@ -636,6 +638,7 @@ function SessionsPageContent() {
                       <option value="ongoing">En cours</option>
                       <option value="completed">Terminées</option>
                       <option value="cancelled">Annulées</option>
+                      <option value="archived">Archivées</option>
                     </select>
                   </div>
                 </div>

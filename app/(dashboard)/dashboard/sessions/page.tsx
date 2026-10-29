@@ -24,7 +24,7 @@ export default async function SessionsPage() {
         queryClient.prefetchQuery({
           queryKey: ['sessions', orgId, '', '', '', 0],
           queryFn: () =>
-            sessionSvc.getAllSessions(orgId, { limit: PAGE_SIZE, offset: 0 }),
+            sessionSvc.getAllSessions(orgId, { archived: false, limit: PAGE_SIZE, offset: 0 }),
         }),
         queryClient.prefetchQuery({
           queryKey: ['formations-filter', orgId],

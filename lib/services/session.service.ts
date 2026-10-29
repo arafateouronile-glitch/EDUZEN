@@ -38,6 +38,8 @@ export class SessionService {
     startDate?: string
     endDate?: string
     search?: string
+    /** true = uniquement les archivées, false = uniquement les actives, absent = toutes */
+    archived?: boolean
     limit?: number
     offset?: number
   }) {
@@ -55,6 +57,8 @@ export class SessionService {
       if (filters?.startDate) query = query.gte('start_date', filters.startDate)
       if (filters?.endDate) query = query.lte('end_date', filters.endDate)
       if (filters?.search) query = query.ilike('name', `%${filters.search}%`)
+      if (filters?.archived === true) query = query.not('archived_at', 'is', null)
+      if (filters?.archived === false) query = query.is('archived_at', null)
 
       if (usePagination) {
         const limit = filters?.limit ?? 50
@@ -101,6 +105,14 @@ export class SessionService {
       queryWithFormation = queryWithFormation.ilike('name', `%${filters.search}%`)
       queryIndependent = queryIndependent.ilike('name', `%${filters.search}%`)
     }
+    if (filters?.archived === true) {
+      queryWithFormation = queryWithFormation.not('archived_at', 'is', null)
+      queryIndependent = queryIndependent.not('archived_at', 'is', null)
+    }
+    if (filters?.archived === false) {
+      queryWithFormation = queryWithFormation.is('archived_at', null)
+      queryIndependent = queryIndependent.is('archived_at', null)
+    }
 
     // Exécution parallèle des requêtes
     const [withFormationResult, independentResult] = await Promise.all([
@@ -124,6 +136,17 @@ export class SessionService {
     }
 
     return merged
+  }
+
+  /**
+   * Archive (archived = true) ou désarchive une session.
+   */
+  async setSessionArchived(id: string, archived: boolean) {
+    const { error } = await this.supabase
+      .from('sessions')
+      .update({ archived_at: archived ? new Date().toISOString() : null } as never)
+      .eq('id', id)
+    if (error) throw error
   }
 
   /**
