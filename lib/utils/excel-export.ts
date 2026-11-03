@@ -9,24 +9,21 @@ export interface ExcelColumn {
   header: string
   key: string
   width?: number
+  numFmt?: string
 }
 
-export interface ExcelExportOptions {
-  filename: string
+export interface ExcelSheet {
   sheetName: string
   columns: ExcelColumn[]
   data: Record<string, unknown>[]
 }
 
-/**
- * Exporte des données vers un fichier Excel (.xlsx)
- * @param options Configuration de l'export
- */
-export async function exportToExcel(options: ExcelExportOptions): Promise<void> {
-  const { filename, sheetName, columns, data } = options
+export interface ExcelExportOptions extends ExcelSheet {
+  filename: string
+}
 
-  // Créer un nouveau workbook
-  const workbook = new ExcelJS.Workbook()
+function addStyledSheet(workbook: ExcelJS.Workbook, sheet: ExcelSheet): ExcelJS.Worksheet {
+  const { sheetName, columns, data } = sheet
   const worksheet = workbook.addWorksheet(sheetName)
 
   // Définir les colonnes avec largeurs
@@ -34,6 +31,7 @@ export async function exportToExcel(options: ExcelExportOptions): Promise<void> 
     header: col.header,
     key: col.key,
     width: col.width || 15,
+    ...(col.numFmt ? { style: { numFmt: col.numFmt } } : {}),
   }))
 
   // Ajouter les données
@@ -62,6 +60,10 @@ export async function exportToExcel(options: ExcelExportOptions): Promise<void> 
     })
   })
 
+  return worksheet
+}
+
+async function downloadWorkbook(workbook: ExcelJS.Workbook, filename: string): Promise<void> {
   // Générer le fichier et déclencher le téléchargement
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], {
@@ -73,6 +75,33 @@ export async function exportToExcel(options: ExcelExportOptions): Promise<void> 
   link.download = filename
   link.click()
   window.URL.revokeObjectURL(url)
+}
+
+/**
+ * Exporte des données vers un fichier Excel (.xlsx)
+ * @param options Configuration de l'export
+ */
+export async function exportToExcel(options: ExcelExportOptions): Promise<void> {
+  const workbook = new ExcelJS.Workbook()
+  addStyledSheet(workbook, options)
+  await downloadWorkbook(workbook, options.filename)
+}
+
+/**
+ * Exporte plusieurs feuilles dans un même fichier Excel (.xlsx),
+ * avec en-tête figé et filtres sur chaque feuille
+ */
+export async function exportSheetsToExcel(filename: string, sheets: ExcelSheet[]): Promise<void> {
+  const workbook = new ExcelJS.Workbook()
+  for (const sheet of sheets) {
+    const worksheet = addStyledSheet(workbook, sheet)
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }]
+    worksheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: sheet.columns.length },
+    }
+  }
+  await downloadWorkbook(workbook, filename)
 }
 
 /**

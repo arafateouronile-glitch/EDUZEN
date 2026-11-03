@@ -7,9 +7,10 @@ import { sessionService } from '@/lib/services/session.service.client'
 import { formationService } from '@/lib/services/formation.service.client'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
-import { Plus, Search, Calendar, Clock, MapPin, Users, Filter, TrendingUp, BookOpen, CheckCircle, XCircle, Activity, SlidersHorizontal, ArrowUpRight } from 'lucide-react'
+import { Plus, Search, Calendar, Clock, MapPin, Users, Filter, TrendingUp, BookOpen, CheckCircle, XCircle, Activity, SlidersHorizontal, ArrowUpRight, Download, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, cn } from '@/lib/utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -146,6 +147,7 @@ function SessionsPageContent() {
   const { user } = useAuth()
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { addToast } = useToast()
   const shouldReduceAnimations = useShouldReduceAnimations()
   const [search, setSearch] = useState('')
   const [selectedFormationId, setSelectedFormationId] = useState<string>('')
@@ -153,6 +155,7 @@ function SessionsPageContent() {
   const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(0)
   const [isPending, startTransition] = useTransition()
+  const [isExporting, setIsExporting] = useState(false)
 
   // Reset page when filters change avec transition
   const handleSearchChange = useCallback((value: string) => {
@@ -175,6 +178,38 @@ function SessionsPageContent() {
       setPage(0)
     })
   }, [])
+
+  // Exporte toutes les sessions correspondant aux filtres (pas seulement la page affichée)
+  const handleExport = async () => {
+    if (!user?.organization_id) return
+    setIsExporting(true)
+    try {
+      const allSessions = await sessionService.getAllSessions(user.organization_id, {
+        formationId: selectedFormationId || undefined,
+        status: statusFilter && statusFilter !== 'archived' ? (statusFilter as Session['status']) : undefined,
+        archived: statusFilter === 'archived',
+        search,
+      })
+      const { exportSessionsToExcel } = await import('@/lib/utils/sessions-export')
+      const count = await exportSessionsToExcel(supabase, allSessions as Session[], {
+        organizationId: user.organization_id,
+        userId: user.id,
+      })
+      addToast({
+        type: 'success',
+        title: 'Export réussi',
+        description: `${count} session(s) exportée(s) en Excel.`,
+      })
+    } catch (error) {
+      addToast({
+        type: 'error',
+        title: 'Erreur d\'export',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'export.',
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   // Récupérer les formations pour le filtre avec cache long
   const { data: formations } = useQuery({
@@ -413,14 +448,25 @@ function SessionsPageContent() {
           </p>
         </div>
 
-        <motion.div whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.98 }}>
-          <Link href="/dashboard/sessions/new">
-            <Button className="bg-gradient-to-br from-brand-blue to-brand-cyan text-white hover:from-brand-blue-dark hover:to-brand-cyan-dark shadow-xl shadow-brand-blue/20 hover:shadow-2xl hover:shadow-brand-cyan/30 transition-all duration-500 font-semibold tracking-tight px-6 py-6 text-base">
-              <Plus className="h-5 w-5 mr-2" />
-              Nouvelle session
-            </Button>
-          </Link>
-        </motion.div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting || totalCount === 0}
+            className="hover:bg-brand-blue-ghost hover:border-brand-blue/30 hover:text-brand-blue transition-all px-6 py-6 text-base font-semibold tracking-tight"
+          >
+            {isExporting ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Download className="h-5 w-5 mr-2" />}
+            {isExporting ? 'Export en cours...' : 'Exporter Excel'}
+          </Button>
+          <motion.div whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.98 }}>
+            <Link href="/dashboard/sessions/new">
+              <Button className="bg-gradient-to-br from-brand-blue to-brand-cyan text-white hover:from-brand-blue-dark hover:to-brand-cyan-dark shadow-xl shadow-brand-blue/20 hover:shadow-2xl hover:shadow-brand-cyan/30 transition-all duration-500 font-semibold tracking-tight px-6 py-6 text-base">
+                <Plus className="h-5 w-5 mr-2" />
+                Nouvelle session
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
       </motion.div>
 
       {/* Statistiques Ultra-Premium - 2 lignes de 3 carreaux */}
