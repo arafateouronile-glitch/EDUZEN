@@ -38,8 +38,11 @@ import {
   FileCheck,
   CheckCircle2,
   Zap,
+  ClipboardList,
 } from 'lucide-react'
 import Link from 'next/link'
+import { AutomationEmailFields } from '@/components/automations/automation-email-fields'
+import { evaluationTemplateService } from '@/lib/services/evaluation-template.service.client'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import type {
@@ -52,11 +55,13 @@ import {
   PRESET_AUTOMATIONS,
   PRESET_EMAIL_TYPES,
   presetDocumentFields,
+  presetEvaluationFields,
   PRESET_CATEGORIES,
   type PresetAutomation,
 } from '@/lib/constants/automation-presets'
 
 const PRESET_ICONS: Record<string, React.ElementType> = {
+  recueil_besoins: ClipboardList,
   convocation_j14: FileText,
   rappel_j7: Bell,
   rappel_j3: Clock,
@@ -107,6 +112,16 @@ export default function EmailSchedulesPage() {
     queryFn: async () => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
       return documentTemplateService.getAllTemplates(user.organization_id)
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Modèles d'évaluation (de l'organisme + globaux) envoyables par une automatisation
+  const { data: evaluationTemplates } = useQuery({
+    queryKey: ['evaluation-templates-for-automations', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) throw new Error('Organization ID manquant')
+      return evaluationTemplateService.getTemplates(user.organization_id)
     },
     enabled: !!user?.organization_id,
   })
@@ -217,6 +232,7 @@ export default function EmailSchedulesPage() {
         send_to_teachers: preset.send_to_teachers,
         send_to_coordinators: preset.send_to_coordinators,
         ...presetDocumentFields(preset),
+        ...presetEvaluationFields(preset),
         target_type: preset.target_type,
         is_active: true,
         // Pas de session_id → règle globale applicable à toutes les sessions
@@ -310,6 +326,7 @@ export default function EmailSchedulesPage() {
         {showCreateForm && (
           <CreateScheduleForm
             emailTemplates={emailTemplates || []}
+            evaluationTemplates={evaluationTemplates || []}
             documentTemplates={documentTemplates || []}
             onCreate={(input) => {
               createMutation.mutate(input)
@@ -461,6 +478,7 @@ export default function EmailSchedulesPage() {
                         key={schedule.id}
                         schedule={schedule}
                         emailTemplates={emailTemplates || []}
+                        evaluationTemplates={evaluationTemplates || []}
                         documentTemplates={documentTemplates || []}
                         onEdit={() => setEditingSchedule(schedule.id)}
                         onDelete={(id) => {
@@ -495,6 +513,7 @@ export default function EmailSchedulesPage() {
                         key={schedule.id}
                         schedule={schedule}
                         emailTemplates={emailTemplates || []}
+                        evaluationTemplates={evaluationTemplates || []}
                         documentTemplates={documentTemplates || []}
                         onEdit={() => setEditingSchedule(schedule.id)}
                         onDelete={(id) => {
@@ -546,12 +565,14 @@ export default function EmailSchedulesPage() {
 // Composant pour le formulaire de création
 function CreateScheduleForm({
   emailTemplates,
+  evaluationTemplates,
   documentTemplates,
   onCreate,
   onCancel,
   isLoading,
 }: {
   emailTemplates: any[]
+  evaluationTemplates: any[]
   documentTemplates: any[]
   onCreate: (input: CreateEmailScheduleInput) => void
   onCancel: () => void
@@ -573,6 +594,9 @@ function CreateScheduleForm({
     send_document: false,
     document_type: undefined,
     document_template_id: undefined,
+    email_subject: null,
+    email_body_html: null,
+    evaluation_template_id: null,
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -616,7 +640,10 @@ function CreateScheduleForm({
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
                   required
                 >
-                  <option value="session_reminder">Rappel de session</option>
+                  {PRESET_AUTOMATIONS.filter((p) => p.trigger_type !== 'after_seance_start').map((p) => (
+                  <option key={p.email_type} value={p.email_type}>{p.name}</option>
+                ))}
+                <option value="session_reminder">Rappel de session</option>
                   <option value="evaluation_reminder">Rappel d'évaluation</option>
                   <option value="session_cancellation">Annulation de session</option>
                   <option value="evaluation_available">Évaluation disponible</option>
@@ -639,7 +666,7 @@ function CreateScheduleForm({
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
                 >
                   <option value="">Template par défaut</option>
-                  {emailTemplates.map((template) => (
+                  {emailTemplates.filter((t) => t.email_type !== 'notification').map((template) => (
                     <option key={template.id} value={template.id}>
                       {template.name} ({template.email_type})
                     </option>
@@ -748,6 +775,18 @@ function CreateScheduleForm({
               />
             </div>
 
+            <AutomationEmailFields
+              idPrefix="create"
+              emailType={formData.email_type}
+              templateId={formData.template_id}
+              emailTemplates={emailTemplates}
+              evaluationTemplates={evaluationTemplates}
+              emailSubject={formData.email_subject}
+              emailBodyHtml={formData.email_body_html}
+              evaluationTemplateId={formData.evaluation_template_id}
+              onChange={(fields) => setFormData((prev) => ({ ...prev, ...fields }))}
+            />
+
             <div className="space-y-4 border-t pt-6">
               <h3 className="font-semibold text-gray-900">Document à joindre</h3>
               <div className="flex flex-col gap-4">
@@ -848,6 +887,7 @@ function CreateScheduleForm({
 function ScheduleCard({
   schedule,
   emailTemplates,
+  evaluationTemplates,
   documentTemplates,
   onEdit,
   onDelete,
@@ -859,6 +899,7 @@ function ScheduleCard({
 }: {
   schedule: any
   emailTemplates: any[]
+  evaluationTemplates: any[]
   documentTemplates: any[]
   onEdit: () => void
   onDelete: (id: string) => void
@@ -875,6 +916,7 @@ function ScheduleCard({
       <EditScheduleForm
         schedule={schedule}
         emailTemplates={emailTemplates}
+        evaluationTemplates={evaluationTemplates}
         documentTemplates={documentTemplates}
         onUpdate={onUpdate}
         onCancel={onCancelEdit}
@@ -1013,6 +1055,7 @@ function ScheduleCard({
 function EditScheduleForm({
   schedule,
   emailTemplates,
+  evaluationTemplates,
   documentTemplates,
   onUpdate,
   onCancel,
@@ -1020,6 +1063,7 @@ function EditScheduleForm({
 }: {
   schedule: any
   emailTemplates: any[]
+  evaluationTemplates: any[]
   documentTemplates: any[]
   onUpdate: (input: Partial<CreateEmailScheduleInput>) => void
   onCancel: () => void
@@ -1046,6 +1090,9 @@ function EditScheduleForm({
       schedule.document_template_id ||
       defaultTemplateIdForType(documentTemplates, schedule.document_type) ||
       undefined,
+    email_subject: schedule.email_subject ?? null,
+    email_body_html: schedule.email_body_html ?? null,
+    evaluation_template_id: schedule.evaluation_template_id ?? null,
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1077,6 +1124,9 @@ function EditScheduleForm({
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
                 required
               >
+                {PRESET_AUTOMATIONS.filter((p) => p.trigger_type !== 'after_seance_start').map((p) => (
+                  <option key={p.email_type} value={p.email_type}>{p.name}</option>
+                ))}
                 <option value="session_reminder">Rappel de session</option>
                 <option value="evaluation_reminder">Rappel d'évaluation</option>
                 <option value="session_cancellation">Annulation de session</option>
@@ -1100,7 +1150,7 @@ function EditScheduleForm({
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
               >
                 <option value="">Template par défaut</option>
-                {emailTemplates.map((template) => (
+                {emailTemplates.filter((t) => t.email_type !== 'notification').map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.name} ({template.email_type})
                   </option>
@@ -1204,6 +1254,21 @@ function EditScheduleForm({
               rows={3}
             />
           </div>
+
+          {/* Émargement : mail géré par /api/cron/auto-launch-attendance */}
+          {formData.trigger_type !== 'after_seance_start' && (
+            <AutomationEmailFields
+              idPrefix="edit"
+              emailType={formData.email_type}
+              templateId={formData.template_id}
+              emailTemplates={emailTemplates}
+              evaluationTemplates={evaluationTemplates}
+              emailSubject={formData.email_subject}
+              emailBodyHtml={formData.email_body_html}
+              evaluationTemplateId={formData.evaluation_template_id}
+              onChange={(fields) => setFormData((prev) => ({ ...prev, ...fields }))}
+            />
+          )}
 
           <div className="space-y-4 border-t pt-6">
             <h3 className="font-semibold text-gray-900">Document à joindre</h3>

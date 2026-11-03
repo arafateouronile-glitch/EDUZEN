@@ -7726,7 +7726,10 @@ export type Database = {
           description: string | null
           document_template_id: string | null
           document_type: string | null
+          email_body_html: string | null
+          email_subject: string | null
           email_type: string
+          evaluation_template_id: string | null
           formation_id: string | null
           id: string
           is_active: boolean | null
@@ -7758,7 +7761,10 @@ export type Database = {
           description?: string | null
           document_template_id?: string | null
           document_type?: string | null
+          email_body_html?: string | null
+          email_subject?: string | null
           email_type: string
+          evaluation_template_id?: string | null
           formation_id?: string | null
           id?: string
           is_active?: boolean | null
@@ -7790,7 +7796,10 @@ export type Database = {
           description?: string | null
           document_template_id?: string | null
           document_type?: string | null
+          email_body_html?: string | null
+          email_subject?: string | null
           email_type?: string
+          evaluation_template_id?: string | null
           formation_id?: string | null
           id?: string
           is_active?: boolean | null

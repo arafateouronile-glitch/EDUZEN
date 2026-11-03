@@ -14,7 +14,10 @@ import {
   resolveScheduleScope,
   runStatus,
   studentsWithPendingHotEvaluation,
+  withQuestionnaireLink,
 } from '@/lib/services/email-schedule-run'
+import { getOrCreateQuestionnaireLink, type QuestionnaireLinkInput } from '@/lib/services/questionnaire-link.service'
+import { AUTOMATION_EVALUATION_TEMPLATES } from '@/lib/constants/automation-presets'
 import { AUTOMATION_EMAIL_DEFAULTS, AUTOMATION_EMAIL_FALLBACK_TYPE } from '@/lib/constants/automation-email-defaults'
 import { sendEmailViaResend, verifiedSenderAddress } from '@/lib/utils/send-email-resend'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
@@ -159,13 +162,13 @@ async function getUnpaidInvoices(supabase: any, sessionId: string): Promise<{ co
   }
 }
 
-/** Apprenants de la session dont l'évaluation à chaud n'est pas complétée */
-async function getStudentsToRemind(supabase: any, sessionId: string): Promise<Set<string>> {
+/** Apprenants de la session dont l'évaluation de ce type n'est pas complétée */
+async function getStudentsToRemind(supabase: any, sessionId: string, assessmentType: string): Promise<Set<string>> {
   const { data: grades } = await supabase
     .from('grades')
     .select('id, student_id')
     .eq('session_id', sessionId)
-    .eq('assessment_type', 'hot')
+    .eq('assessment_type', assessmentType)
   const gradeRows = (grades ?? []) as Array<{ id: string; student_id: string | null }>
   if (gradeRows.length === 0) return new Set()
 
@@ -183,7 +186,8 @@ async function getRecipientsForSchedule(
   schedule: EmailSchedule,
   supabase: any,
   now: Date,
-  sessionRules: SessionRule[]
+  sessionRules: SessionRule[],
+  assessmentType: string
 ): Promise<Recipient[]> {
   const recipients: Recipient[] = []
 
@@ -213,7 +217,7 @@ async function getRecipientsForSchedule(
     for (const session of matchingSessions) {
       if (schedule.send_to_students) {
         // Relance d'évaluation : uniquement ceux qui n'ont pas répondu
-        const toRemind = schedule.email_type === 'relance_evaluation' ? await getStudentsToRemind(supabase, session.id) : null
+        const toRemind = schedule.email_type === 'relance_evaluation' ? await getStudentsToRemind(supabase, session.id, assessmentType) : null
         for (const enrollment of await loadStudents(session.id)) {
           const student = enrollment.students
           if (!student?.email) continue
@@ -302,7 +306,8 @@ function formatTime(value: string | null | undefined): string {
 function replaceTemplateVariables(
   template: { subject?: string | null; body_html?: string | null; body_text?: string | null },
   recipient: Recipient,
-  organization: any
+  organization: any,
+  extras: Record<string, string> = {}
 ): { subject: string; bodyHtml: string; bodyText: string } {
   let subject = template.subject || ''
   let bodyHtml = template.body_html || ''
@@ -324,6 +329,7 @@ function replaceTemplateVariables(
     variables.session_end_date = session.end_date ? new Date(session.end_date).toLocaleDateString('fr-FR') : ''
     variables.session_start_time = formatTime(session.start_time)
     variables.session_location = session.location || ''
+    variables.session_url = session.id ? `${APP_URLS.getBaseUrl()}/dashboard/sessions/${session.id}` : ''
   }
 
   if (context.student) {
@@ -348,7 +354,7 @@ function replaceTemplateVariables(
   }
 
   // Remplacer les variables {variable_name}
-  Object.entries(variables).forEach(([key, value]) => {
+  Object.entries({ ...variables, ...extras }).forEach(([key, value]) => {
     const regex = new RegExp(`{${key}}`, 'g')
     subject = subject.replace(regex, value)
     bodyHtml = bodyHtml.replace(regex, value)
@@ -367,6 +373,20 @@ async function resolveEmailTemplate(
   service: EmailTemplateService,
   schedule: EmailSchedule
 ): Promise<{ subject?: string | null; body_html?: string | null; body_text?: string | null } | null> {
+  const base = await resolveBaseEmailTemplate(service, schedule)
+  // Mail modifié directement dans la règle : prioritaire sur tout modèle
+  if (!schedule.email_subject && !schedule.email_body_html) return base
+  return {
+    subject: schedule.email_subject || base?.subject,
+    body_html: schedule.email_body_html || base?.body_html,
+    body_text: schedule.email_body_html ? null : base?.body_text,
+  }
+}
+
+async function resolveBaseEmailTemplate(
+  service: EmailTemplateService,
+  schedule: EmailSchedule
+): Promise<{ subject?: string | null; body_html?: string | null; body_text?: string | null } | null> {
   if (schedule.template_id) {
     const chosen = await service.getById(schedule.template_id).catch(() => null)
     if (chosen) return chosen
@@ -379,6 +399,28 @@ async function resolveEmailTemplate(
     if (related) return related
   }
   return AUTOMATION_EMAIL_DEFAULTS[schedule.email_type] ?? null
+}
+
+/**
+ * Évaluation envoyée par la règle : la sienne, ou celle prévue pour ce type
+ * d'automatisation. Erreur explicite si elle n'existe plus ou appartient à un
+ * autre organisme : la règle est journalisée en échec, rien n'est envoyé.
+ */
+async function resolveEvaluationTemplate(
+  supabase: any,
+  schedule: EmailSchedule
+): Promise<{ id: string; name: string; assessment_type: string | null } | null> {
+  const templateId = schedule.evaluation_template_id || AUTOMATION_EVALUATION_TEMPLATES[schedule.email_type]
+  if (!templateId) return null
+  const { data } = await supabase
+    .from('evaluation_templates')
+    .select('id, name, assessment_type, organization_id')
+    .eq('id', templateId)
+    .maybeSingle()
+  if (!data || (data.organization_id && data.organization_id !== schedule.organization_id)) {
+    throw new Error('Évaluation à envoyer introuvable : choisissez-la dans la règle d\'envoi')
+  }
+  return data
 }
 
 /**
@@ -522,8 +564,15 @@ export async function POST(request: NextRequest) {
           schedule.trigger_type !== 'fixed_date' &&
           (schedule.target_type === 'session' || schedule.target_type === 'evaluation')
         ) {
+          const evaluationTemplate = await resolveEvaluationTemplate(adminSupabase, schedule)
+          const assessmentType = evaluationTemplate?.assessment_type || 'hot'
+
           // On va récupérer les destinataires qui incluent aussi le filtrage temporel
-          const recipients = await getRecipientsForSchedule(schedule, adminSupabase, now, sessionRules)
+          const allRecipients = await getRecipientsForSchedule(schedule, adminSupabase, now, sessionRules, assessmentType)
+          // Le lien d'une évaluation est nominatif : apprenants uniquement
+          const recipients = evaluationTemplate
+            ? allRecipients.filter((r) => r.type === 'student')
+            : allRecipients
 
           if (recipients.length === 0) {
             logger.info(`No recipients for schedule ${schedule.id} at this time`)
@@ -560,11 +609,32 @@ export async function POST(request: NextRequest) {
 
           const sendToRecipient = async (recipient: Recipient) => {
             try {
+              // Lien direct vers l'évaluation de la règle
+              const extras: Record<string, string> = {}
+              let emailContent = template
+              if (evaluationTemplate) {
+                const context = recipient.context as { session: { id: string; name?: string | null }; student: QuestionnaireLinkInput['student'] }
+                const link = await getOrCreateQuestionnaireLink(adminSupabase, {
+                  organizationId: schedule.organization_id,
+                  session: context.session,
+                  student: context.student,
+                  template: evaluationTemplate,
+                  assessmentType,
+                })
+                // Déjà répondu : rien à envoyer, ce n'est pas un échec
+                if (link.status === 'already_submitted') return
+                extras.questionnaire_url = `${APP_URLS.getBaseUrl()}/q/${link.token}`
+                extras.evaluation_name = evaluationTemplate.name
+                const withLink = withQuestionnaireLink(template.body_html || '', template.body_text || '')
+                emailContent = { subject: template.subject, body_html: withLink.bodyHtml, body_text: withLink.bodyText }
+              }
+
               // Remplacer les variables du template
               const { subject, bodyHtml, bodyText } = replaceTemplateVariables(
-                template,
+                emailContent,
                 recipient,
-                organization
+                organization,
+                extras
               )
 
               // Modèle non rempli (ex. {message} du modèle générique) : ne rien

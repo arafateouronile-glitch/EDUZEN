@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserOrgId } from '@/lib/utils/with-auth'
 import { emailService } from '@/lib/services/email.service'
+import { getOrCreateQuestionnaireLink } from '@/lib/services/questionnaire-link.service'
 
 // questionnaire_links est une table récente non encore dans les types générés.
 type AnyClient = any
@@ -113,95 +114,42 @@ export async function POST(
   for (const student of students) {
     const studentName = `${student.first_name} ${student.last_name}`
 
-    // Vérifier si un lien non-soumis existe déjà pour ce student+session+type
-    const { data: existing } = await admin
-      .from('questionnaire_links')
-      .select('id, submitted_at')
-      .eq('session_id', sessionId)
-      .eq('student_id', student.id)
-      .eq('assessment_type', assessment_type)
-      .maybeSingle()
+    const link = await getOrCreateQuestionnaireLink(admin, {
+      organizationId: orgId,
+      session,
+      student,
+      template,
+      assessmentType: assessment_type,
+    })
 
-    if (existing?.submitted_at) {
-      // Déjà répondu → on skip
+    if (link.status === 'already_submitted') {
       results.push({ student_name: studentName, sent: false, reason: 'déjà soumis' })
       skipped++
       continue
     }
 
-    let token: string
-
-    if (existing) {
-      // Lien existe mais pas encore soumis → réutiliser
-      const { data: linkRow } = await admin
-        .from('questionnaire_links')
-        .select('token')
-        .eq('id', existing.id)
-        .single()
-      token = linkRow!.token as string
-    } else {
-      // Créer grade
-      const { data: gradeRow } = await admin
-        .from('grades')
-        .insert({
-          organization_id: orgId,
-          session_id: sessionId,
-          student_id: student.id,
-          assessment_type,
-          subject: template.name,
-          graded_at: new Date().toISOString(),
-          max_score: 5,
-        })
-        .select('id')
-        .single()
-
-      // Créer instance
-      const { data: instanceRow } = await admin
-        .from('evaluation_template_instances')
-        .insert({
-          grade_id: gradeRow!.id,
-          template_id,
-        })
-        .select('id')
-        .single()
-
-      // Créer lien token
-      const { data: newLink } = await admin
-        .from('questionnaire_links')
-        .insert({
-          organization_id: orgId,
-          session_id: sessionId,
-          student_id: student.id,
-          template_id,
-          grade_id: gradeRow!.id,
-          instance_id: instanceRow!.id,
-          student_name: studentName,
-          student_email: student.email,
-          session_name: session.name,
-          assessment_type,
-        })
-        .select('token')
-        .single()
-
-      token = newLink!.token as string
-      created++
-    }
+    const { token } = link
+    if (link.created) created++
 
     // Envoi email si email disponible
     if (student.email) {
+      const isNeedsAnalysis = assessment_type === 'pre_formation'
       const typeLabel = assessment_type === 'hot' ? 'à chaud' : assessment_type === 'cold' ? 'à froid' : assessment_type
+      const title = isNeedsAnalysis ? template.name : 'Questionnaire de satisfaction'
       const questionnaireUrl = `${appUrl}/q/${token}`
       try {
         await emailService.sendEmail({
           to: student.email,
-          subject: `Questionnaire de satisfaction ${typeLabel} — ${session.name}`,
+          subject: `${isNeedsAnalysis ? title : `${title} ${typeLabel}`} — ${session.name}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-              <h2 style="color: #1e40af; margin-bottom: 8px;">Questionnaire de satisfaction</h2>
+              <h2 style="color: #1e40af; margin-bottom: 8px;">${title}</h2>
               <p style="color: #374151; margin-bottom: 4px;">Bonjour ${student.first_name},</p>
               <p style="color: #374151; margin-bottom: 20px;">
-                Merci de participer à <strong>${session.name}</strong>.<br>
-                Nous souhaiterions recueillir votre avis via ce questionnaire de satisfaction ${typeLabel}.
+                ${isNeedsAnalysis
+                  ? `Afin de préparer <strong>${session.name}</strong> selon vos besoins, merci de répondre à ce questionnaire.`
+                  : `Merci de participer à <strong>${session.name}</strong>.<br>
+                Nous souhaiterions recueillir votre avis via ce questionnaire de satisfaction ${typeLabel}.`}
               </p>
               <a href="${questionnaireUrl}"
                  style="display: inline-block; background: #1e40af; color: white; padding: 12px 24px;
