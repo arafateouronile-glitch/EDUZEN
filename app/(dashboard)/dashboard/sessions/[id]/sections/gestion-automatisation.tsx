@@ -15,6 +15,7 @@ import {
   Zap,
   CheckCircle2,
   FileText,
+  ClipboardList,
   Star,
   Award,
   RefreshCw,
@@ -36,6 +37,7 @@ import {
   PRESET_AUTOMATIONS,
   PRESET_EMAIL_TYPES,
   presetDocumentFields,
+  presetEvaluationFields,
   type PresetAutomation,
 } from '@/lib/constants/automation-presets'
 
@@ -48,6 +50,7 @@ const PRESET_ICONS: Record<string, React.ElementType> = {
   convocation_j14: FileText,
   rappel_j7: Bell,
   rappel_j3: Clock,
+  recueil_besoins: ClipboardList,
   evaluation_post_formation: Star,
   attestation_presence: FileCheck,
   certificat_realisation: Award,
@@ -127,6 +130,7 @@ export function GestionAutomatisation({ sessionId }: GestionAutomatisationProps)
         send_to_teachers: preset.send_to_teachers,
         send_to_coordinators: preset.send_to_coordinators,
         ...presetDocumentFields(preset),
+        ...presetEvaluationFields(preset),
         target_type: preset.target_type,
         session_id: sessionId,
         is_active: true,

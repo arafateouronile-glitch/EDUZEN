@@ -149,9 +149,11 @@ export default function QuestionnairePage() {
           <h1 className="text-2xl font-bold text-slate-800 mb-2">Merci !</h1>
           <p className="text-slate-500">
             Vos réponses ont bien été enregistrées.
-            {data && (
+            {data && (data.assessment_type === 'pre_formation' ? (
+              <> Elles nous aideront à préparer la session <strong>{data.session_name}</strong> selon vos besoins.</>
+            ) : (
               <> Votre avis sur la session <strong>{data.session_name}</strong> contribue à l&apos;amélioration continue de notre organisme.</>
-            )}
+            ))}
           </p>
         </div>
       </div>
@@ -173,10 +175,17 @@ export default function QuestionnairePage() {
             </div>
             <div>
               <p className="text-sm text-blue-600 font-medium uppercase tracking-wide mb-1">
-                Questionnaire de satisfaction {typeLabel(data.assessment_type)}
+                {data.assessment_type === 'pre_formation'
+                  ? data.template.name
+                  : `Questionnaire de satisfaction ${typeLabel(data.assessment_type)}`}
               </p>
               <h1 className="text-xl font-bold text-slate-800 leading-snug">{data.session_name}</h1>
-              <p className="text-slate-500 text-sm mt-1">Bonjour {data.student_name}, merci de prendre quelques instants pour évaluer cette formation.</p>
+              <p className="text-slate-500 text-sm mt-1">
+                Bonjour {data.student_name},{' '}
+                {data.assessment_type === 'pre_formation'
+                  ? 'merci de répondre à ces quelques questions pour nous aider à préparer votre formation.'
+                  : 'merci de prendre quelques instants pour évaluer cette formation.'}
+              </p>
             </div>
           </div>
         </div>
@@ -275,7 +284,7 @@ export default function QuestionnairePage() {
               {submitting ? 'Envoi en cours…' : 'Envoyer mes réponses'}
             </Button>
             <p className="text-xs text-center text-slate-400 mt-3">
-              Vos réponses sont anonymes et ne seront utilisées qu&apos;à des fins d&apos;amélioration.
+              Vos réponses sont transmises à votre organisme de formation.
             </p>
           </div>
         </form>

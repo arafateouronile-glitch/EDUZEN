@@ -9,9 +9,10 @@ import {
   shiftDay,
   slotInLaunchWindow,
   studentsWithPendingHotEvaluation,
+  withQuestionnaireLink,
 } from '@/lib/services/email-schedule-run'
 import { AUTOMATION_EMAIL_DEFAULTS } from '@/lib/constants/automation-email-defaults'
-import { PRESET_AUTOMATIONS, presetDocumentFields } from '@/lib/constants/automation-presets'
+import { AUTOMATION_EVALUATION_TEMPLATES, PRESET_AUTOMATIONS, presetDocumentFields, presetEvaluationFields } from '@/lib/constants/automation-presets'
 import { isSchedulableDocumentType, scheduledDocumentFilename } from '@/lib/utils/document-generation/schedulable-document-types'
 
 describe('findUnresolvedVariables', () => {
@@ -24,6 +25,19 @@ describe('findUnresolvedVariables', () => {
 
   it('ignore un email entièrement rempli et le CSS', () => {
     expect(findUnresolvedVariables('Objet', '<style>a{color:red}</style><p>Bonjour</p>', undefined)).toEqual([])
+  })
+})
+
+describe('withQuestionnaireLink', () => {
+  it('ajoute le lien à un mail qui ne le contient pas', () => {
+    const { bodyHtml, bodyText } = withQuestionnaireLink('<p>Bonjour</p>', 'Bonjour')
+    expect(bodyHtml).toContain('href="{questionnaire_url}"')
+    expect(bodyText).toContain('{questionnaire_url}')
+  })
+
+  it('ne double pas un lien déjà présent et ne crée pas de contenu vide', () => {
+    expect(withQuestionnaireLink('<a href="{questionnaire_url}">Go</a>', '').bodyHtml).toBe('<a href="{questionnaire_url}">Go</a>')
+    expect(withQuestionnaireLink('<p>x</p>', '').bodyText).toBe('')
   })
 })
 
@@ -174,5 +188,17 @@ describe('automatisations prédéfinies', () => {
     expect(byType.attestation_presence).toEqual({ send_document: true, document_type: 'attestation_assiduite' })
     expect(byType.certificat_realisation).toEqual({ send_document: true, document_type: 'certificat_realisation' })
     expect(byType.rappel_j3).toEqual({})
+    expect(byType.convocation_j14).toEqual({ send_document: true, document_type: 'convocation' })
+  })
+
+  it('les automatisations d\'évaluation ont leur évaluation et un mail sans balise de lien cassable', () => {
+    for (const type of Object.keys(AUTOMATION_EVALUATION_TEMPLATES)) {
+      const preset = PRESET_AUTOMATIONS.find((p) => p.email_type === type)!
+      expect(presetEvaluationFields(preset).evaluation_template_id).toBe(AUTOMATION_EVALUATION_TEMPLATES[type])
+    }
+    for (const tpl of Object.values(AUTOMATION_EMAIL_DEFAULTS)) {
+      expect(tpl.body_html).not.toMatch(/href="\{/)
+      expect(tpl.body_html).not.toContain('<table')
+    }
   })
 })

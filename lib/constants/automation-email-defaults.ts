@@ -28,24 +28,22 @@ ${content}
 <p style="font-size: 12px; color: #6b7280;">{organization_email} · {organization_phone}</p>
 </div>`
 
-const sessionBlock = `<table style="border-collapse: collapse; margin: 12px 0;">
-<tr><td style="padding: 2px 12px 2px 0; color: #6b7280;">Formation</td><td><strong>{session_name}</strong></td></tr>
-<tr><td style="padding: 2px 12px 2px 0; color: #6b7280;">Dates</td><td>du {session_start_date} au {session_end_date}</td></tr>
-<tr><td style="padding: 2px 12px 2px 0; color: #6b7280;">Horaire</td><td>{session_start_time}</td></tr>
-<tr><td style="padding: 2px 12px 2px 0; color: #6b7280;">Lieu</td><td>{session_location}</td></tr>
-</table>`
-
-const learnerSpaceButton = (label: string) =>
-  `<p><a href="{espace_apprenant}" style="display: inline-block; background: #335ACF; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">${label}</a></p>`
+// Pas de tableau ni de balise dans un href : ces mails sont modifiables dans
+// l'éditeur de la règle (EmailBodyEditor), qui ne les conserve pas.
+const sessionBlock = `<ul>
+<li>Formation : <strong>{session_name}</strong></li>
+<li>Dates : du {session_start_date} au {session_end_date}</li>
+<li>Horaire : {session_start_time}</li>
+<li>Lieu : {session_location}</li>
+</ul>`
 
 export const AUTOMATION_EMAIL_DEFAULTS: Record<string, AutomationEmailDefault> = {
   convocation_j14: {
     subject: 'Convocation — {session_name}',
     body_html: wrap(`<p>Bonjour {student_first_name},</p>
-<p>Nous avons le plaisir de vous convoquer à la formation suivante :</p>
+<p>Nous avons le plaisir de vous convoquer à la formation suivante. Vous trouverez votre convocation en pièce jointe.</p>
 ${sessionBlock}
-<p>Retrouvez toutes les informations pratiques dans votre espace apprenant.</p>
-${learnerSpaceButton('Accéder à mon espace')}`),
+<p>Retrouvez toutes les informations pratiques dans votre espace apprenant : {espace_apprenant}</p>`),
   },
   rappel_j7: {
     subject: 'Rappel : votre formation commence dans 7 jours — {session_name}',
@@ -59,17 +57,21 @@ ${sessionBlock}`),
 <p>Votre formation <strong>{session_name}</strong> commence dans 3 jours. Pensez à prévoir votre trajet et le matériel demandé.</p>
 ${sessionBlock}`),
   },
+  recueil_besoins: {
+    subject: 'Préparons votre formation {session_name}',
+    body_html: wrap(`<p>Bonjour {student_first_name},</p>
+<p>Votre formation <strong>{session_name}</strong> débute le {session_start_date}. Afin de l'adapter au mieux à vos attentes, merci de remplir le questionnaire de recueil des besoins en cliquant sur le bouton ci-dessous.</p>
+<p>Cela ne prend que quelques minutes.</p>`),
+  },
   evaluation_post_formation: {
     subject: 'Votre avis sur la formation {session_name}',
     body_html: wrap(`<p>Bonjour {student_first_name},</p>
-<p>Merci d'avoir suivi la formation <strong>{session_name}</strong>. Votre avis nous aide à améliorer nos formations : merci de prendre quelques minutes pour remplir le questionnaire de satisfaction dans votre espace apprenant.</p>
-${learnerSpaceButton('Donner mon avis')}`),
+<p>Merci d'avoir suivi la formation <strong>{session_name}</strong>. Votre avis nous aide à améliorer nos formations : merci de prendre quelques minutes pour remplir le questionnaire de satisfaction en cliquant sur le bouton ci-dessous.</p>`),
   },
   relance_evaluation: {
     subject: 'Rappel : votre avis sur la formation {session_name}',
     body_html: wrap(`<p>Bonjour {student_first_name},</p>
-<p>Vous n'avez pas encore répondu au questionnaire de satisfaction de la formation <strong>{session_name}</strong>. Cela ne prend que quelques minutes.</p>
-${learnerSpaceButton('Répondre au questionnaire')}`),
+<p>Vous n'avez pas encore répondu au questionnaire de satisfaction de la formation <strong>{session_name}</strong>. Cela ne prend que quelques minutes : il vous suffit de cliquer sur le bouton ci-dessous.</p>`),
   },
   attestation_presence: {
     subject: 'Votre attestation de présence — {session_name}',
@@ -87,6 +89,6 @@ ${learnerSpaceButton('Répondre au questionnaire')}`),
     subject: 'Factures impayées — {session_name}',
     body_html: wrap(`<p>Bonjour {recipient_name},</p>
 <p>La session <strong>{session_name}</strong>, terminée le {session_end_date}, compte encore <strong>{factures_impayees} facture(s) impayée(s)</strong> pour un montant de <strong>{montant_impaye}</strong>.</p>
-<p>Pensez à relancer les financeurs ou les apprenants concernés depuis l'onglet Finances de la session.</p>`),
+<p>Pensez à relancer les financeurs ou les apprenants concernés depuis l'onglet Finances de la session : {session_url}</p>`),
   },
 }

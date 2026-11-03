@@ -25,12 +25,30 @@ export interface PresetAutomation {
   /** Couleur Tailwind text pour l'icône (ex: 'text-blue-600') */
   textColorClass: string
   /** Document nominatif joint à l'email (modèle par défaut de ce type) */
-  document_type?: 'attestation_assiduite' | 'certificat_realisation'
+  document_type?: 'attestation_assiduite' | 'certificat_realisation' | 'convocation'
+  /** Évaluation envoyée par lien direct (modèle global) */
+  evaluation_template_id?: string
+}
+
+/** Modèles d'évaluation globaux (organization_id nul), visibles par tous les organismes */
+export const GLOBAL_HOT_EVALUATION_TEMPLATE_ID = '251d190d-586e-4596-b19d-adcab6024aa4'
+export const GLOBAL_NEEDS_ANALYSIS_TEMPLATE_ID = '7b5e3c1a-2d4f-4a8b-9c6e-1f0a3d5b7e21'
+
+/** Évaluation envoyée par chaque type d'automatisation, si la règle n'en précise pas */
+export const AUTOMATION_EVALUATION_TEMPLATES: Record<string, string> = {
+  recueil_besoins: GLOBAL_NEEDS_ANALYSIS_TEMPLATE_ID,
+  evaluation_post_formation: GLOBAL_HOT_EVALUATION_TEMPLATE_ID,
+  relance_evaluation: GLOBAL_HOT_EVALUATION_TEMPLATE_ID,
 }
 
 /** Champs « document joint » à écrire à l'activation d'une automatisation prédéfinie */
 export function presetDocumentFields(preset: PresetAutomation): { send_document?: boolean; document_type?: PresetAutomation['document_type'] } {
   return preset.document_type ? { send_document: true, document_type: preset.document_type } : {}
+}
+
+/** Champ « évaluation » à écrire à l'activation d'une automatisation prédéfinie */
+export function presetEvaluationFields(preset: PresetAutomation): { evaluation_template_id?: string } {
+  return preset.evaluation_template_id ? { evaluation_template_id: preset.evaluation_template_id } : {}
 }
 
 export const PRESET_AUTOMATIONS: PresetAutomation[] = [
@@ -52,7 +70,24 @@ export const PRESET_AUTOMATIONS: PresetAutomation[] = [
   },
   // ── Avant la session ─────────────────────────────────────────────────────
   {
+    email_type: 'recueil_besoins',
+    evaluation_template_id: GLOBAL_NEEDS_ANALYSIS_TEMPLATE_ID,
+    name: 'Recueil des besoins',
+    description: "Envoi du questionnaire de recueil des besoins 7 jours avant le début de la session.",
+    trigger_type: 'before_session_start',
+    trigger_days: 7,
+    trigger_time: '09:00',
+    send_to_students: true,
+    send_to_teachers: false,
+    send_to_coordinators: false,
+    target_type: 'session',
+    category: 'avant',
+    colorClass: 'bg-sky-100',
+    textColorClass: 'text-sky-600',
+  },
+  {
     email_type: 'convocation_j14',
+    document_type: 'convocation',
     name: 'Convocation J-14',
     description: 'Envoi automatique de la convocation 14 jours avant le début de la session.',
     trigger_type: 'before_session_start',
@@ -99,6 +134,7 @@ export const PRESET_AUTOMATIONS: PresetAutomation[] = [
   // ── Après la session ──────────────────────────────────────────────────────
   {
     email_type: 'evaluation_post_formation',
+    evaluation_template_id: GLOBAL_HOT_EVALUATION_TEMPLATE_ID,
     name: 'Évaluation post-formation',
     description: "Envoi du questionnaire de satisfaction le lendemain de la fin de la session.",
     trigger_type: 'after_session_end',
@@ -146,6 +182,7 @@ export const PRESET_AUTOMATIONS: PresetAutomation[] = [
   },
   {
     email_type: 'relance_evaluation',
+    evaluation_template_id: GLOBAL_HOT_EVALUATION_TEMPLATE_ID,
     name: 'Relance évaluation',
     description: "Relance pour les participants n'ayant pas répondu au questionnaire (J+7).",
     trigger_type: 'after_session_end',

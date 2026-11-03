@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withDistributedRateLimit } from '@/lib/utils/rate-limiter-distributed'
+import { toPublicQuestion } from '@/lib/services/questionnaire-link.service'
 
 interface QLinkRow {
   id: string
@@ -77,7 +78,7 @@ export async function GET(
       name: (template as { name?: string } | null)?.name,
       description: (template as { description?: string } | null)?.description,
     },
-    questions: (questions as unknown[]) ?? [],
+    questions: ((questions ?? []) as Array<{ question_type: string; options?: unknown }>).map(toPublicQuestion),
   })
   })
 }

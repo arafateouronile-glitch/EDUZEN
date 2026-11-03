@@ -20,6 +20,18 @@ export function findUnresolvedVariables(...contents: Array<string | null | undef
   return [...new Set(found)]
 }
 
+/**
+ * Ajoute le lien vers l'évaluation à un mail qui ne le contient pas (modèle ou
+ * texte modifié par l'organisme) : une automatisation d'évaluation envoie toujours le lien.
+ */
+export function withQuestionnaireLink(bodyHtml: string, bodyText: string): { bodyHtml: string; bodyText: string } {
+  const button = `<p><a href="{questionnaire_url}" style="display: inline-block; background: #335ACF; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">Répondre au questionnaire</a></p>`
+  return {
+    bodyHtml: !bodyHtml || bodyHtml.includes('{questionnaire_url}') ? bodyHtml : `${bodyHtml}\n${button}`,
+    bodyText: !bodyText || bodyText.includes('{questionnaire_url}') ? bodyText : `${bodyText}\n\nRépondre au questionnaire : {questionnaire_url}`,
+  }
+}
+
 /** Date du jour (AAAA-MM-JJ) en heure de Paris */
 export function parisDay(date: Date): string {
   return new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)

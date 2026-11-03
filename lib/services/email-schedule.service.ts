@@ -57,6 +57,11 @@ export interface CreateEmailScheduleInput {
   send_document?: boolean
   document_type?: DocumentType
   document_template_id?: string
+  /** Mail propre à la règle : prioritaire sur le modèle choisi (null = mail par défaut) */
+  email_subject?: string | null
+  email_body_html?: string | null
+  /** Évaluation envoyée par lien direct à chaque apprenant */
+  evaluation_template_id?: string | null
 }
 
 export interface UpdateEmailScheduleInput extends Partial<CreateEmailScheduleInput> {
@@ -191,6 +196,15 @@ export class EmailScheduleService {
     if (input.document_template_id !== undefined) {
       schedule.document_template_id = input.document_template_id || null
     }
+    if (input.email_subject !== undefined) {
+      schedule.email_subject = input.email_subject || null
+    }
+    if (input.email_body_html !== undefined) {
+      schedule.email_body_html = input.email_body_html || null
+    }
+    if (input.evaluation_template_id !== undefined) {
+      schedule.evaluation_template_id = input.evaluation_template_id || null
+    }
     if (user?.user?.id) {
       schedule.created_by = user.user.id
     }
@@ -233,6 +247,9 @@ export class EmailScheduleService {
       send_document: input.send_document,
       document_type: input.document_type,
       document_template_id: input.document_template_id,
+      email_subject: input.email_subject,
+      email_body_html: input.email_body_html,
+      evaluation_template_id: input.evaluation_template_id,
     }
 
     // Supprimer les champs undefined
