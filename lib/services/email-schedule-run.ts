@@ -11,6 +11,15 @@ export function runStatus(successfulSends: number, failedSends: number): Schedul
   return 'partial'
 }
 
+/**
+ * Balises restées telles quelles après remplacement (ex. {message}) : un email
+ * qui en contient n'a pas été rempli et ne doit pas partir.
+ */
+export function findUnresolvedVariables(...contents: Array<string | null | undefined>): string[] {
+  const found = contents.flatMap((content) => content?.match(/\{[a-zA-Z_][a-zA-Z0-9_]*\}/g) ?? [])
+  return [...new Set(found)]
+}
+
 /** Date du jour (AAAA-MM-JJ) en heure de Paris */
 export function parisDay(date: Date): string {
   return new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)

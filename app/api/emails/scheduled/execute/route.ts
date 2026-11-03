@@ -9,6 +9,7 @@ import { EmailScheduleService } from '@/lib/services/email-schedule.service'
 import {
   alreadyRanToday,
   EMAIL_AUTOMATION_ENROLLMENT_STATUSES,
+  findUnresolvedVariables,
   isTriggerDay,
   resolveScheduleScope,
   runStatus,
@@ -566,6 +567,13 @@ export async function POST(request: NextRequest) {
                 organization
               )
 
+              // Modèle non rempli (ex. {message} du modèle générique) : ne rien
+              // envoyer plutôt qu'un email vide, l'erreur remonte sur la règle.
+              const unresolved = findUnresolvedVariables(subject, bodyHtml, bodyText)
+              if (unresolved.length > 0) {
+                throw new Error(`Balises non remplies dans le modèle : ${unresolved.join(', ')}`)
+              }
+
               // Document nominatif : uniquement pour les apprenants. En cas
               // d'échec de génération, l'email n'est pas envoyé sans le document.
               const attachments: Array<{ filename: string; content: Buffer }> = []
@@ -586,6 +594,19 @@ export async function POST(request: NextRequest) {
               })
               if (!sent.success) {
                 throw new Error(`Email send failed: ${sent.error ?? 'erreur inconnue'}`)
+              }
+
+              // Journal (l'email est parti : une erreur ici ne compte pas comme un échec d'envoi)
+              const { error: logError } = await adminSupabase.from('email_logs').insert({
+                organization_id: schedule.organization_id,
+                recipient: recipient.email,
+                subject,
+                template_type: schedule.email_type,
+                resend_id: sent.id ?? null,
+                metadata: { schedule_id: schedule.id, schedule_name: schedule.name },
+              })
+              if (logError) {
+                logger.warn(`email_logs insert failed for schedule ${schedule.id}`, { error: logError.message })
               }
 
               successfulSends++
@@ -615,7 +636,7 @@ export async function POST(request: NextRequest) {
               totalRecipients: recipients.length,
               successfulSends,
               failedSends,
-              errorMessage: errors.length > 0 ? `${errors.length} erreurs` : undefined,
+              errorMessage: errors.length > 0 ? `${errors.length} erreurs — ${errors[0].error}` : undefined,
               errorDetails: errors.length > 0 ? { errors } : undefined,
             },
             {

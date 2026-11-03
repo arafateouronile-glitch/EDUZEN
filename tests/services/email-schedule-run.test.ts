@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   alreadyRanToday,
+  findUnresolvedVariables,
   isTriggerDay,
   parisDay,
   resolveScheduleScope,
@@ -12,6 +13,19 @@ import {
 import { AUTOMATION_EMAIL_DEFAULTS } from '@/lib/constants/automation-email-defaults'
 import { PRESET_AUTOMATIONS, presetDocumentFields } from '@/lib/constants/automation-presets'
 import { isSchedulableDocumentType, scheduledDocumentFilename } from '@/lib/utils/document-generation/schedulable-document-types'
+
+describe('findUnresolvedVariables', () => {
+  it('repère les balises restantes, sans doublon, dans tous les contenus', () => {
+    expect(findUnresolvedVariables('Objet', '<p>{message}</p><a href="{action_url}">{message}</a>', null)).toEqual([
+      '{message}',
+      '{action_url}',
+    ])
+  })
+
+  it('ignore un email entièrement rempli et le CSS', () => {
+    expect(findUnresolvedVariables('Objet', '<style>a{color:red}</style><p>Bonjour</p>', undefined)).toEqual([])
+  })
+})
 
 describe('runStatus', () => {
   it('succès, partiel, échec', () => {

@@ -43,7 +43,7 @@ export function verifiedSenderAddress(): string {
  */
 export async function sendEmailViaResend(
   options: SendEmailViaResendOptions
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; id?: string }> {
   const resendApiKey = process.env.RESEND_API_KEY
   const recipients = Array.isArray(options.to) ? options.to : [options.to]
 
@@ -101,7 +101,7 @@ export async function sendEmailViaResend(
       subject: options.subject,
       id: data?.id,
     })
-    return { success: true }
+    return { success: true, id: data?.id }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     logger.error('Email (Resend server) - Exception', err as Error)
