@@ -1,18 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import type {
-  DragEndEvent,
-  DragStartEvent} from '@dnd-kit/core';
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  useDroppable,
-} from '@dnd-kit/core'
-import { useDraggable } from '@dnd-kit/core'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -41,18 +28,14 @@ const COLUMNS: { id: CrmStatus; label: string; color: string; bg: string; border
   { id: 'abandon',   label: 'Abandons',     color: 'text-red-600',           bg: 'bg-red-50',            border: 'border-red-200' },
 ]
 
-// ─── Carte apprenant draggable ────────────────────────────────────────────────
+// ─── Carte apprenant ──────────────────────────────────────────────────────────
 
-function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard; isDragging?: boolean }) {
+function LearnerCardItem({ learner }: { learner: LearnerCard }) {
   const initials = `${learner.first_name[0] ?? ''}${learner.last_name[0] ?? ''}`.toUpperCase()
   const isOverdue = !!learner.next_follow_up_date && learner.next_follow_up_date < new Date().toISOString().slice(0, 10)
 
   return (
-    <div
-      className={`rounded-lg border bg-white p-3 shadow-sm transition-shadow ${
-        isDragging ? 'opacity-50 shadow-md' : 'hover:shadow-md'
-      }`}
-    >
+    <div className="rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start gap-2.5">
         <Avatar className="h-8 w-8 shrink-0">
           {learner.photo_url && <AvatarImage src={learner.photo_url} />}
@@ -154,22 +137,7 @@ function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard
   )
 }
 
-// ─── Carte draggable (avec hook useDraggable) ─────────────────────────────────
-
-function DraggableLearnerCard({ learner }: { learner: LearnerCard }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id:   learner.id,
-    data: { learner },
-  })
-
-  return (
-    <div ref={setNodeRef} {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing">
-      <LearnerCardItem learner={learner} isDragging={isDragging} />
-    </div>
-  )
-}
-
-// ─── Colonne droppable ────────────────────────────────────────────────────────
+// ─── Colonne ──────────────────────────────────────────────────────────────────
 
 function KanbanColumn({
   col,
@@ -178,8 +146,6 @@ function KanbanColumn({
   col: (typeof COLUMNS)[0]
   learners: LearnerCard[]
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: col.id })
-
   return (
     <div className="flex min-w-[220px] flex-1 flex-col">
       {/* Header colonne */}
@@ -190,13 +156,7 @@ function KanbanColumn({
         </Badge>
       </div>
 
-      {/* Zone droppable */}
-      <div
-        ref={setNodeRef}
-        className={`flex-1 rounded-b-lg border border-t-0 p-2 transition-colors ${col.border} ${
-          isOver ? `${col.bg} border-dashed` : 'bg-slate-50/50'
-        } min-h-[200px] space-y-2`}
-      >
+      <div className={`flex-1 rounded-b-lg border border-t-0 bg-slate-50/50 p-2 ${col.border} min-h-[200px] space-y-2`}>
         {learners.length === 0 ? (
           <div className="flex h-20 items-center justify-center">
             <div className="flex flex-col items-center gap-1 text-center">
@@ -206,7 +166,7 @@ function KanbanColumn({
           </div>
         ) : (
           learners.map(learner => (
-            <DraggableLearnerCard key={learner.id} learner={learner} />
+            <LearnerCardItem key={learner.id} learner={learner} />
           ))
         )}
       </div>
@@ -220,75 +180,22 @@ interface LearnerPipelineProps {
   initialData: LearnerPipelineData
 }
 
+// Colonnes en lecture seule : le statut est calculé en SQL depuis les
+// inscriptions (voir la fonction CRM), un déplacement manuel ne serait pas conservé.
 export function LearnerPipeline({ initialData }: LearnerPipelineProps) {
-  const [data, setData]           = useState<LearnerPipelineData>(initialData)
-  const [activeLearner, setActiveLearner] = useState<LearnerCard | null>(null)
-
-  // Sync quand les filtres du parent changent
-  useEffect(() => { setData(initialData) }, [initialData])
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  )
-
-  function handleDragStart(event: DragStartEvent) {
-    const learner = event.active.data.current?.learner as LearnerCard
-    setActiveLearner(learner)
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveLearner(null)
-
-    const { active, over } = event
-    if (!over) return
-
-    const learnerId   = String(active.id)
-    const newStatus   = over.id as CrmStatus
-    const fromStatus  = (Object.keys(data) as CrmStatus[]).find(col =>
-      data[col].some(l => l.id === learnerId)
-    )
-
-    if (!fromStatus || fromStatus === newStatus) return
-
-    // Mise à jour locale optimiste
-    const learner = data[fromStatus].find(l => l.id === learnerId)!
-    setData(prev => ({
-      ...prev,
-      [fromStatus]: prev[fromStatus].filter(l => l.id !== learnerId),
-      [newStatus]:  [{ ...learner, crm_status: newStatus }, ...prev[newStatus]],
-    }))
-
-    // TODO: Appeler une server action pour persister le changement de statut
-    // (ex: créer une inscription ou mettre à jour enrollment.status)
-  }
-
-  const total = Object.values(data).reduce((sum, col) => sum + col.length, 0)
+  const total = Object.values(initialData).reduce((sum, col) => sum + col.length, 0)
 
   return (
     <div className="space-y-4">
       {/* Résumé */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{total} apprenants au total</p>
-        <p className="text-xs text-muted-foreground">Glissez-déposez pour changer le statut</p>
-      </div>
+      <p className="text-sm text-muted-foreground">{total} apprenants au total</p>
 
       {/* Kanban */}
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto pb-4">
-          {COLUMNS.map(col => (
-            <KanbanColumn key={col.id} col={col} learners={data[col.id]} />
-          ))}
-        </div>
-
-        {/* Overlay pendant le drag */}
-        <DragOverlay>
-          {activeLearner && (
-            <div className="w-[220px] rotate-2 opacity-90">
-              <LearnerCardItem learner={activeLearner} />
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {COLUMNS.map(col => (
+          <KanbanColumn key={col.id} col={col} learners={initialData[col.id]} />
+        ))}
+      </div>
     </div>
   )
 }

@@ -19,7 +19,7 @@ import {
 import {
   ArrowLeft, Save, Copy, Archive, Trash2, Calendar, BookOpen, Sparkles,
   LayoutDashboard, Users, Clock, CheckCircle2, TrendingUp, Zap,
-  MoreHorizontal, ExternalLink, ChevronRight
+  ChevronRight
 } from 'lucide-react'
 import { AskAiButton } from '@/components/dashboard/ask-ai-button'
 import { useSessionDetail } from './hooks/use-session-detail'
@@ -176,6 +176,7 @@ export default function SessionDetailPage() {
     try {
       await sessionService.setSessionArchived(sessionId, !isArchived)
       await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      await queryClient.invalidateQueries({ queryKey: ['session-stats'] })
       await refetchSessionDetail()
       if (isArchived) {
         addToast({ title: 'Session désarchivée', description: 'Elle réapparaît dans la liste des sessions.', type: 'success' })
@@ -348,9 +349,6 @@ export default function SessionDetailPage() {
                       <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", statusConfig[sessionMetrics.status].dot)} />
                       {statusConfig[sessionMetrics.status].label}
                     </div>
-                    <Button variant="ghost" size="icon" className="w-8 h-8 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
                   </div>
 
                   <h2 className="text-lg font-bold text-white mb-1 line-clamp-2 leading-snug">
@@ -465,9 +463,6 @@ export default function SessionDetailPage() {
                   >
                     <Copy className="w-3.5 h-3.5 mr-2" />
                     {isDuplicating ? 'Duplication…' : 'Dupliquer la session'}
-                  </Button>
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium">
-                    <ExternalLink className="w-3.5 h-3.5 mr-2" /> Voir sur le portail
                   </Button>
                   <Button
                     variant="ghost"

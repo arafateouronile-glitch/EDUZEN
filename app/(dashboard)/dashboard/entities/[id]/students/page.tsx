@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -71,7 +71,8 @@ function EntityStudentsPageContent() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState('students')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') ?? 'students')
   const [isSendLinkOpen, setIsSendLinkOpen] = useState(false)
 
   // Formulaire pour le rattachement

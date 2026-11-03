@@ -1724,16 +1724,18 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-600 font-semibold">Derniers mouvements dans l'établissement</p>
                   </div>
                 </div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-brand-blue hover:text-brand-blue-dark hover:bg-brand-blue-ghost font-bold transition-all"
-                  >
-                    Tout voir
-                    <ArrowUpRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </motion.div>
+                <Link href="/dashboard/students">
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-brand-blue hover:text-brand-blue-dark hover:bg-brand-blue-ghost font-bold transition-all"
+                    >
+                      Tout voir
+                      <ArrowUpRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </motion.div>
+                </Link>
               </div>
               <div className="p-0">
                 <div className="divide-y divide-gray-100/50">

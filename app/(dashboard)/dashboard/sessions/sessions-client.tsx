@@ -255,12 +255,14 @@ function SessionsPageContent() {
         supabase
           .from('sessions')
           .select('status, start_date, end_date, formation_id, formations!inner(organization_id)')
-          .eq('formations.organization_id', user.organization_id),
+          .eq('formations.organization_id', user.organization_id)
+          .is('archived_at', null),
         supabase
           .from('sessions')
           .select('status, start_date, end_date, formation_id')
           .is('formation_id', null)
-          .eq('organization_id', user.organization_id),
+          .eq('organization_id', user.organization_id)
+          .is('archived_at', null),
       ])
       const err = withFormation.error || withoutFormation.error
       if (err) throw err

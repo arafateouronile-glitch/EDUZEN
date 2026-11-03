@@ -307,22 +307,30 @@ export function GestionEspaceEntreprise({
                         </Button>
                       </>
                     ) : null}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Documents
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    >
-                      <Mail className="mr-2 h-4 w-4" />
-                      Contacter
-                    </Button>
+                    {entity.id ? (
+                      <Link href={`/dashboard/entities/${entity.id}/students?tab=documents`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Documents
+                        </Button>
+                      </Link>
+                    ) : null}
+                    {entity.emails[0] ? (
+                      <a href={`mailto:${entity.emails[0]}`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Contacter
+                        </Button>
+                      </a>
+                    ) : null}
                   </div>
                 </motion.div>
               ))}

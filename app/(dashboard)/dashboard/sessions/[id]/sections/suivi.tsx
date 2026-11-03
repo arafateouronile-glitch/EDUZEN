@@ -748,7 +748,32 @@ export function Suivi({
                 <p className="text-sm text-gray-500">Suivi individuel détaillé</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-2 border-gray-200 hover:bg-gray-50 text-gray-700">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-gray-200 hover:bg-gray-50 text-gray-700"
+              onClick={async () => {
+                const { exportToExcel } = await import('@/lib/utils/excel-export')
+                await exportToExcel({
+                  filename: 'performance-apprenants.xlsx',
+                  sheetName: 'Performance',
+                  columns: [
+                    { header: 'Apprenant', key: 'name', width: 30 },
+                    { header: 'Matricule', key: 'number', width: 18 },
+                    { header: 'Présence (%)', key: 'attendance', width: 14 },
+                    { header: 'Moyenne /20', key: 'average', width: 14 },
+                    { header: 'Évaluations', key: 'grades', width: 14 },
+                  ],
+                  data: studentPerformance.map((perf) => ({
+                    name: perf.student.name,
+                    number: perf.student.number ?? '',
+                    attendance: perf.attendanceRate,
+                    average: perf.avgGrade != null ? Math.round(perf.avgGrade * 100) / 100 : '',
+                    grades: perf.gradeCount,
+                  })),
+                })
+              }}
+            >
               <Download className="h-4 w-4" />
               Exporter
             </Button>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -987,9 +988,11 @@ function ReportsPageContent() {
                     {formatCurrency(stats.totalOverdue)} en factures impayées
                   </p>
                 </div>
-                <Button variant="outline" size="sm" className="ml-auto border-red-300 text-red-600 hover:bg-red-100">
-                  Voir les détails
-                </Button>
+                <Link href="/dashboard/payments" className="ml-auto">
+                  <Button variant="outline" size="sm" className="border-red-300 text-red-600 hover:bg-red-100">
+                    Voir les détails
+                  </Button>
+                </Link>
               </div>
             )}
           </motion.div>
