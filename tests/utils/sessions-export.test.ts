@@ -116,6 +116,38 @@ describe('buildSessionsSheets', () => {
     expect(sheet(sheets, 'Séances').data[1]).toMatchObject({ teacher: 'Autre Prof' })
   })
 
+  it('calcule le coût global et la marge, et liste les apprenants actifs', () => {
+    const data: SessionsExportData = {
+      ...emptyData,
+      modules: [{ id: 'm1', session_id: 's1', name: 'Module', amount: 1000, currency: 'EUR' }],
+      enrollments: [
+        { id: 'e1', session_id: 's1', status: 'confirmed', students: { first_name: 'Zoé', last_name: 'Martin' } },
+        { id: 'e2', session_id: 's1', status: 'confirmed', students: { first_name: 'Paul', last_name: 'Adam' } },
+        { id: 'e3', session_id: 's1', status: 'cancelled', students: { first_name: 'Ex', last_name: 'Annulé' } },
+      ],
+      sessionTeachers: [
+        { id: 't1', session_id: 's1', teacher_id: 'u1', daily_rate: 500, intervention_days: 2 },
+        { id: 't2', session_id: 's1', teacher_id: 'u2', hourly_rate: 50, total_hours: 4 },
+        { id: 't3', session_id: 's1', teacher_id: 'u3', daily_rate: 500 },
+      ],
+      charges: [
+        { id: 'c1', session_id: 's1', amount: 300, payment_status: 'paid' },
+        { id: 'c2', session_id: 's1', amount: 999, payment_status: 'cancelled' },
+      ],
+    }
+    const sheets = buildSessionsSheets([session], data)
+
+    expect(sheet(sheets, 'Sessions').data[0]).toMatchObject({
+      learners: 'Adam Paul, Martin Zoé',
+      total: 3000,
+      teachersCost: 1200,
+      chargesTotal: 300,
+      globalCost: 1500,
+      margin: 1500,
+    })
+    expect(sheet(sheets, 'Intervenants').data.map((t) => t.cost)).toEqual([1000, 200, ''])
+  })
+
   it('écrit des dates calendaires exactes et produit un classeur lisible', async () => {
     const sheets = buildSessionsSheets([session], emptyData)
     const workbook = new ExcelJS.Workbook()
