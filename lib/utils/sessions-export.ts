@@ -257,6 +257,13 @@ const displayTotal = (invoices: Row[], fallback: number): number => {
   return (reference ? invoiceTotal(reference) : fallback) + creditNotes
 }
 
+/** Tarif journalier × jours, sinon tarif horaire × heures (même règle que la convention formateur) */
+const teacherCost = (st: Row): number | null => {
+  if (st.daily_rate != null && st.intervention_days != null) return toNumber(st.daily_rate) * toNumber(st.intervention_days)
+  if (st.hourly_rate != null && st.total_hours != null) return toNumber(st.hourly_rate) * toNumber(st.total_hours)
+  return null
+}
+
 const SESSION_COLUMNS: ExcelColumn[] = [
   { header: 'Session', key: 'name', width: 34 },
   { header: 'Code formation', key: 'formationCode', width: 15 },
@@ -274,6 +281,7 @@ const SESSION_COLUMNS: ExcelColumn[] = [
   { header: 'Apprenants inscrits', key: 'enrolledCount', width: 18 },
   { header: 'Effectif entreprises', key: 'reservedCount', width: 18 },
   { header: 'Places restantes', key: 'remainingSeats', width: 16 },
+  { header: 'Apprenants', key: 'learners', width: 50 },
   { header: 'Formateur principal', key: 'primaryTeacher', width: 26 },
   { header: 'Intervenants', key: 'teachers', width: 36 },
   { header: 'Séances', key: 'slotCount', width: 10 },
@@ -282,7 +290,10 @@ const SESSION_COLUMNS: ExcelColumn[] = [
   money('Montant total', 'total'),
   money('Encaissé', 'paid'),
   money('Reste à payer', 'remaining'),
+  money('Coût intervenants', 'teachersCost'),
   money('Charges', 'chargesTotal'),
+  money('Coût global', 'globalCost'),
+  money('Marge', 'margin'),
   { header: 'Devise', key: 'currency', width: 9 },
 ]
 
@@ -435,6 +446,7 @@ export function buildSessionsSheets(sessions: Row[], data: SessionsExportData): 
         hourlyRate: st.hourly_rate ?? '',
         days: st.intervention_days ?? '',
         hours: st.total_hours ?? '',
+        cost: teacherCost(st) ?? '',
         notes: st.notes ?? '',
       })
     }
@@ -483,7 +495,17 @@ export function buildSessionsSheets(sessions: Row[], data: SessionsExportData): 
     const teacherNames = uniqueIds([...sessionTeachers.map((t) => t.teacher_id), session.teacher_id])
       .map(userName)
       .filter(Boolean)
+    const learners = enrollments
+      .filter((e) => !inactive.includes(e.status))
+      .map((e) => `${e.students?.last_name ?? ''} ${e.students?.first_name ?? ''}`.trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, 'fr'))
     const total = enrollmentsTotal + reservationsTotal
+    const teachersCost = sessionTeachers.reduce((sum, st) => sum + (teacherCost(st) ?? 0), 0)
+    const chargesTotal = charges
+      .filter((c) => c.payment_status !== 'cancelled')
+      .reduce((sum, c) => sum + toNumber(c.amount), 0)
+    const globalCost = teachersCost + chargesTotal
 
     sessionRows.push({
       name: session.name ?? '',
@@ -502,6 +524,7 @@ export function buildSessionsSheets(sessions: Row[], data: SessionsExportData): 
       enrolledCount,
       reservedCount,
       remainingSeats: session.capacity_max != null ? session.capacity_max - enrolledCount - reservedCount : '',
+      learners: learners.join(', '),
       primaryTeacher: userName(primary),
       teachers: teacherNames.join(', '),
       slotCount: slots.length,
@@ -510,7 +533,10 @@ export function buildSessionsSheets(sessions: Row[], data: SessionsExportData): 
       total,
       paid,
       remaining: total - paid,
-      chargesTotal: charges.reduce((sum, c) => sum + toNumber(c.amount), 0),
+      teachersCost,
+      chargesTotal,
+      globalCost,
+      margin: total - globalCost,
       currency: session.formations?.currency ?? modules[0]?.currency ?? '',
     })
   }
@@ -579,6 +605,7 @@ export function buildSessionsSheets(sessions: Row[], data: SessionsExportData): 
         money('Tarif horaire', 'hourlyRate'),
         { header: "Jours d'intervention", key: 'days', width: 18 },
         { header: 'Heures', key: 'hours', width: 10 },
+        money('Coût', 'cost'),
         { header: 'Notes', key: 'notes', width: 30 },
       ],
       data: teacherRows,

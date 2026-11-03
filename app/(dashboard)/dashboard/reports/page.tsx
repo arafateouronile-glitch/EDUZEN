@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { sessionService } from '@/lib/services/session.service.client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -692,31 +693,34 @@ function ReportsPageContent() {
         }
 
         case 'sessions': {
-          // Export des sessions
-          if (!sessions || sessions.length === 0) {
+          // Export détaillé : toutes les sessions, y compris celles sans formation
+          const allSessions = (await sessionService.getAllSessions(user.organization_id, {
+            formationId: filters.formationId,
+          })) as { id: string }[]
+          const sessionsToExport = filters.sessionId
+            ? allSessions.filter((session) => session.id === filters.sessionId)
+            : allSessions
+
+          if (sessionsToExport.length === 0) {
             addToast({
               type: 'warning',
               title: 'Aucune donnée',
               description: 'Aucune session à exporter',
             })
-            setIsExporting(false)
             return
           }
 
-          type SessionExportRow = { name?: string; formations?: { name?: string }; start_date?: string; end_date?: string; status?: string; enrollments?: Array<{ count?: number }> }
-          dataToExport = (sessions || []).map((session: SessionExportRow) => ({
-            'Session': session.name ?? '',
-            'Formation': session.formations?.name ?? '',
-            'Date de début': session.start_date ? formatDate(session.start_date, 'dd/MM/yyyy') : '',
-            'Date de fin': session.end_date ? formatDate(session.end_date, 'dd/MM/yyyy') : '',
-            'Statut': session.status === 'ongoing' ? 'En cours' :
-                     session.status === 'completed' ? 'Terminée' :
-                     session.status === 'planned' ? 'Planifiée' : session.status ?? '',
-            'Inscrits': session.enrollments?.[0]?.count ?? 0,
-          }))
-          filename = `rapport-sessions-${dateStr}`
-          sheetName = 'Sessions'
-          break
+          const { exportSessionsToExcel } = await import('@/lib/utils/sessions-export')
+          const count = await exportSessionsToExcel(supabase, sessionsToExport, {
+            organizationId: user.organization_id,
+            userId: user.id,
+          })
+          addToast({
+            type: 'success',
+            title: 'Export réussi',
+            description: `${count} session(s) exportée(s) en Excel.`,
+          })
+          return
         }
 
         case 'students': {
