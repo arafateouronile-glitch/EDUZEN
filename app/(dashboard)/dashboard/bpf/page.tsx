@@ -34,6 +34,39 @@ export default function BPFPage() {
   const queryClient = useQueryClient()
   const { addToast } = useToast()
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear() - 1)
+  const [exportingYear, setExportingYear] = useState<number | null>(null)
+
+  const handleExportPdf = async (year: number) => {
+    setExportingYear(year)
+    try {
+      const res = await fetch('/api/bpf/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Erreur HTTP ${res.status}`)
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `CERFA_10443_BPF_${year}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Erreur de génération',
+        description: err instanceof Error ? err.message : 'Impossible de générer le PDF.',
+      })
+    } finally {
+      setExportingYear(null)
+    }
+  }
 
   // Query rapports BPF (liste depuis la table)
   const { data: reports = [], isLoading } = useQuery({
@@ -443,15 +476,23 @@ export default function BPFPage() {
                           Voir le détail
                         </Button>
                       </Link>
-                      <Button variant="outline" size="sm" className="hover:bg-brand-cyan-ghost hover:border-brand-cyan/30 hover:text-brand-cyan transition-all">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hover:bg-brand-cyan-ghost hover:border-brand-cyan/30 hover:text-brand-cyan transition-all"
+                        onClick={() => handleExportPdf(report.year)}
+                        disabled={exportingYear === report.year}
+                      >
                         <Download className="h-4 w-4 mr-2" />
-                        Exporter PDF
+                        {exportingYear === report.year ? 'Génération…' : 'Exporter PDF'}
                       </Button>
                       {report.status === 'completed' && (
-                        <Button size="sm" className="bg-brand-blue hover:bg-brand-blue-dark shadow-md hover:shadow-lg transition-all">
-                          <Send className="h-4 w-4 mr-2" />
-                          Soumettre
-                        </Button>
+                        <Link href={`/dashboard/bpf/${report.year}`}>
+                          <Button size="sm" className="bg-brand-blue hover:bg-brand-blue-dark shadow-md hover:shadow-lg transition-all">
+                            <Send className="h-4 w-4 mr-2" />
+                            Soumettre
+                          </Button>
+                        </Link>
                       )}
                     </div>
                   </div>
