@@ -20469,7 +20469,10 @@ export type Database = {
       }
       teachers: {
         Row: {
+          address: string | null
           bio: string | null
+          city: string | null
+          postal_code: string | null
           created_at: string
           employee_number: string | null
           hire_date: string | null
@@ -20483,7 +20486,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address?: string | null
           bio?: string | null
+          city?: string | null
+          postal_code?: string | null
           created_at?: string
           employee_number?: string | null
           hire_date?: string | null
@@ -20497,7 +20503,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address?: string | null
           bio?: string | null
+          city?: string | null
+          postal_code?: string | null
           created_at?: string
           employee_number?: string | null
           hire_date?: string | null

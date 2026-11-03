@@ -210,7 +210,7 @@ export function ConfigIntervenants({
       if (!activeIntervenantId || !user?.organization_id) return null
       const { data } = await supabase
         .from('teachers')
-        .select('statut, siret, specialization')
+        .select('statut, siret, specialization, address, postal_code, city')
         .eq('user_id', activeIntervenantId)
         .eq('organization_id', user.organization_id)
         .maybeSingle()
@@ -429,7 +429,7 @@ export function ConfigIntervenants({
       // de le modifier dans la page Formateurs.
       const { data: freshTeacherProfile } = await supabase
         .from('teachers')
-        .select('statut, siret, specialization')
+        .select('statut, siret, specialization, address, postal_code, city')
         .eq('user_id', activeTeacher.id)
         .eq('organization_id', user.organization_id)
         .maybeSingle()

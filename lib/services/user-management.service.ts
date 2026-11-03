@@ -55,6 +55,9 @@ export interface Teacher {
   is_active: boolean
   statut: 'independant' | 'salarie'
   siret: string | null
+  address: string | null
+  postal_code: string | null
+  city: string | null
   created_at: string
   updated_at: string
   user?: {

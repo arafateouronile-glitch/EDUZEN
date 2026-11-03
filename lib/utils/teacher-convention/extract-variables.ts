@@ -28,6 +28,9 @@ export interface TeacherConventionVariablesOptions {
     statut?: string | null
     siret?: string | null
     specialization?: string | null
+    address?: string | null
+    postal_code?: string | null
+    city?: string | null
   } | null
   convention: {
     period_start?: string | null
@@ -76,11 +79,9 @@ export function extractTeacherConventionVariables(
     formateur_specialite: teacherProfile?.specialization || '',
     formateur_statut: statutLabel,
     formateur_siret: teacherProfile?.siret || '',
-    // Non collectées aujourd'hui dans le formulaire "Intervenants" — laissées
-    // vides plutôt qu'inventées (le modèle affichera juste un champ blanc).
-    formateur_adresse: '',
-    formateur_code_postal: '',
-    formateur_ville: '',
+    formateur_adresse: teacherProfile?.address || '',
+    formateur_code_postal: teacherProfile?.postal_code || '',
+    formateur_ville: teacherProfile?.city || '',
     convention_date_debut: formatFrDate(convention.period_start),
     convention_date_fin: formatFrDate(convention.period_end),
     convention_lieu_formation: convention.location || '',

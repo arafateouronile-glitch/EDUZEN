@@ -37,6 +37,9 @@ export interface OrdreMissionVariablesOptions {
     statut?: string | null
     siret?: string | null
     specialization?: string | null
+    address?: string | null
+    postal_code?: string | null
+    city?: string | null
   } | null
   mission: {
     session_name?: string | null
@@ -90,11 +93,9 @@ export function extractOrdreMissionVariables(
     formateur_specialite: teacherProfile?.specialization || '',
     formateur_statut: statutLabel,
     formateur_siret: teacherProfile?.siret || '',
-    // Non collectées aujourd'hui dans le formulaire "Intervenants" — laissées
-    // vides plutôt qu'inventées (le modèle affichera juste un champ blanc).
-    formateur_adresse: '',
-    formateur_code_postal: '',
-    formateur_ville: '',
+    formateur_adresse: teacherProfile?.address || '',
+    formateur_code_postal: teacherProfile?.postal_code || '',
+    formateur_ville: teacherProfile?.city || '',
     mission_objet: mission.session_name || 'Session de formation',
     mission_formation: teacherProfile?.specialization || mission.session_name || '',
     mission_session_ref: mission.session_ref || '',

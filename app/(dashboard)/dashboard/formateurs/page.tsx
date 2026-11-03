@@ -46,6 +46,9 @@ interface TeacherWithUser {
   bio: string | null
   statut: 'independant' | 'salarie'
   siret: string | null
+  address: string | null
+  postal_code: string | null
+  city: string | null
   is_active: boolean
   user: { id: string; email: string; full_name: string | null; avatar_url: string | null } | null
 }
@@ -693,6 +696,9 @@ function ProfileTab({ teacher }: { teacher: TeacherWithUser }) {
     specialization: teacher.specialization ?? '',
     statut: teacher.statut,
     siret: teacher.siret ?? '',
+    address: teacher.address ?? '',
+    postal_code: teacher.postal_code ?? '',
+    city: teacher.city ?? '',
   })
 
   const updateMutation = useMutation({
@@ -733,6 +739,18 @@ function ProfileTab({ teacher }: { teacher: TeacherWithUser }) {
           <Label>Spécialisation</Label>
           <Input value={form.specialization} onChange={e => setForm(p => ({ ...p, specialization: e.target.value }))} placeholder="Ex: Sécurité incendie, Gestes premiers secours..." />
         </div>
+        <div className="col-span-2 space-y-1">
+          <Label>Adresse</Label>
+          <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="12 rue de la Paix" />
+        </div>
+        <div className="space-y-1">
+          <Label>Code postal</Label>
+          <Input value={form.postal_code} onChange={e => setForm(p => ({ ...p, postal_code: e.target.value }))} placeholder="75002" />
+        </div>
+        <div className="space-y-1">
+          <Label>Ville</Label>
+          <Input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="Paris" />
+        </div>
       </div>
       <div className="flex justify-end">
         <Button
@@ -741,6 +759,9 @@ function ProfileTab({ teacher }: { teacher: TeacherWithUser }) {
             specialization: form.specialization.trim() || null,
             statut: form.statut,
             siret: form.statut === 'independant' ? (form.siret.trim() || null) : null,
+            address: form.address.trim() || null,
+            postal_code: form.postal_code.trim() || null,
+            city: form.city.trim() || null,
           })}
           disabled={updateMutation.isPending}
           className="bg-brand-blue hover:bg-brand-blue-dark"
