@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   alreadyRanToday,
   findUnresolvedVariables,
+  isSendTimeReached,
   isTriggerDay,
   parisDay,
   resolveScheduleScope,
@@ -200,5 +201,29 @@ describe('automatisations prédéfinies', () => {
       expect(tpl.body_html).not.toMatch(/href="\{/)
       expect(tpl.body_html).not.toContain('<table')
     }
+  })
+})
+
+describe('isSendTimeReached (heure de Paris)', () => {
+  it("attend l'heure de la règle", () => {
+    const winter = new Date('2026-12-10T08:00:00Z') // 09:00 à Paris (UTC+1)
+    expect(isSendTimeReached('09:00', winter)).toBe(true)
+    expect(isSendTimeReached('09:00:00', winter)).toBe(true)
+    expect(isSendTimeReached('09:15', winter)).toBe(false)
+  })
+
+  it('suit le changement d\'heure', () => {
+    const summer = new Date('2026-07-10T07:00:00Z') // 09:00 à Paris (UTC+2)
+    expect(isSendTimeReached('09:00', summer)).toBe(true)
+    expect(isSendTimeReached('09:01', summer)).toBe(false)
+  })
+
+  it('sans heure : 07:00, comme l\'ancien passage quotidien', () => {
+    expect(isSendTimeReached(null, new Date('2026-12-10T05:59:00Z'))).toBe(false) // 06:59
+    expect(isSendTimeReached('', new Date('2026-12-10T06:00:00Z'))).toBe(true) // 07:00
+  })
+
+  it('une heure après le dernier passage (23:45) part quand même', () => {
+    expect(isSendTimeReached('23:55', new Date('2026-12-10T22:45:00Z'))).toBe(true) // 23:45
   })
 })

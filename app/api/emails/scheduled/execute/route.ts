@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 import { EmailScheduleService } from '@/lib/services/email-schedule.service'
 import {
   alreadyRanToday,
+  isSendTimeReached,
   EMAIL_AUTOMATION_ENROLLMENT_STATUSES,
   findUnresolvedVariables,
   isTriggerDay,
@@ -551,6 +552,11 @@ export async function POST(request: NextRequest) {
 
         // Émargement automatique : géré par /api/cron/auto-launch-attendance
         if (schedule.trigger_type === 'after_seance_start') {
+          continue
+        }
+
+        // Le cron passe toutes les 15 min : attendre l'heure d'envoi de la règle
+        if (schedule.trigger_type !== 'fixed_date' && !isSendTimeReached(schedule.trigger_time, now)) {
           continue
         }
 

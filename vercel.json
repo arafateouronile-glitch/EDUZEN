@@ -106,7 +106,7 @@
     },
     {
       "path": "/api/emails/scheduled/execute",
-      "schedule": "0 7 * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/auto-launch-attendance",

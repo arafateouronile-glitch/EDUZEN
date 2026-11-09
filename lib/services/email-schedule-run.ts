@@ -71,8 +71,8 @@ export function shiftDay(day: string, days: number): string {
 
 /**
  * Vrai si aujourd'hui (heure de Paris) est le jour d'envoi : date de début − N
- * jours, ou date de fin + N jours. L'heure de la règle n'est pas bloquante :
- * le cron passe une fois par jour, le matin.
+ * jours, ou date de fin + N jours. L'heure d'envoi est vérifiée à part
+ * (isSendTimeReached).
  */
 export function isTriggerDay(
   triggerType: string,
@@ -136,6 +136,22 @@ export function parisMinutes(date: Date): number {
   const h = Number(parts.find((p) => p.type === 'hour')?.value ?? 0)
   const m = Number(parts.find((p) => p.type === 'minute')?.value ?? 0)
   return h * 60 + m
+}
+
+/** Heure d'envoi d'une règle sans heure : celle de l'ancien passage quotidien */
+export const DEFAULT_SEND_TIME = '07:00'
+/** Dernier passage du cron (toutes les 15 min) avant minuit */
+const LAST_CRON_MINUTES = 23 * 60 + 45
+
+/**
+ * Vrai si l'heure d'envoi de la règle (HH:MM[:SS], heure de Paris) est atteinte.
+ * Une heure après le dernier passage de la journée est ramenée à 23:45, sinon
+ * la règle ne partirait jamais.
+ */
+export function isSendTimeReached(triggerTime: string | null | undefined, now: Date): boolean {
+  const [h, m] = (triggerTime || DEFAULT_SEND_TIME).split(':').map(Number)
+  const minutes = Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : 7 * 60
+  return parisMinutes(now) >= Math.min(minutes, LAST_CRON_MINUTES)
 }
 
 /**

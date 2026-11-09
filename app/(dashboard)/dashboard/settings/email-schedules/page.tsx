@@ -419,7 +419,7 @@ export default function EmailSchedulesPage() {
                             <div className="flex flex-wrap gap-1.5">
                               <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                                 <Clock className="h-3 w-3" />
-                                {triggerLabel}{preset.trigger_time ? ' · le matin' : ''}
+                                {triggerLabel}{preset.trigger_time ? ` · à ${preset.trigger_time.slice(0, 5)}` : ''}
                               </span>
                               {recipients.map((label) => (
                                 <span
