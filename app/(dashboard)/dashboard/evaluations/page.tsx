@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { evaluationService } from '@/lib/services/evaluation.service.client'
 import { evaluationTemplateService } from '@/lib/services/evaluation-template.service.client'
 import { emailService } from '@/lib/services/email.service'
+import { withEmailLayout } from '@/lib/utils/evaluation-email'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
@@ -441,7 +442,7 @@ export default function EvaluationsPage() {
       await emailService.sendEmail({
         to: student.email,
         subject: `Nouvelle évaluation : ${data.subject}`,
-        html: emailBody,
+        html: withEmailLayout('Nouvelle évaluation', emailBody, organizationName),
       })
     } catch (emailError) {
       logger.warn("Erreur lors de l'envoi de l'email d'évaluation", {

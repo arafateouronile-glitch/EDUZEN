@@ -2,7 +2,7 @@ import type { EmailType } from '@/lib/services/email-template.service'
 
 // ─── Helper HTML ──────────────────────────────────────────────────────────────
 
-function emailHtml(title: string, body: string): string {
+export function emailHtml(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>

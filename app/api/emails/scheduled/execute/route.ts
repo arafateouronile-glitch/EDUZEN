@@ -19,6 +19,7 @@ import {
 import { getOrCreateQuestionnaireLink, type QuestionnaireLinkInput } from '@/lib/services/questionnaire-link.service'
 import { AUTOMATION_EVALUATION_TEMPLATES } from '@/lib/constants/automation-presets'
 import { AUTOMATION_EMAIL_DEFAULTS, AUTOMATION_EMAIL_FALLBACK_TYPE } from '@/lib/constants/automation-email-defaults'
+import { withEmailLayout } from '@/lib/utils/evaluation-email'
 import { sendEmailViaResend, verifiedSenderAddress } from '@/lib/utils/send-email-resend'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
@@ -626,7 +627,11 @@ export async function POST(request: NextRequest) {
                 extras.questionnaire_url = `${APP_URLS.getBaseUrl()}/q/${link.token}`
                 extras.evaluation_name = evaluationTemplate.name
                 const withLink = withQuestionnaireLink(template.body_html || '', template.body_text || '')
-                emailContent = { subject: template.subject, body_html: withLink.bodyHtml, body_text: withLink.bodyText }
+                emailContent = {
+                  subject: template.subject,
+                  body_html: withEmailLayout(template.subject || evaluationTemplate.name, withLink.bodyHtml),
+                  body_text: withLink.bodyText,
+                }
               }
 
               // Remplacer les variables du template

@@ -10,6 +10,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserOrgId } from '@/lib/utils/with-auth'
 import { emailService } from '@/lib/services/email.service'
 import { getOrCreateQuestionnaireLink } from '@/lib/services/questionnaire-link.service'
+import { buildEvaluationEmailHtml } from '@/lib/utils/evaluation-email'
+import { escapeHtml } from '@/lib/utils/sanitize-html'
 
 // questionnaire_links est une table récente non encore dans les types générés.
 type AnyClient = any
@@ -106,6 +108,13 @@ export async function POST(
     return NextResponse.json({ error: 'Aucun apprenant inscrit avec email' }, { status: 400 })
   }
 
+  const { data: organization } = await supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', orgId)
+    .single()
+  const organizationName = (organization as { name?: string } | null)?.name ?? ''
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3001}`
   const results: { student_name: string; sent: boolean; reason?: string }[] = []
   let created = 0
@@ -141,27 +150,17 @@ export async function POST(
         await emailService.sendEmail({
           to: student.email,
           subject: `${isNeedsAnalysis ? title : `${title} ${typeLabel}`} — ${session.name}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-              <h2 style="color: #1e40af; margin-bottom: 8px;">${title}</h2>
-              <p style="color: #374151; margin-bottom: 4px;">Bonjour ${student.first_name},</p>
-              <p style="color: #374151; margin-bottom: 20px;">
-                ${isNeedsAnalysis
-                  ? `Afin de préparer <strong>${session.name}</strong> selon vos besoins, merci de répondre à ce questionnaire.`
-                  : `Merci de participer à <strong>${session.name}</strong>.<br>
-                Nous souhaiterions recueillir votre avis via ce questionnaire de satisfaction ${typeLabel}.`}
-              </p>
-              <a href="${questionnaireUrl}"
-                 style="display: inline-block; background: #1e40af; color: white; padding: 12px 24px;
-                        border-radius: 8px; text-decoration: none; font-weight: bold; margin-bottom: 20px;">
-                Répondre au questionnaire
-              </a>
-              <p style="color: #6b7280; font-size: 13px;">
-                Ce lien est valable 30 jours. Si le bouton ne fonctionne pas, copiez cette URL :<br>
-                <a href="${questionnaireUrl}" style="color: #2563eb;">${questionnaireUrl}</a>
-              </p>
-            </div>
-          `,
+          html: buildEvaluationEmailHtml({
+            organizationName,
+            recipientName: studentName,
+            title,
+            messageHtml: isNeedsAnalysis
+              ? `Afin de préparer <strong>${escapeHtml(session.name)}</strong> selon vos besoins, merci de répondre à ce questionnaire.`
+              : `Merci de participer à <strong>${escapeHtml(session.name)}</strong>.<br/>Nous souhaiterions recueillir votre avis via ce questionnaire de satisfaction ${escapeHtml(typeLabel)}.`,
+            url: questionnaireUrl,
+            buttonLabel: 'Répondre au questionnaire',
+            noteHtml: `Ce lien est valable 30 jours. Si le bouton ne fonctionne pas, copiez cette URL :<br/><a href="${questionnaireUrl}" style="color:#2563eb;word-break:break-all;">${questionnaireUrl}</a>`,
+          }),
         })
         results.push({ student_name: studentName, sent: true })
       } catch {

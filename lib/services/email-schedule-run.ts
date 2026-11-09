@@ -3,6 +3,8 @@
  * statut du journal et protection contre un double envoi le même jour.
  */
 
+import { emailButton } from '@/lib/utils/evaluation-email'
+
 export type ScheduleRunStatus = 'success' | 'partial' | 'failed'
 
 export function runStatus(successfulSends: number, failedSends: number): ScheduleRunStatus {
@@ -20,14 +22,21 @@ export function findUnresolvedVariables(...contents: Array<string | null | undef
   return [...new Set(found)]
 }
 
+/** Insère un bloc avant la formule de politesse, ou à la fin s'il n'y en a pas */
+function insertBeforeSignature(bodyHtml: string, block: string): string {
+  const match = /<p[^>]*>\s*Cordialement/i.exec(bodyHtml)
+  if (!match) return `${bodyHtml}\n${block}`
+  return `${bodyHtml.slice(0, match.index)}${block}\n${bodyHtml.slice(match.index)}`
+}
+
 /**
  * Ajoute le lien vers l'évaluation à un mail qui ne le contient pas (modèle ou
  * texte modifié par l'organisme) : une automatisation d'évaluation envoie toujours le lien.
  */
 export function withQuestionnaireLink(bodyHtml: string, bodyText: string): { bodyHtml: string; bodyText: string } {
-  const button = `<p><a href="{questionnaire_url}" style="display: inline-block; background: #335ACF; color: #ffffff; padding: 10px 18px; border-radius: 6px; text-decoration: none;">Répondre au questionnaire</a></p>`
+  const button = emailButton('{questionnaire_url}', 'Répondre au questionnaire')
   return {
-    bodyHtml: !bodyHtml || bodyHtml.includes('{questionnaire_url}') ? bodyHtml : `${bodyHtml}\n${button}`,
+    bodyHtml: !bodyHtml || bodyHtml.includes('{questionnaire_url}') ? bodyHtml : insertBeforeSignature(bodyHtml, button),
     bodyText: !bodyText || bodyText.includes('{questionnaire_url}') ? bodyText : `${bodyText}\n\nRépondre au questionnaire : {questionnaire_url}`,
   }
 }
