@@ -95,6 +95,8 @@ export class ElectronicAttendanceService {
    * optionnel sur un sous-ensemble d'IDs. Centralise le filtre utilisé à la
    * création, au lancement, à l'envoi sélectif et à la resynchronisation du
    * lien public — pour ne plus avoir à le dupliquer (et donc à le désynchroniser).
+   * Les inscrits sans email sont inclus (ils doivent pouvoir signer par QR) ;
+   * skippedNoEmail les liste pour signaler qu'ils ne recevront pas d'email.
    */
   private async getEligibleEnrolledStudents(
     sessionId: string,
@@ -117,7 +119,7 @@ export class ElectronicAttendanceService {
       .map((e) => e.students)
       .filter((s): s is StudentRef => !!s)
 
-    const students = enrolledStudents.filter((s) => !!s.email)
+    const students = enrolledStudents
     const skippedNoEmail = enrolledStudents
       .filter((s) => !s.email)
       .map((s) => ({ id: s.id, name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() }))
@@ -299,7 +301,7 @@ export class ElectronicAttendanceService {
           attendance_session_id: data.id,
           student_id: s.id,
           student_name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim(),
-          student_email: s.email!,
+          student_email: s.email ?? '',
           status: 'pending' as const,
           organization_id: params.organizationId,
           signature_token: crypto.randomUUID().replace(/-/g, ''),
@@ -382,8 +384,8 @@ export class ElectronicAttendanceService {
       }
 
       // Récupérer les étudiants inscrits
-      // Inscrits sans email : ne recevront jamais la demande, on le signale
-      // à l'appelant au lieu de les exclure en silence.
+      // Inscrits sans email : ils ont leur ligne (signature par QR) mais ne
+      // recevront pas d'email, on le signale à l'appelant.
       const { students, skippedNoEmail } = await this.getEligibleEnrolledStudents(attendanceSession.session_id)
 
       const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
@@ -409,7 +411,7 @@ export class ElectronicAttendanceService {
         organization_id: attendanceSession.organization_id,
         attendance_session_id: attendanceSessionId,
         student_id: student.id,
-        student_email: student.email,
+        student_email: student.email ?? '',
         student_name: `${student.first_name} ${student.last_name}`,
         status: 'pending' as const,
         signature_token: this.generateSignatureToken(),
@@ -803,7 +805,7 @@ export class ElectronicAttendanceService {
           organization_id: attendanceSession.organization_id,
           attendance_session_id: attendanceSessionId,
           student_id: student.id,
-          student_email: student.email,
+          student_email: student.email ?? '',
           student_name: `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
           status: 'pending' as const,
           signature_token: this.generateSignatureToken(),
@@ -947,7 +949,7 @@ export class ElectronicAttendanceService {
           attendance_session_id: attendanceSessionId,
           student_id: student.id,
           student_name: `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
-          student_email: student.email!,
+          student_email: student.email ?? '',
           status: 'pending' as const,
           organization_id: organizationId,
           signature_token: crypto.randomUUID().replace(/-/g, ''),
@@ -1227,6 +1229,10 @@ export class ElectronicAttendanceService {
         )
       }
 
+      if (!request.student_email) {
+        throw errorHandler.createValidationError('Cet apprenant n\'a pas d\'email', 'student_email')
+      }
+
       const session = request.attendance_session as AttendanceSessionWithSessionName | null
       const token = (request as RequestWithAccessToken).access_token ?? request.signature_token
       const attendanceUrl = this.generateAttendanceUrl(token)
@@ -1337,6 +1343,8 @@ export class ElectronicAttendanceService {
     session: ElectronicAttendanceSession,
     sessionTitle: string
   ) {
+    // Les apprenants sans email signent par QR : rien à leur envoyer
+    requests = requests.filter((r) => !!r.student_email)
     const results = await Promise.allSettled(
       requests.map(async (request) => {
         const token = (request as RequestWithAccessToken).access_token ?? request.signature_token

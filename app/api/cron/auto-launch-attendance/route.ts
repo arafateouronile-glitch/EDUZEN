@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
           const formation = Array.isArray(session.formations) ? session.formations[0] : session.formations
           const sessionTitle = (formation?.name ?? session.name) || 'Formation'
 
-          // Récupérer les apprenants inscrits avec email
+          // Récupérer les apprenants inscrits (ceux sans email signent par QR)
           const { data: enrollments } = await supabaseAdmin
             .from('enrollments')
             .select('student_id, students(id, first_name, last_name, email)')
@@ -208,11 +208,11 @@ export async function GET(request: NextRequest) {
 
           const students = (
             enrollments as Array<{
-              students: { id: string; first_name: string; last_name: string; email: string } | null
+              students: { id: string; first_name: string; last_name: string; email: string | null } | null
             }> | null
           )
             ?.map((e) => e.students)
-            .filter((s): s is { id: string; first_name: string; last_name: string; email: string } => !!s && !!s.email) ?? []
+            .filter((s): s is { id: string; first_name: string; last_name: string; email: string | null } => !!s) ?? []
 
           // Créer la session d'émargement directement en statut 'active'
           const tokenExpiresAt = new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString()
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
               organization_id: org.id,
               attendance_session_id: attendanceSession.id,
               student_id: student.id,
-              student_email: student.email,
+              student_email: student.email ?? '',
               student_name: `${student.first_name} ${student.last_name}`,
               status: 'pending' as const,
               signature_token: generateSignatureToken(),
@@ -271,7 +271,7 @@ export async function GET(request: NextRequest) {
             // Envoyer les emails de signature
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
             const emailResults = await Promise.allSettled(
-              (createdRequests ?? []).map(async (req) => {
+              (createdRequests ?? []).filter((req) => !!req.student_email).map(async (req) => {
                 const token = (req as { access_token?: string; signature_token: string }).access_token ?? req.signature_token
                 const attendanceUrl = `${baseUrl}/sign/${token}`
                 const sent = await sendEmailViaResend({
