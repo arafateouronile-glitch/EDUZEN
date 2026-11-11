@@ -56,7 +56,8 @@ export interface AnalyticsQuestionRow {
 export interface AnalyticsResponseRow {
   instance_id: string
   question_id: string
-  student_id: string
+  /** null pour un intervenant, une entreprise ou un financeur */
+  student_id: string | null
   answer_text: string | null
   answer_choice: string[] | null
   answer_boolean: boolean | null
@@ -76,6 +77,8 @@ export interface EvaluationAnalyticsInput {
   questions: AnalyticsQuestionRow[]
   responses: AnalyticsResponseRow[]
   students: AnalyticsStudentRow[]
+  /** Nom des répondants sans apprenant (questionnaires intervenant, manager, financeur), par instance */
+  respondents?: Array<{ instance_id: string; name: string }>
 }
 
 // ── Sortie ───────────────────────────────────────────────────────────────────
@@ -124,7 +127,7 @@ export interface BooleanQuestionStats extends QuestionStatsBase {
 
 export interface TextQuestionStats extends QuestionStatsBase {
   kind: 'text'
-  answers: { studentId: string; studentName: string; answer: string }[]
+  answers: { studentId: string | null; studentName: string; answer: string }[]
 }
 
 export type QuestionStats = RatingQuestionStats | ChoiceQuestionStats | BooleanQuestionStats | TextQuestionStats
@@ -274,7 +277,7 @@ function studentName(s: AnalyticsStudentRow | undefined): string {
 function buildQuestionStats(
   question: AnalyticsQuestionRow,
   responses: AnalyticsResponseRow[],
-  students: Map<string, AnalyticsStudentRow>
+  respondentName: (r: AnalyticsResponseRow) => string
 ): QuestionStats {
   const base = { questionId: question.id, text: question.question_text }
 
@@ -370,7 +373,7 @@ function buildQuestionStats(
       const answers = responses
         .map((r) => ({ r, answer: (r.answer_text ?? r.answer_choice?.join(', ') ?? '').trim() }))
         .filter(({ answer }) => answer.length > 0)
-        .map(({ r, answer }) => ({ studentId: r.student_id, studentName: studentName(students.get(r.student_id)), answer }))
+        .map(({ r, answer }) => ({ studentId: r.student_id, studentName: respondentName(r), answer }))
         .sort((a, b) => a.studentName.localeCompare(b.studentName, 'fr'))
       return { ...base, kind: 'text', respondents: answers.length, score10: null, answers }
     }
@@ -386,6 +389,9 @@ function scoredMean(questions: QuestionStats[]): number | null {
 
 export function buildEvaluationAnalytics(input: EvaluationAnalyticsInput): EvaluationAnalytics {
   const students = new Map(input.students.map((s) => [s.id, s]))
+  const respondentNames = new Map((input.respondents ?? []).map((r) => [r.instance_id, r.name]))
+  const respondentName = (r: AnalyticsResponseRow) =>
+    r.student_id ? studentName(students.get(r.student_id)) : respondentNames.get(r.instance_id) ?? 'Répondant'
   const templates = new Map(input.templates.map((t) => [t.id, t]))
   const instanceByGrade = new Map(input.instances.map((i) => [i.grade_id, i]))
 
@@ -436,7 +442,7 @@ export function buildEvaluationAnalytics(input: EvaluationAnalyticsInput): Evalu
 
       const sections: SectionStats[] = []
       for (const q of questionsByTemplate.get(templateId) ?? []) {
-        const stats = buildQuestionStats(q, templateResponses.filter((r) => r.question_id === q.id), students)
+        const stats = buildQuestionStats(q, templateResponses.filter((r) => r.question_id === q.id), respondentName)
         const name = q.section?.trim() || null
         // Les rubriques gardent l'ordre de leur première question
         let section = sections.find((s) => s.name === name)

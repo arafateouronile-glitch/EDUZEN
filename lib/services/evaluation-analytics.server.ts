@@ -97,7 +97,15 @@ export async function loadAnalyticsRows(
   const studentIds = [...new Set(grades.map((g) => g.student_id).filter((id): id is string => !!id))]
   const students = await selectIn<AnalyticsStudentRow>(client, 'students', 'id, first_name, last_name', 'id', studentIds)
 
-  return { grades, instances, templates, questions, responses, students }
+  // Répondants sans apprenant (intervenants, entreprises, financeurs) : nom pris sur leur lien
+  const respondentLinks = await selectIn<{ instance_id: string; student_name: string; student_id: string | null }>(
+    client, 'questionnaire_links', 'instance_id, student_name, student_id', 'instance_id', instances.map((i) => i.id)
+  )
+  const respondents = respondentLinks
+    .filter((l) => !l.student_id)
+    .map((l) => ({ instance_id: l.instance_id, name: l.student_name }))
+
+  return { grades, instances, templates, questions, responses, students, respondents }
 }
 
 /** Restreint les lignes chargées à une seule session (tendance multi-sessions) */

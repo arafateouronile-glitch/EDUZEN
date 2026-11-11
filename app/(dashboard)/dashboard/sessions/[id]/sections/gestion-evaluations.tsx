@@ -22,6 +22,29 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Star } from 'lucide-react'
+import { templateAudience, type QuestionnaireAudience } from '@/lib/services/questionnaire-link.service'
+import {
+  QuestionnaireRecipientsDialog,
+  type SelectedRecipient,
+} from '@/components/evaluations/questionnaire-recipients-dialog'
+
+/** Groupes du sélecteur de questionnaires, par public */
+const AUDIENCE_GROUPS: Array<{ audience: QuestionnaireAudience; label: string }> = [
+  { audience: 'student', label: 'Apprenants' },
+  { audience: 'instructor', label: 'Intervenants' },
+  { audience: 'manager', label: 'Managers / entreprises' },
+  { audience: 'funder', label: 'Financeurs' },
+]
+
+/** Libellés des statistiques d'envoi par type */
+const QUESTIONNAIRE_TYPE_LABELS: Record<string, string> = {
+  pre_formation: 'Recueil des besoins',
+  hot: 'À chaud',
+  cold: 'À froid',
+  instructor: 'Intervenants',
+  manager: 'Managers',
+  funder: 'Financeurs',
+}
 
 interface QuestionnaireStats {
   byType: Record<string, { sent: number; viewed: number; submitted: number }>
@@ -147,6 +170,7 @@ export function GestionEvaluations({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [selectedAssessmentType, setSelectedAssessmentType] = useState<'hot' | 'cold'>('hot')
   const [sendResult, setSendResult] = useState<{ sent: number; skipped: number } | null>(null)
+  const [recipientsDialogOpen, setRecipientsDialogOpen] = useState(false)
 
   const { data: qStats, isLoading: qStatsLoading } = useQuery<QuestionnaireStats>({
     queryKey: ['questionnaire-stats', sessionId],
@@ -159,32 +183,43 @@ export function GestionEvaluations({
   })
 
   const sendMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedTemplateId) throw new Error('Choisissez un template')
+    mutationFn: async (recipients?: SelectedRecipient[]) => {
+      if (!selectedTemplateId) throw new Error('Choisissez un modèle')
       const res = await fetch(`/api/sessions/${sessionId}/questionnaires`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template_id: selectedTemplateId, assessment_type: selectedAssessmentType }),
+        body: JSON.stringify({ template_id: selectedTemplateId, assessment_type: selectedAssessmentType, recipients }),
       })
       if (!res.ok) {
         const j = await res.json() as { error?: string }
         throw new Error(j.error ?? 'Erreur envoi')
       }
-      return res.json() as Promise<{ created: number; skipped: number }>
+      return res.json() as Promise<{ created: number; sent?: number; skipped: number }>
     },
     onSuccess: (data) => {
-      setSendResult({ sent: data.created, skipped: data.skipped })
+      setSendResult({ sent: data.sent ?? data.created, skipped: data.skipped })
+      setRecipientsDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['questionnaire-stats', sessionId] })
     },
   })
 
-  // Templates de type satisfaction disponibles
-  const satisfactionTemplates = evaluationTemplates.filter(t =>
-    !t.assessment_type || ['hot', 'cold', 'pre_formation', 'a_chaud', 'a_froid'].includes(t.assessment_type ?? '')
-  )
+  // Modèles de questionnaire (les quiz / examens notés passent par « Nouvelle évaluation »)
+  const questionnaireTemplates = evaluationTemplates.filter((t) => templateAudience(t.assessment_type) !== null)
+  const selectedTemplate = questionnaireTemplates.find((t) => t.id === selectedTemplateId)
+  const selectedAudience = selectedTemplate ? templateAudience(selectedTemplate.assessment_type) : null
+  // Le type vient du modèle ; à chaud / à froid ne se choisit que pour un modèle sans type
+  const templateHasNoType = !!selectedTemplate && !selectedTemplate.assessment_type
 
-  const hotStats = qStats?.byType?.['hot']
-  const coldStats = qStats?.byType?.['cold']
+  const handleSend = () => {
+    setSendResult(null)
+    if (selectedAudience && selectedAudience !== 'student') {
+      setRecipientsDialogOpen(true)
+    } else {
+      sendMutation.mutate(undefined)
+    }
+  }
+
+  const questionnaireStats = Object.entries(qStats?.byType ?? {})
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -218,8 +253,8 @@ export function GestionEvaluations({
               <Send className="h-4.5 w-4.5 text-orange-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Questionnaires de satisfaction</h3>
-              <p className="text-xs text-muted-foreground">Envoi de liens personnalisés aux apprenants inscrits</p>
+              <h3 className="font-semibold text-gray-900">Questionnaires</h3>
+              <p className="text-xs text-muted-foreground">Envoi de liens personnalisés aux apprenants, intervenants, entreprises et financeurs</p>
             </div>
             <button
               type="button"
@@ -231,12 +266,12 @@ export function GestionEvaluations({
           </div>
 
           {/* Stats existantes */}
-          {(hotStats || coldStats) && (
+          {questionnaireStats.length > 0 && (
             <div className="grid grid-cols-2 gap-3 mb-5">
-              {[{ key: 'hot', label: 'À chaud', stats: hotStats }, { key: 'cold', label: 'À froid', stats: coldStats }].map(({ key, label, stats }) =>
+              {questionnaireStats.map(([key, stats]) =>
                 stats ? (
                   <div key={key} className="bg-slate-50 rounded-xl p-3">
-                    <p className="text-xs font-medium text-slate-600 mb-2">{label}</p>
+                    <p className="text-xs font-medium text-slate-600 mb-2">{QUESTIONNAIRE_TYPE_LABELS[key] ?? key}</p>
                     <div className="flex gap-4 text-sm">
                       <div className="flex items-center gap-1.5">
                         <Send className="h-3.5 w-3.5 text-blue-500" />
@@ -259,17 +294,17 @@ export function GestionEvaluations({
 
           {/* Formulaire d'envoi */}
           <div className="space-y-3">
-            {satisfactionTemplates.length === 0 ? (
+            {questionnaireTemplates.length === 0 ? (
               <div className="text-sm text-slate-500 bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <AlertCircle className="h-4 w-4 text-amber-500 inline mr-1.5 -mt-0.5" />
-                Aucun template de satisfaction disponible.{' '}
+                Aucun modèle de questionnaire disponible.{' '}
                 <Link href="/dashboard/evaluations/templates/new" className="text-blue-600 underline">
                   Créer un template
                 </Link>
               </div>
             ) : (
               <div className="flex flex-wrap gap-3 items-end">
-                <div className="flex gap-2">
+                {templateHasNoType && <div className="flex gap-2">
                   {(['hot', 'cold'] as const).map(type => (
                     <button
                       key={type}
@@ -285,21 +320,28 @@ export function GestionEvaluations({
                       {type === 'hot' ? '🔥 À chaud' : '❄️ À froid'}
                     </button>
                   ))}
-                </div>
+                </div>}
                 <select
                   value={selectedTemplateId}
                   onChange={e => setSelectedTemplateId(e.target.value)}
                   className="flex-1 min-w-[180px] h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
-                  <option value="">Choisir un template…</option>
-                  {satisfactionTemplates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
+                  <option value="">Choisir un modèle…</option>
+                  {AUDIENCE_GROUPS.map(({ audience, label }) => {
+                    const group = questionnaireTemplates.filter((t) => templateAudience(t.assessment_type) === audience)
+                    return group.length > 0 ? (
+                      <optgroup key={audience} label={label}>
+                        {group.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </optgroup>
+                    ) : null
+                  })}
                 </select>
                 <Button
                   size="sm"
                   disabled={!selectedTemplateId || sendMutation.isPending}
-                  onClick={() => { setSendResult(null); sendMutation.mutate() }}
+                  onClick={handleSend}
                   className="bg-orange-500 hover:bg-orange-600 text-white"
                 >
                   {sendMutation.isPending ? (
@@ -321,11 +363,23 @@ export function GestionEvaluations({
             {sendResult && (
               <p className="text-sm text-emerald-600 flex items-center gap-1.5">
                 <CheckCheck className="h-4 w-4" />
-                {sendResult.sent} lien(s) créé(s) et envoyé(s)
+                {sendResult.sent} questionnaire(s) envoyé(s)
                 {sendResult.skipped > 0 && `, ${sendResult.skipped} ignoré(s) (déjà soumis)`}
               </p>
             )}
           </div>
+          {selectedTemplate && selectedAudience && selectedAudience !== 'student' && (
+            <QuestionnaireRecipientsDialog
+              open={recipientsDialogOpen}
+              onOpenChange={setRecipientsDialogOpen}
+              sessionId={sessionId}
+              audience={selectedAudience}
+              templateName={selectedTemplate.name}
+              sending={sendMutation.isPending}
+              error={sendMutation.error instanceof Error ? sendMutation.error.message : null}
+              onSend={(recipients) => sendMutation.mutate(recipients)}
+            />
+          )}
         </GlassCard>
       )}
 

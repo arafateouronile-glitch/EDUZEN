@@ -23,7 +23,7 @@ interface QLinkRow {
   expires_at: string
   template_id: string
   instance_id: string | null
-  student_id: string
+  student_id: string | null
   grade_id: string | null
 }
 

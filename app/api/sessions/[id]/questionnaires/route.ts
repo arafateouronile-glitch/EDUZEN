@@ -1,6 +1,8 @@
 /**
  * GET  /api/sessions/[id]/questionnaires — stats d'envoi et de réponse
- * POST /api/sessions/[id]/questionnaires — envoie le questionnaire aux apprenants inscrits
+ * POST /api/sessions/[id]/questionnaires — envoie le questionnaire à son public :
+ *      apprenants inscrits, ou destinataires choisis (intervenants, entreprises,
+ *      financeurs) pour les modèles formateur, manager et financeur
  */
 
 import { NextResponse } from 'next/server'
@@ -9,7 +11,15 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserOrgId } from '@/lib/utils/with-auth'
 import { emailService } from '@/lib/services/email.service'
-import { getOrCreateQuestionnaireLink } from '@/lib/services/questionnaire-link.service'
+import {
+  getOrCreateQuestionnaireLink,
+  getOrCreateRespondentLink,
+  isValidEmail,
+  normalizeAssessmentType,
+  templateAudience,
+  type QuestionnaireAudience,
+} from '@/lib/services/questionnaire-link.service'
+import { loadRecipientCandidates } from '@/lib/services/questionnaire-recipients'
 import { buildEvaluationEmailHtml } from '@/lib/utils/evaluation-email'
 import { escapeHtml } from '@/lib/utils/sanitize-html'
 
@@ -51,6 +61,26 @@ export async function GET(
 
 // ── POST — envoi ──────────────────────────────────────────────────────────────
 
+const MAX_RECIPIENTS = 200
+
+/** Message de l'email selon le public du questionnaire */
+function audienceMessage(audience: QuestionnaireAudience, assessmentType: string, sessionName: string): string {
+  const session = `<strong>${escapeHtml(sessionName)}</strong>`
+  switch (audience) {
+    case 'instructor':
+      return `Vous êtes intervenu(e) sur la formation ${session}. Merci de nous faire part de votre retour via ce questionnaire.`
+    case 'manager':
+      return `Un ou plusieurs de vos collaborateurs ont suivi la formation ${session}. Votre avis nous aide à mesurer l'impact de la formation : merci de répondre à ce questionnaire.`
+    case 'funder':
+      return `Vous avez financé la formation ${session}. Merci de nous faire part de votre retour via ce questionnaire.`
+    default:
+      if (assessmentType === 'pre_formation') {
+        return `Afin de préparer ${session} selon vos besoins, merci de répondre à ce questionnaire.`
+      }
+      return `Merci de participer à ${session}.<br/>Nous souhaiterions recueillir votre avis via ce questionnaire de satisfaction ${assessmentType === 'cold' ? 'à froid' : 'à chaud'}.`
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -64,11 +94,13 @@ export async function POST(
   const orgId = await getUserOrgId(supabase, user.id)
   if (!orgId) return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
 
-  const body = await req.json() as { template_id: string; assessment_type: string }
-  const { template_id, assessment_type } = body
-
-  if (!template_id || !assessment_type) {
-    return NextResponse.json({ error: 'template_id et assessment_type requis' }, { status: 400 })
+  const body = await req.json() as {
+    template_id?: string
+    assessment_type?: string
+    recipients?: Array<{ name?: string; email?: string }>
+  }
+  if (!body.template_id) {
+    return NextResponse.json({ error: 'template_id requis' }, { status: 400 })
   }
 
   // Vérifier la session appartient à l'org
@@ -84,12 +116,117 @@ export async function POST(
   const { data: template } = await supabase
     .from('evaluation_templates')
     .select('id, name, assessment_type')
-    .eq('id', template_id)
+    .eq('id', body.template_id)
     .or(`organization_id.eq.${orgId},organization_id.is.null`)
     .single()
   if (!template) return NextResponse.json({ error: 'Template introuvable' }, { status: 404 })
 
-  // Apprenants inscrits (non annulés) avec email
+  const audience = templateAudience(template.assessment_type)
+  if (!audience) {
+    return NextResponse.json(
+      { error: 'Ce modèle est une évaluation notée : créez-la depuis « Nouvelle évaluation ».' },
+      { status: 400 }
+    )
+  }
+  // Le type vient du modèle ; le choix à chaud / à froid ne sert qu'aux modèles sans type
+  const assessmentType =
+    normalizeAssessmentType(template.assessment_type) ??
+    (body.assessment_type === 'cold' ? 'cold' : 'hot')
+
+  const { data: organization } = await supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', orgId)
+    .single()
+  const organizationName = (organization as { name?: string } | null)?.name ?? ''
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3001}`
+
+  const title = audience === 'student' && assessmentType !== 'pre_formation' ? 'Questionnaire de satisfaction' : template.name
+  const subject =
+    audience === 'student' && assessmentType !== 'pre_formation'
+      ? `${title} ${assessmentType === 'cold' ? 'à froid' : 'à chaud'} — ${session.name}`
+      : `${title} — ${session.name}`
+
+  const sendLink = async (email: string, recipientName: string, token: string) => {
+    const questionnaireUrl = `${appUrl}/q/${token}`
+    await emailService.sendEmail({
+      to: email,
+      subject,
+      html: buildEvaluationEmailHtml({
+        organizationName,
+        recipientName,
+        title,
+        messageHtml: audienceMessage(audience, assessmentType, session.name),
+        url: questionnaireUrl,
+        buttonLabel: 'Répondre au questionnaire',
+        noteHtml: `Ce lien est valable 30 jours. Si le bouton ne fonctionne pas, copiez cette URL :<br/><a href="${questionnaireUrl}" style="color:#2563eb;word-break:break-all;">${questionnaireUrl}</a>`,
+      }),
+    })
+  }
+
+  const results: { student_name: string; sent: boolean; reason?: string }[] = []
+  let created = 0
+  let skipped = 0
+
+  if (audience !== 'student') {
+    const requested = (Array.isArray(body.recipients) ? body.recipients : [])
+      .filter((r) => isValidEmail(r?.email))
+    const byEmail = new Map(requested.map((r) => [r.email!.trim().toLowerCase(), r]))
+    if (byEmail.size === 0) {
+      return NextResponse.json({ error: 'Aucun destinataire avec un email valide' }, { status: 400 })
+    }
+    if (byEmail.size > MAX_RECIPIENTS) {
+      return NextResponse.json({ error: `${MAX_RECIPIENTS} destinataires au maximum` }, { status: 400 })
+    }
+
+    // Les identifiants (utilisateur, entité) ne viennent que de la liste calculée côté serveur
+    const candidates = new Map(
+      (await loadRecipientCandidates(admin, sessionId, audience))
+        .filter((c) => c.email)
+        .map((c) => [c.email!.toLowerCase(), c])
+    )
+
+    for (const [email, requestedRecipient] of byEmail) {
+      const candidate = candidates.get(email)
+      const name = requestedRecipient.name?.trim().slice(0, 200) || candidate?.name || email
+      try {
+        const link = await getOrCreateRespondentLink(admin, {
+          organizationId: orgId,
+          session,
+          template,
+          assessmentType,
+          respondent: {
+            type: audience,
+            name,
+            email,
+            userId: candidate?.userId ?? null,
+            entityId: candidate?.entityId ?? null,
+          },
+        })
+        if (link.status === 'already_submitted') {
+          results.push({ student_name: name, sent: false, reason: 'déjà soumis' })
+          skipped++
+          continue
+        }
+        if (link.created) created++
+        await sendLink(email, name, link.token)
+        results.push({ student_name: name, sent: true })
+      } catch {
+        results.push({ student_name: name, sent: false, reason: 'erreur envoi email' })
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      created,
+      sent: results.filter((r) => r.sent).length,
+      skipped,
+      total: byEmail.size,
+      results,
+    })
+  }
+
+  // Apprenants inscrits (non annulés)
   const { data: enrollments } = await supabase
     .from('enrollments')
     .select('id, student_id, students(id, first_name, last_name, email)')
@@ -108,18 +245,6 @@ export async function POST(
     return NextResponse.json({ error: 'Aucun apprenant inscrit avec email' }, { status: 400 })
   }
 
-  const { data: organization } = await supabase
-    .from('organizations')
-    .select('name')
-    .eq('id', orgId)
-    .single()
-  const organizationName = (organization as { name?: string } | null)?.name ?? ''
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3001}`
-  const results: { student_name: string; sent: boolean; reason?: string }[] = []
-  let created = 0
-  let skipped = 0
-
   for (const student of students) {
     const studentName = `${student.first_name} ${student.last_name}`
 
@@ -128,7 +253,7 @@ export async function POST(
       session,
       student,
       template,
-      assessmentType: assessment_type,
+      assessmentType,
     })
 
     if (link.status === 'already_submitted') {
@@ -137,31 +262,12 @@ export async function POST(
       continue
     }
 
-    const { token } = link
     if (link.created) created++
 
     // Envoi email si email disponible
     if (student.email) {
-      const isNeedsAnalysis = assessment_type === 'pre_formation'
-      const typeLabel = assessment_type === 'hot' ? 'à chaud' : assessment_type === 'cold' ? 'à froid' : assessment_type
-      const title = isNeedsAnalysis ? template.name : 'Questionnaire de satisfaction'
-      const questionnaireUrl = `${appUrl}/q/${token}`
       try {
-        await emailService.sendEmail({
-          to: student.email,
-          subject: `${isNeedsAnalysis ? title : `${title} ${typeLabel}`} — ${session.name}`,
-          html: buildEvaluationEmailHtml({
-            organizationName,
-            recipientName: studentName,
-            title,
-            messageHtml: isNeedsAnalysis
-              ? `Afin de préparer <strong>${escapeHtml(session.name)}</strong> selon vos besoins, merci de répondre à ce questionnaire.`
-              : `Merci de participer à <strong>${escapeHtml(session.name)}</strong>.<br/>Nous souhaiterions recueillir votre avis via ce questionnaire de satisfaction ${escapeHtml(typeLabel)}.`,
-            url: questionnaireUrl,
-            buttonLabel: 'Répondre au questionnaire',
-            noteHtml: `Ce lien est valable 30 jours. Si le bouton ne fonctionne pas, copiez cette URL :<br/><a href="${questionnaireUrl}" style="color:#2563eb;word-break:break-all;">${questionnaireUrl}</a>`,
-          }),
-        })
+        await sendLink(student.email, studentName, link.token)
         results.push({ student_name: studentName, sent: true })
       } catch {
         results.push({ student_name: studentName, sent: false, reason: 'erreur envoi email' })
@@ -174,6 +280,7 @@ export async function POST(
   return NextResponse.json({
     success: true,
     created,
+    sent: results.filter((r) => r.sent).length,
     skipped,
     total: students.length,
     results,

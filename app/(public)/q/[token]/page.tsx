@@ -175,9 +175,9 @@ export default function QuestionnairePage() {
             </div>
             <div>
               <p className="text-sm text-blue-600 font-medium uppercase tracking-wide mb-1">
-                {data.assessment_type === 'pre_formation'
-                  ? data.template.name
-                  : `Questionnaire de satisfaction ${typeLabel(data.assessment_type)}`}
+                {data.assessment_type === 'hot' || data.assessment_type === 'cold'
+                  ? `Questionnaire de satisfaction ${typeLabel(data.assessment_type)}`
+                  : data.template.name}
               </p>
               <h1 className="text-xl font-bold text-slate-800 leading-snug">{data.session_name}</h1>
               <p className="text-slate-500 text-sm mt-1">
