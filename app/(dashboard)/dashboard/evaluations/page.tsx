@@ -27,6 +27,7 @@ import { evaluationSchema, type EvaluationFormData } from '@/lib/validations/sch
 import type { GradeWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { logger } from '@/lib/utils/logger'
+import { templateAudience } from '@/lib/services/questionnaire-link.service'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
@@ -503,6 +504,44 @@ export default function EvaluationsPage() {
     onError: (error: Error) => addToast({ type: 'error', title: 'Erreur', description: error.message })
   })
 
+  // Questionnaire intervenant / manager / financeur : un lien par destinataire de
+  // la session (pas une évaluation par apprenant), dans le même lot que le QR code
+  const respondentBatchMutation = useMutation({
+    mutationFn: async (data: EvaluationFormData) => {
+      if (!data.session_id) throw new Error('Choisissez la session concernée.')
+      if (!data.template_id) throw new Error('Choisissez le modèle de questionnaire à envoyer.')
+      const res = await fetch(`/api/sessions/${data.session_id}/questionnaires`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: data.template_id,
+          assessment_type: data.assessment_type,
+          all_recipients: true,
+          send_email: data.sendByEmail ?? true,
+          batch: { subject: data.subject, graded_at: data.graded_at || new Date().toISOString() },
+        }),
+      })
+      const json = (await res.json()) as { error?: string; total?: number; sent?: number; failed?: number; skipped?: number }
+      if (!res.ok) throw new Error(json.error ?? 'Création impossible')
+      return json
+    },
+    onSuccess: async (result, data) => {
+      setShowCreateModal(false)
+      reset()
+      await queryClient.invalidateQueries({ queryKey: ['evaluations'] })
+      await queryClient.invalidateQueries({ queryKey: ['evaluation-stats'] })
+      const total = result.total ?? 0
+      addToast({
+        type: result.failed ? 'warning' : 'success',
+        title: 'Questionnaire prêt',
+        description: data.sendByEmail ?? true
+          ? `${result.sent ?? 0} email(s) envoyé(s) sur ${total} destinataire(s)${result.failed ? `, ${result.failed} échec(s)` : ''}.`
+          : `${total} destinataire(s) : partagez le QR code du questionnaire.`,
+      })
+    },
+    onError: (error: Error) => addToast({ type: 'error', title: 'Erreur', description: error.message }),
+  })
+
   // Évaluation collective : aucun étudiant précis sélectionné mais une session
   // choisie — crée un grade par apprenant actif inscrit à cette session.
   const createBulkMutation = useMutation({
@@ -659,6 +698,11 @@ export default function EvaluationsPage() {
         return
       }
       updateMutation.mutate(data)
+      return
+    }
+    const audience = templateAudience(data.assessment_type)
+    if (audience && audience !== 'student') {
+      respondentBatchMutation.mutate(data)
       return
     }
     if (!data.student_id) {
@@ -1060,7 +1104,10 @@ export default function EvaluationsPage() {
                         <div className="text-right">
                           <div className="flex items-center gap-2 justify-end text-sm text-gray-500">
                             <Users className="h-3.5 w-3.5" />
-                            {batch.items.length} apprenant{batch.items.length > 1 ? 's' : ''}
+                            {batch.items.length}{' '}
+                            {templateAudience(batch.assessment_type) === 'student' || !templateAudience(batch.assessment_type)
+                              ? `apprenant${batch.items.length > 1 ? 's' : ''}`
+                              : `destinataire${batch.items.length > 1 ? 's' : ''}`}
                           </div>
                           {batch.graded_at && (
                             <div className="flex items-center gap-1.5 justify-end text-xs text-gray-400 mt-0.5">
@@ -1130,7 +1177,9 @@ export default function EvaluationsPage() {
                               <div className="flex items-center gap-1.5 text-sm">
                                 <User className="h-3.5 w-3.5 text-gray-400" />
                                 <span className="font-medium text-gray-700">
-                                  {student ? `${student.first_name} ${student.last_name}` : 'Apprenant'}
+                                  {student
+                                    ? `${student.first_name} ${student.last_name}`
+                                    : (evaluation as { questionnaire_links?: Array<{ student_name?: string | null }> }).questionnaire_links?.[0]?.student_name ?? 'Apprenant'}
                                 </span>
                               </div>
                               <div className="flex items-center gap-6">
@@ -1382,7 +1431,7 @@ export default function EvaluationsPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={createMutation.isPending || createBulkMutation.isPending || updateMutation.isPending}
+                      disabled={createMutation.isPending || createBulkMutation.isPending || respondentBatchMutation.isPending || updateMutation.isPending}
                       className="shadow-lg shadow-brand-blue/20"
                     >
                       {editingEvaluation

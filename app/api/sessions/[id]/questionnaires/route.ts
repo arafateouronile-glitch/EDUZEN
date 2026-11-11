@@ -98,6 +98,12 @@ export async function POST(
     template_id?: string
     assessment_type?: string
     recipients?: Array<{ name?: string; email?: string }>
+    /** Tous les destinataires proposés (page Évaluations) au lieu d'une liste choisie */
+    all_recipients?: boolean
+    /** Lot d'évaluations de la page Évaluations : sujet, date et type choisis */
+    batch?: { subject?: string; graded_at?: string }
+    /** false : prépare les liens (QR code) sans envoyer d'email */
+    send_email?: boolean
   }
   if (!body.template_id) {
     return NextResponse.json({ error: 'template_id requis' }, { status: 400 })
@@ -121,7 +127,15 @@ export async function POST(
     .single()
   if (!template) return NextResponse.json({ error: 'Template introuvable' }, { status: 404 })
 
-  const audience = templateAudience(template.assessment_type)
+  const batch = body.batch?.subject && body.batch?.graded_at
+    ? { subject: body.batch.subject.slice(0, 200), gradedAt: body.batch.graded_at }
+    : undefined
+  // Page Évaluations : le type choisi dans le formulaire fixe le public
+  const batchAudience = batch && ['instructor', 'manager', 'funder'].includes(body.assessment_type ?? '')
+    ? (body.assessment_type as QuestionnaireAudience)
+    : null
+  const audience = batchAudience ?? templateAudience(template.assessment_type)
+  const sendEmail = body.send_email !== false
   if (!audience) {
     return NextResponse.json(
       { error: 'Ce modèle est une évaluation notée : créez-la depuis « Nouvelle évaluation ».' },
@@ -130,6 +144,7 @@ export async function POST(
   }
   // Le type vient du modèle ; le choix à chaud / à froid ne sert qu'aux modèles sans type
   const assessmentType =
+    batchAudience ??
     normalizeAssessmentType(template.assessment_type) ??
     (body.assessment_type === 'cold' ? 'cold' : 'hot')
 
@@ -177,22 +192,27 @@ export async function POST(
   let skipped = 0
 
   if (audience !== 'student') {
-    const requested = (Array.isArray(body.recipients) ? body.recipients : [])
-      .filter((r) => isValidEmail(r?.email))
-    const byEmail = new Map(requested.map((r) => [r.email!.trim().toLowerCase(), r]))
-    if (byEmail.size === 0) {
-      return NextResponse.json({ error: 'Aucun destinataire avec un email valide' }, { status: 400 })
-    }
-    if (byEmail.size > MAX_RECIPIENTS) {
-      return NextResponse.json({ error: `${MAX_RECIPIENTS} destinataires au maximum` }, { status: 400 })
-    }
-
     // Les identifiants (utilisateur, entité) ne viennent que de la liste calculée côté serveur
     const candidates = new Map(
       (await loadRecipientCandidates(admin, sessionId, audience))
         .filter((c) => c.email)
         .map((c) => [c.email!.toLowerCase(), c])
     )
+
+    const requested = body.all_recipients
+      ? [...candidates.values()].map((c) => ({ name: c.name, email: c.email as string }))
+      : (Array.isArray(body.recipients) ? body.recipients : []).filter((r) => isValidEmail(r?.email))
+    const byEmail = new Map(requested.map((r) => [r.email!.trim().toLowerCase(), r]))
+    if (byEmail.size === 0) {
+      const who = { instructor: 'intervenant', manager: 'entreprise', funder: 'financeur' }[audience]
+      return NextResponse.json(
+        { error: body.all_recipients ? `Aucun ${who} avec un email sur cette session` : 'Aucun destinataire avec un email valide' },
+        { status: 400 }
+      )
+    }
+    if (byEmail.size > MAX_RECIPIENTS) {
+      return NextResponse.json({ error: `${MAX_RECIPIENTS} destinataires au maximum` }, { status: 400 })
+    }
 
     for (const [email, requestedRecipient] of byEmail) {
       const candidate = candidates.get(email)
@@ -210,6 +230,7 @@ export async function POST(
             userId: candidate?.userId ?? null,
             entityId: candidate?.entityId ?? null,
           },
+          batch,
         })
         if (link.status === 'already_submitted') {
           results.push({ student_name: name, sent: false, reason: 'déjà soumis' })
@@ -217,6 +238,10 @@ export async function POST(
           continue
         }
         if (link.created) created++
+        if (!sendEmail) {
+          results.push({ student_name: name, sent: false, reason: 'lien préparé' })
+          continue
+        }
         await sendLink(email, name, link.token)
         results.push({ student_name: name, sent: true })
       } catch {

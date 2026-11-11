@@ -48,7 +48,8 @@ export class EvaluationService {
         *,
         students(id, first_name, last_name, student_number),
         sessions(id, name, formations(name, programs(name))),
-        users(id, full_name)
+        users(id, full_name),
+        questionnaire_links(student_name)
       `)
       .eq('organization_id', organizationId)
       .order('graded_at', { ascending: false })

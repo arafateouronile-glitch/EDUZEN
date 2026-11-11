@@ -99,6 +99,12 @@ describe('getOrCreateRespondentLink', () => {
     })
   })
 
+  it("rejoint le lot de la page Évaluations (même sujet et même date que le QR code)", async () => {
+    const { client, inserted } = fakeAdmin({})
+    await getOrCreateRespondentLink(client, { ...input, batch: { subject: 'Bilan formateur', gradedAt: '2026-11-11' } })
+    expect(inserted.grades[0]).toMatchObject({ subject: 'Bilan formateur', graded_at: '2026-11-11', student_id: null })
+  })
+
   it('réutilise le lien existant, ou ne renvoie rien si déjà répondu', async () => {
     const reuse = fakeAdmin({ questionnaire_links: [{ token: 't', submitted_at: null }] })
     expect(await getOrCreateRespondentLink(reuse.client, input)).toEqual({ status: 'ready', token: 't', created: false })

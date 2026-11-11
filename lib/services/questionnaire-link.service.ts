@@ -170,6 +170,8 @@ export interface RespondentLinkInput {
   template: { id: string; name: string }
   assessmentType: string
   respondent: QuestionnaireRecipient & { email: string }
+  /** Lot d'évaluations à rejoindre (page Évaluations, QR code) : sujet et date communs */
+  batch?: { subject: string; gradedAt: string }
 }
 
 /**
@@ -180,7 +182,7 @@ export async function getOrCreateRespondentLink(
   admin: AnyClient,
   input: RespondentLinkInput
 ): Promise<QuestionnaireLinkResult> {
-  const { organizationId, session, template, assessmentType, respondent } = input
+  const { organizationId, session, template, assessmentType, respondent, batch } = input
   const email = respondent.email.trim().toLowerCase()
 
   const { data: existing } = await admin
@@ -204,8 +206,8 @@ export async function getOrCreateRespondentLink(
       session_id: session.id,
       student_id: null,
       assessment_type: assessmentType,
-      subject: template.name,
-      graded_at: new Date().toISOString(),
+      subject: batch?.subject ?? template.name,
+      graded_at: batch?.gradedAt ?? new Date().toISOString(),
       max_score: 5,
     })
     .select('id')

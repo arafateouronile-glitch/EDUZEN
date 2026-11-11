@@ -8,6 +8,13 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { logger, maskId } from '@/lib/utils/logger'
 
+/** Intervenant, entreprise ou financeur (questionnaires non apprenants) */
+interface Respondent {
+  key: string
+  name: string
+  detail: string | null
+}
+
 interface EligibleStudent {
   grade_id: string
   student_id: string
@@ -19,10 +26,12 @@ export default function PublicEvaluationLinkPage() {
   const router = useRouter()
   const token = params.token as string
 
-  const [status, setStatus] = useState<'loading' | 'select' | 'redirecting' | 'invalid'>('loading')
+  const [status, setStatus] = useState<'loading' | 'select' | 'redirecting' | 'done' | 'invalid'>('loading')
   const [subject, setSubject] = useState<string>('')
   const [sessionName, setSessionName] = useState<string | null>(null)
   const [students, setStudents] = useState<EligibleStudent[]>([])
+  const [respondents, setRespondents] = useState<Respondent[] | null>(null)
+  const [selectError, setSelectError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -36,6 +45,7 @@ export default function PublicEvaluationLinkPage() {
         setSubject(data.subject || 'Évaluation')
         setSessionName(data.session_name || null)
         setStudents(data.students || [])
+        setRespondents(data.respondents ?? null)
         setStatus('select')
       } catch (err) {
         logger.error('Public evaluation link - load failed', err, { token: maskId(token) })
@@ -49,6 +59,34 @@ export default function PublicEvaluationLinkPage() {
     setStatus('redirecting')
     router.replace(`/learner/access/${student.student_id}?redirect=${encodeURIComponent(`/learner/evaluations/${student.grade_id}`)}`)
   }
+
+  // Questionnaire intervenant / manager / financeur : lien /q nominatif, sans espace apprenant
+  const handleSelectRespondent = async (respondent: Respondent) => {
+    setSelectError(null)
+    setStatus('redirecting')
+    try {
+      const res = await fetch(`/api/evaluations/public-link/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: respondent.key }),
+      })
+      const data = (await res.json()) as { status?: string; token?: string; error?: string }
+      if (!res.ok) throw new Error(data.error ?? 'Accès impossible')
+      if (data.status === 'already_submitted') {
+        setStatus('done')
+        return
+      }
+      router.replace(`/q/${data.token}`)
+    } catch (err) {
+      logger.error('Public evaluation link - respondent failed', err, { token: maskId(token) })
+      setSelectError(err instanceof Error ? err.message : 'Accès impossible')
+      setStatus('select')
+    }
+  }
+
+  const people = respondents
+    ? respondents.map((r) => ({ key: r.key, name: r.name, detail: r.detail, onClick: () => handleSelectRespondent(r) }))
+    : students.map((s) => ({ key: s.grade_id, name: s.student_name, detail: null, onClick: () => handleSelect(s) }))
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -84,33 +122,40 @@ export default function PublicEvaluationLinkPage() {
               </div>
               <h2 className="text-lg font-semibold text-white mb-1">{subject}</h2>
               {sessionName && <p className="text-blue-200/70 text-sm">{sessionName}</p>}
-              <p className="text-blue-200/60 text-sm mt-3">Touchez votre nom pour accéder à votre évaluation</p>
+              <p className="text-blue-200/60 text-sm mt-3">
+                {respondents ? 'Touchez votre nom pour répondre au questionnaire' : 'Touchez votre nom pour accéder à votre évaluation'}
+              </p>
             </div>
 
-            {students.length === 0 ? (
+            {selectError && <p className="text-center text-red-300 text-sm mb-4">{selectError}</p>}
+
+            {people.length === 0 ? (
               <p className="text-center text-blue-200/70 text-sm py-6">
-                Aucun apprenant trouvé pour cette évaluation.
+                {respondents ? 'Aucun destinataire trouvé pour ce questionnaire.' : 'Aucun apprenant trouvé pour cette évaluation.'}
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1">
-                {students.map((student) => (
+                {people.map((person) => (
                   <button
-                    key={student.grade_id}
+                    key={person.key}
                     type="button"
-                    onClick={() => handleSelect(student)}
+                    onClick={person.onClick}
                     className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 transition-colors text-center"
                   >
                     <div className="w-10 h-10 rounded-full bg-blue-500/30 flex items-center justify-center">
                       <User className="w-5 h-5 text-blue-200" />
                     </div>
-                    <span className="text-sm text-white font-medium leading-tight">{student.student_name}</span>
+                    <span className="text-sm text-white font-medium leading-tight">{person.name}</span>
+                    {person.detail && <span className="text-xs text-blue-200/60 leading-tight">{person.detail}</span>}
                   </button>
                 ))}
               </div>
             )}
 
             <p className="text-center text-blue-200/50 text-xs mt-6">
-              Votre nom n&apos;apparaît pas ? Contactez votre formateur.
+              {respondents
+                ? <>Votre nom n&apos;apparaît pas ? Contactez l&apos;organisme de formation.</>
+                : <>Votre nom n&apos;apparaît pas ? Contactez votre formateur.</>}
             </p>
           </div>
         )}
@@ -120,7 +165,17 @@ export default function PublicEvaluationLinkPage() {
             <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">Accès à votre espace...</h2>
+            <h2 className="text-xl font-semibold text-white mb-2">{respondents ? 'Ouverture du questionnaire...' : 'Accès à votre espace...'}</h2>
+          </div>
+        )}
+
+        {status === 'done' && (
+          <div className="text-center">
+            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ClipboardCheck className="w-10 h-10 text-emerald-300" />
+            </div>
+            <h2 className="text-xl font-semibold text-white mb-2">Déjà répondu</h2>
+            <p className="text-blue-200/70">Vous avez déjà répondu à ce questionnaire. Merci !</p>
           </div>
         )}
 
