@@ -169,7 +169,7 @@ export function GestionEvaluations({
   // ── Questionnaires ──────────────────────────────────────────────────────────
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [selectedAssessmentType, setSelectedAssessmentType] = useState<'hot' | 'cold'>('hot')
-  const [sendResult, setSendResult] = useState<{ sent: number; skipped: number } | null>(null)
+  const [sendResult, setSendResult] = useState<{ sent: number; skipped: number; failed: number } | null>(null)
   const [recipientsDialogOpen, setRecipientsDialogOpen] = useState(false)
 
   const { data: qStats, isLoading: qStatsLoading } = useQuery<QuestionnaireStats>({
@@ -194,10 +194,10 @@ export function GestionEvaluations({
         const j = await res.json() as { error?: string }
         throw new Error(j.error ?? 'Erreur envoi')
       }
-      return res.json() as Promise<{ created: number; sent?: number; skipped: number }>
+      return res.json() as Promise<{ created: number; sent?: number; failed?: number; skipped: number }>
     },
     onSuccess: (data) => {
-      setSendResult({ sent: data.sent ?? data.created, skipped: data.skipped })
+      setSendResult({ sent: data.sent ?? data.created, skipped: data.skipped, failed: data.failed ?? 0 })
       setRecipientsDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['questionnaire-stats', sessionId] })
     },
@@ -365,6 +365,12 @@ export function GestionEvaluations({
                 <CheckCheck className="h-4 w-4" />
                 {sendResult.sent} questionnaire(s) envoyé(s)
                 {sendResult.skipped > 0 && `, ${sendResult.skipped} ignoré(s) (déjà soumis)`}
+              </p>
+            )}
+            {sendResult && sendResult.failed > 0 && (
+              <p className="text-sm text-red-600 flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4" />
+                {sendResult.failed} email(s) non envoyé(s) : réessayez, le lien reste le même
               </p>
             )}
           </div>

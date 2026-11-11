@@ -10,7 +10,7 @@ import type { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserOrgId } from '@/lib/utils/with-auth'
-import { emailService } from '@/lib/services/email.service'
+import { sendEmailViaResend, verifiedSenderAddress } from '@/lib/utils/send-email-resend'
 import {
   getOrCreateQuestionnaireLink,
   getOrCreateRespondentLink,
@@ -135,10 +135,15 @@ export async function POST(
 
   const { data: organization } = await supabase
     .from('organizations')
-    .select('name')
+    .select('name, email')
     .eq('id', orgId)
     .single()
   const organizationName = (organization as { name?: string } | null)?.name ?? ''
+  // Envoi direct par Resend (pas de fetch vers /api/email/send, qui n'a pas la
+  // session de l'utilisateur côté serveur) : expéditeur au nom de l'organisme,
+  // réponses à l'organisme
+  const from = `${(organizationName || 'EDUZEN').replace(/[<>"]/g, '')} <${verifiedSenderAddress()}>`
+  const replyTo = (organization as { email?: string | null } | null)?.email || undefined
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3001}`
 
   const title = audience === 'student' && assessmentType !== 'pre_formation' ? 'Questionnaire de satisfaction' : template.name
@@ -149,7 +154,9 @@ export async function POST(
 
   const sendLink = async (email: string, recipientName: string, token: string) => {
     const questionnaireUrl = `${appUrl}/q/${token}`
-    await emailService.sendEmail({
+    const sent = await sendEmailViaResend({
+      from,
+      replyTo,
       to: email,
       subject,
       html: buildEvaluationEmailHtml({
@@ -162,6 +169,7 @@ export async function POST(
         noteHtml: `Ce lien est valable 30 jours. Si le bouton ne fonctionne pas, copiez cette URL :<br/><a href="${questionnaireUrl}" style="color:#2563eb;word-break:break-all;">${questionnaireUrl}</a>`,
       }),
     })
+    if (!sent.success) throw new Error(sent.error ?? 'Envoi impossible')
   }
 
   const results: { student_name: string; sent: boolean; reason?: string }[] = []
@@ -220,6 +228,7 @@ export async function POST(
       success: true,
       created,
       sent: results.filter((r) => r.sent).length,
+      failed: results.filter((r) => r.reason === 'erreur envoi email').length,
       skipped,
       total: byEmail.size,
       results,
@@ -281,6 +290,7 @@ export async function POST(
     success: true,
     created,
     sent: results.filter((r) => r.sent).length,
+    failed: results.filter((r) => r.reason === 'erreur envoi email').length,
     skipped,
     total: students.length,
     results,
