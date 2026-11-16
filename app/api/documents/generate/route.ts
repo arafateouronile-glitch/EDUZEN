@@ -4,7 +4,7 @@ import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
-import { emailService } from '@/lib/services/email.service'
+import { sendOrganizationEmail } from '@/lib/utils/send-organization-email'
 import { templateAnalyticsService } from '@/lib/services/template-analytics.service'
 import type { GenerateDocumentInput, DocumentTemplate } from '@/lib/types/document-templates'
 import type { Database } from '@/types/database.types'
@@ -81,6 +81,7 @@ async function generateDocumentBlob(
 
 async function sendDocumentEmail(params: {
   supabase: ReturnType<typeof createSupabaseServerClient>
+  organizationId: string
   body: GenerateDocumentInput
   template: { id: string; name?: string | null; type: string }
   organizationName: string | null
@@ -89,7 +90,7 @@ async function sendDocumentEmail(params: {
   fileName: string
   documentId: string | undefined
 }): Promise<{ success: boolean; error?: string }> {
-  const { supabase, body, template, organizationName, organizationEmail, fileBlob, fileName, documentId } = params
+  const { supabase, organizationId, body, template, organizationName, organizationEmail, fileBlob, fileName, documentId } = params
 
   let recipientName = ''
   let emailTo = body.options?.emailTo ?? ''
@@ -110,14 +111,10 @@ async function sendDocumentEmail(params: {
   if (!emailTo) return { success: false, error: 'Aucun destinataire email' }
 
   const documentTitle = template.name || `Document ${template.type}`
-  const arrayBuffer = await fileBlob.arrayBuffer()
-  const contentTypeMap: Record<string, string> = {
-    PDF:  'application/pdf',
-    DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    HTML: 'text/html',
-  }
+  const content = Buffer.from(await fileBlob.arrayBuffer())
 
-  await emailService.sendEmail({
+  const sent = await sendOrganizationEmail({
+    organizationId,
     to: emailTo,
     subject: `${documentTitle} - ${organizationName || 'Eduzen'}`,
     html: `
@@ -143,9 +140,11 @@ async function sendDocumentEmail(params: {
         </div>
       </div></body></html>`,
     text: `Bonjour${recipientName ? ` ${recipientName}` : ''},\n\nVeuillez trouver ci-joint votre document ${documentTitle}.\n\nCe document a été généré le ${new Date().toLocaleDateString('fr-FR')}.\n\n${organizationName ? `Cordialement,\n${organizationName}` : 'Cordialement,\nL\'équipe Eduzen'}`,
-    attachments: [{ filename: fileName, content: arrayBuffer, contentType: contentTypeMap[body.format] || 'application/octet-stream' }],
+    attachments: [{ filename: fileName, content }],
     templateType: template.type,
+    metadata: { document_id: documentId ?? null },
   })
+  if (!sent.success) return { success: false, error: sent.error ?? 'Envoi impossible' }
 
   logger.info('Email envoyé', { to: emailTo, documentId })
   return { success: true }
@@ -283,6 +282,7 @@ export async function POST(request: NextRequest) {
         try {
           emailResult = await sendDocumentEmail({
             supabase,
+            organizationId: orgId,
             body,
             template,
             organizationName:  organization?.name ?? null,

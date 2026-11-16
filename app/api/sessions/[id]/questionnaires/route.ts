@@ -10,7 +10,7 @@ import type { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserOrgId } from '@/lib/utils/with-auth'
-import { sendEmailViaResend, verifiedSenderAddress } from '@/lib/utils/send-email-resend'
+import { sendOrganizationEmail } from '@/lib/utils/send-organization-email'
 import {
   getOrCreateQuestionnaireLink,
   getOrCreateRespondentLink,
@@ -150,15 +150,10 @@ export async function POST(
 
   const { data: organization } = await supabase
     .from('organizations')
-    .select('name, email')
+    .select('name')
     .eq('id', orgId)
     .single()
   const organizationName = (organization as { name?: string } | null)?.name ?? ''
-  // Envoi direct par Resend (pas de fetch vers /api/email/send, qui n'a pas la
-  // session de l'utilisateur côté serveur) : expéditeur au nom de l'organisme,
-  // réponses à l'organisme
-  const from = `${(organizationName || 'EDUZEN').replace(/[<>"]/g, '')} <${verifiedSenderAddress()}>`
-  const replyTo = (organization as { email?: string | null } | null)?.email || undefined
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? `http://localhost:${process.env.PORT ?? 3001}`
 
   const title = audience === 'student' && assessmentType !== 'pre_formation' ? 'Questionnaire de satisfaction' : template.name
@@ -169,9 +164,10 @@ export async function POST(
 
   const sendLink = async (email: string, recipientName: string, token: string) => {
     const questionnaireUrl = `${appUrl}/q/${token}`
-    const sent = await sendEmailViaResend({
-      from,
-      replyTo,
+    const sent = await sendOrganizationEmail({
+      organizationId: orgId,
+      templateType: `questionnaire_${assessmentType}`,
+      metadata: { session_id: sessionId, template_id: template.id },
       to: email,
       subject,
       html: buildEvaluationEmailHtml({

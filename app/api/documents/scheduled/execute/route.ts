@@ -12,7 +12,7 @@ import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { mapDataToVariables } from '@/lib/utils/document-generation/variable-mapper'
-import { EmailService } from '@/lib/services/email.service'
+import { sendOrganizationEmail } from '@/lib/utils/send-organization-email'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { uploadGeneratedDocument } from '@/lib/utils/document-storage'
@@ -154,9 +154,9 @@ export async function POST(request: NextRequest) {
                 ? [studentEmail]
                 : recipientEmails
 
-              const emailService = new EmailService()
               for (const email of emailsToSend) {
-                await emailService.sendEmail({
+                const sent = await sendOrganizationEmail({
+                  organizationId: generation.organization_id,
                   to: email,
                   subject: `${generation.name} - ${student.first_name} ${student.last_name}`,
                   html: `
@@ -186,17 +186,13 @@ export async function POST(request: NextRequest) {
                       </body>
                     </html>
                   `,
-                  attachments: [{
-                    filename: fileName,
-                    content: arrayBuffer,
-                    contentType: generation.format === 'PDF'
-                      ? 'application/pdf'
-                      : generation.format === 'DOCX'
-                      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                      : 'text/html',
-                  }],
+                  attachments: [{ filename: fileName, content: docBuffer }],
                   templateType: template.type,
+                  metadata: { scheduled_generation_id: generation.id, student_id: studentId },
                 })
+                if (!sent.success) {
+                  logger.warn('Document programmé : email non envoyé', { to: email, generationId: generation.id, error: sent.error })
+                }
               }
             }
           } catch (studentError) {
