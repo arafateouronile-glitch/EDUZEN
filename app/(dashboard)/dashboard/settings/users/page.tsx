@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import { callUsersApi } from '@/lib/utils/users-api'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -150,11 +151,7 @@ function UsersSettingsPageContent() {
   // Mutation pour activer/désactiver un utilisateur
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
-      const { error } = await supabase
-        .from('users')
-        .update({ is_active: !isActive })
-        .eq('id', userId)
-      if (error) throw error
+      await callUsersApi(userId, 'PATCH', { is_active: !isActive })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-users'] })
@@ -168,6 +165,29 @@ function UsersSettingsPageContent() {
       addToast({
         title: 'Erreur',
         description: error instanceof Error ? error.message : 'Erreur lors de la mise à jour',
+        type: 'error',
+      })
+    },
+  })
+
+  // Suppression ; un utilisateur avec de l'historique est désactivé à la place
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) =>
+      callUsersApi(userId, 'DELETE') as Promise<{ deleted?: boolean; deactivated?: boolean }>,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['organization-users'] })
+      addToast({
+        title: result.deactivated ? 'Utilisateur désactivé' : 'Utilisateur supprimé',
+        description: result.deactivated
+          ? "Cet utilisateur a de l'historique (sessions, documents…) : il a été désactivé et ne peut plus se connecter."
+          : "L'utilisateur a été supprimé.",
+        type: 'success',
+      })
+    },
+    onError: (error: unknown) => {
+      addToast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Erreur lors de la suppression',
         type: 'error',
       })
     },
@@ -502,6 +522,21 @@ function UsersSettingsPageContent() {
                           <Mail className="h-4 w-4 mr-2" />
                           Envoyer un email de connexion
                         </Button>
+                        {userItem.id !== user?.id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              if (!confirm(`Supprimer ${userItem.full_name || userItem.email} ? Cette action est définitive. S'il a de l'historique (sessions, documents…), il sera désactivé à la place.`)) return
+                              deleteUserMutation.mutate(userItem.id)
+                            }}
+                            disabled={deleteUserMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Supprimer
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

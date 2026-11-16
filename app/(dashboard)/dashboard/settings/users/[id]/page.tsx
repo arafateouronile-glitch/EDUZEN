@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
 import { RoleGuard, ADMIN_ROLES } from '@/components/auth/role-guard'
+import { callUsersApi } from '@/lib/utils/users-api'
 import {
   ArrowLeft,
   User,
@@ -81,18 +82,13 @@ function EditUserPageContent() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          email: data.email,
-          full_name: data.full_name,
-          phone: data.phone || null,
-          role: data.role,
-          is_active: data.is_active,
-        })
-        .eq('id', userId)
-      
-      if (error) throw error
+      await callUsersApi(userId, 'PATCH', {
+        email: data.email,
+        full_name: data.full_name,
+        phone: data.phone || null,
+        role: data.role,
+        is_active: data.is_active,
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organization-users'] })
