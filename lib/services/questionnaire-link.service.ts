@@ -20,6 +20,30 @@ export type QuestionnaireLinkResult =
   | { status: 'ready'; token: string; created: boolean }
 
 /**
+ * Date du lot du questionnaire dans la session : celle de la première évaluation
+ * déjà créée pour ce modèle et ce type, sinon maintenant. Les évaluations d'un
+ * même lot partagent cette date, qui les regroupe en un seul bloc et un seul QR.
+ */
+async function batchGradedAt(
+  admin: AnyClient,
+  sessionId: string,
+  subject: string,
+  assessmentType: string
+): Promise<string> {
+  const { data } = await admin
+    .from('grades')
+    .select('graded_at')
+    .eq('session_id', sessionId)
+    .eq('subject', subject)
+    .eq('assessment_type', assessmentType)
+    .not('graded_at', 'is', null)
+    .order('graded_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return (data as { graded_at?: string | null } | null)?.graded_at ?? new Date().toISOString()
+}
+
+/**
  * Lien de l'apprenant pour ce type d'évaluation. Réutilise le lien, ou l'évaluation
  * déjà créée mais non remplie, pour ne pas compter deux fois l'apprenant dans les statistiques.
  */
@@ -76,7 +100,7 @@ export async function getOrCreateQuestionnaireLink(
         student_id: student.id,
         assessment_type: assessmentType,
         subject: template.name,
-        graded_at: new Date().toISOString(),
+        graded_at: await batchGradedAt(admin, session.id, template.name, assessmentType),
         max_score: 5,
       })
       .select('id')
@@ -207,7 +231,7 @@ export async function getOrCreateRespondentLink(
       student_id: null,
       assessment_type: assessmentType,
       subject: batch?.subject ?? template.name,
-      graded_at: batch?.gradedAt ?? new Date().toISOString(),
+      graded_at: batch?.gradedAt ?? (await batchGradedAt(admin, session.id, batch?.subject ?? template.name, assessmentType)),
       max_score: 5,
     })
     .select('id')

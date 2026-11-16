@@ -12,6 +12,7 @@ function fakeAdmin(rows: Rows) {
         select: () => chain,
         eq: () => chain,
         in: () => chain,
+        not: () => chain,
         order: () => chain,
         limit: () => chain,
         maybeSingle: async () => ({ data: rows[table]?.[0] ?? null }),
@@ -76,6 +77,12 @@ describe('getOrCreateQuestionnaireLink', () => {
     expect(inserted.grades?.[0]).toMatchObject({ assessment_type: 'pre_formation', student_id: 'student' })
     expect(inserted.evaluation_template_instances?.[0]).toMatchObject({ template_id: 'template' })
     expect(inserted.questionnaire_links?.[0]).toMatchObject({ student_name: 'Marie Dupont' })
+  })
+
+  it('rejoint le lot déjà créé dans la session (même date, donc un seul QR)', async () => {
+    const { client, inserted } = fakeAdmin({ grades: [{ id: 'other', graded_at: '2026-11-13T09:00:00.000Z' }] })
+    await getOrCreateQuestionnaireLink(client, input)
+    expect(inserted.grades?.[0]).toMatchObject({ graded_at: '2026-11-13T09:00:00.000Z' })
   })
 })
 

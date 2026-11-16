@@ -21,6 +21,7 @@ function fakeAdmin(rows: Rows) {
         select: () => chain,
         eq: () => chain,
         neq: () => chain,
+        not: () => chain,
         order: () => chain,
         limit: () => chain,
         maybeSingle: async () => ({ data: rows[table]?.[0] ?? null }),
