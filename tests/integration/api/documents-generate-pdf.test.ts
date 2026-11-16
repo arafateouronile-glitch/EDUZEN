@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/documents/generate-pdf/route'
 
-vi.mock('@supabase/ssr', () => ({
-  createServerClient: vi.fn(),
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(),
 }))
 
 vi.mock('@/lib/utils/rate-limiter-distributed', () => ({
@@ -21,8 +21,8 @@ describe('API POST documents/generate-pdf', () => {
   })
 
   it('returns 401 when not authenticated', async () => {
-    const { createServerClient } = await import('@supabase/ssr')
-    vi.mocked(createServerClient).mockReturnValue({
+    const { createClient } = await import('@/lib/supabase/server')
+    vi.mocked(createClient).mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
           data: { user: null },
@@ -40,8 +40,8 @@ describe('API POST documents/generate-pdf', () => {
   })
 
   it('returns 400 when template is missing', async () => {
-    const { createServerClient } = await import('@supabase/ssr')
-    vi.mocked(createServerClient).mockReturnValue({
+    const { createClient } = await import('@/lib/supabase/server')
+    vi.mocked(createClient).mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
           data: { user: { id: 'user-1', email: 'test@test.com' } },

@@ -1,6 +1,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
-import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase/server'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
@@ -10,26 +10,11 @@ import type { GenerateDocumentInput, DocumentTemplate } from '@/lib/types/docume
 import type { Database } from '@/types/database.types'
 import { withRateLimit, mutationRateLimiter } from '@/app/api/_middleware/rate-limit'
 import { getUserOrgId } from '@/lib/utils/with-auth'
-import type { CookieOptions } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { uploadGeneratedDocument } from '@/lib/utils/document-storage'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function buildSupabaseClient(req: NextRequest) {
-  return createSupabaseServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return req.cookies.get(name)?.value },
-        set(_name: string, _value: string, _options?: CookieOptions) {},
-        remove(_name: string, _options?: CookieOptions) {},
-      },
-    }
-  )
-}
 
 async function generateDocumentBlob(
   template: DocumentTemplate,
@@ -80,7 +65,7 @@ async function generateDocumentBlob(
 }
 
 async function sendDocumentEmail(params: {
-  supabase: ReturnType<typeof createSupabaseServerClient>
+  supabase: Awaited<ReturnType<typeof createClient>>
   organizationId: string
   body: GenerateDocumentInput
   template: { id: string; name?: string | null; type: string }
@@ -155,8 +140,8 @@ async function sendDocumentEmail(params: {
 export async function POST(request: NextRequest) {
   return withRateLimit(request, mutationRateLimiter, async (req) => {
     try {
-      const nextReq = req as unknown as NextRequest
-      const supabase = buildSupabaseClient(nextReq)
+      // Client standard : écrit les cookies si la session est rafraîchie
+      const supabase = await createClient()
 
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {

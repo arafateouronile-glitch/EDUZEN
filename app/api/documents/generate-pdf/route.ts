@@ -1,7 +1,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import type { CookieOptions } from '@supabase/ssr'
+import { createClient } from '@/lib/supabase/server'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { logger } from '@/lib/utils/logger'
 import { createPage } from '@/lib/utils/puppeteer-pool'
@@ -21,17 +20,10 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   let page: Awaited<ReturnType<typeof createPage>> | null = null
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return request.cookies.get(name)?.value },
-        set(_name: string, _value: string, _options?: CookieOptions) {},
-        remove(_name: string, _options?: CookieOptions) {},
-      },
-    }
-  )
+  // Client standard : si le jeton est rafraîchi ici, les nouveaux cookies sont
+  // renvoyés au navigateur (sinon son jeton de rafraîchissement est invalidé
+  // et l'utilisateur est déconnecté)
+  const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
