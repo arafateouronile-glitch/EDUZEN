@@ -1802,81 +1802,16 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
   // ==========================================
   // CERTIFICAT DE RÉALISATION — modèle officiel du Ministère du Travail
-  // (« à établir sur papier en-tête du dispensateur de formation »)
+  // (« à établir sur papier en-tête du dispensateur de formation »).
+  // Écrit dans le format que l'éditeur produit (espacements en pt, pas de
+  // tailles de police) : l'ouvrir et l'enregistrer ne change pas sa mise en
+  // page, qui doit tenir sur une page.
   // ==========================================
   certificat_realisation: {
     type: 'certificat_realisation',
     name: 'Certificat de réalisation',
     headerContent: premiumHeader,
-    bodyContent: `
-      <div style="margin-bottom: 6px;">
-        <p style="font-size: 10pt; font-weight: bold; line-height: 1.15; margin: 0;">MINISTÈRE<br>DU TRAVAIL</p>
-        <p style="font-size: 6.5pt; font-style: italic; line-height: 1.15; margin: 2px 0 0 0;">Liberté<br>Égalité<br>Fraternité</p>
-      </div>
-
-      <h1 style="text-align: center; font-size: 16pt; font-weight: bold; margin: 8px 0 16px 0;">CERTIFICAT DE REALISATION</h1>
-
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 5px 0;">
-        <strong>Je soussigné(e)</strong> <em style="font-size: 9pt;">(prénom et nom)</em> <strong>{ecole_representant}</strong>
-      </p>
-      <p style="font-size: 10.5pt; line-height: 1.35; text-align: justify; margin: 0 0 5px 0;">
-        <strong>représentant légal du dispensateur de l'action concourant au développement des compétences</strong>
-        <em style="font-size: 9pt;">(raison sociale du dispensateur de formation ou de l'employeur en cas de formation interne)</em>,
-        <strong>{ecole_nom}</strong>
-      </p>
-      <p style="font-size: 10.5pt; font-weight: bold; margin: 0 0 10px 0;">atteste que :</p>
-
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 4px 0;">
-        Mme/M. <em style="font-size: 9pt;">(nom et prénom du bénéficiaire)</em> <strong>{eleve_nom} {eleve_prenom}</strong>
-      </p>
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 4px 0;">
-        salarié(e) de l'entreprise <em style="font-size: 9pt;">(raison sociale)</em> <strong>{entreprise_nom}</strong>
-      </p>
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 10px 0;">
-        a suivi l'action <em style="font-size: 9pt;">(intitulé)</em> <strong>{formation_nom}</strong>
-      </p>
-
-      <p style="font-size: 10pt; font-style: italic; margin: 0 0 3px 0;">Nature de l'action concourant au développement des compétences :</p>
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 0 12px;">☒ action de formation <sup>1</sup></p>
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 0 12px;">☐ bilan de compétences</p>
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 0 12px;">☐ action de VAE</p>
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 10px 12px;">☐ action de formation par apprentissage</p>
-
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 4px 0;">
-        qui s'est déroulée du <strong>{session_debut}</strong> au <strong>{session_fin}</strong> <em style="font-size: 9pt;">(dates)</em>
-      </p>
-      <p style="font-size: 10.5pt; line-height: 1.35; margin: 0 0 12px 0;">
-        pour une durée de <strong>{formation_duree}</strong>
-        <em style="font-size: 9pt;">(nombre d'heures réalisées ou, s'agissant d'une formation par apprentissage, nombre de mois réalisés)</em>.<sup>2</sup>
-      </p>
-
-      <p style="font-size: 10.5pt; line-height: 1.35; text-align: justify; margin: 0 0 14px 0;">
-        Sans préjudice des délais imposés par les règles fiscales, comptables ou commerciales, je m'engage à conserver l'ensemble des pièces justificatives qui ont permis d'établir le présent certificat pendant une durée de 3 ans à compter de la fin de l'année du dernier paiement. En cas de cofinancement des fonds européens la durée de conservation est étendue conformément aux obligations conventionnelles spécifiques.
-      </p>
-
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="width: 45%; vertical-align: top; font-size: 10.5pt; line-height: 1.8; padding: 0;">
-            Fait à : <strong>{ecole_ville}</strong><br>
-            Le : <strong>{date_jour}</strong>
-          </td>
-          <td style="width: 55%; vertical-align: top; border: 1px solid #000; padding: 8px; height: 95px; text-align: center; font-size: 10pt;">
-            Cachet et signature<br>
-            du responsable du dispensateur de formation<br>
-            <em>(nom, prénom, qualité du signataire)</em><br>
-            <strong>{ecole_representant}</strong>
-          </td>
-        </tr>
-      </table>
-
-      <div style="margin-top: 14px; border-top: 1px solid #000; width: 35%;"></div>
-      <p style="font-size: 8pt; line-height: 1.4; margin: 4px 0 0 0;">
-        <sup>1</sup> Lorsque l'action est mise en œuvre dans le cadre d'un projet de transition professionnelle, le certificat de réalisation doit être transmis mensuellement.
-      </p>
-      <p style="font-size: 8pt; line-height: 1.4; margin: 2px 0 0 0;">
-        <sup>2</sup> Dans le cadre des formations à distance prendre en compte la réalisation des activités pédagogiques et le temps estimé pour les réaliser.
-      </p>
-    `,
+    bodyContent: `<p style="line-height: 1.2; margin-bottom: 4pt;"><strong>MINISTÈRE<br>DU TRAVAIL</strong><br><em>Liberté Égalité Fraternité</em></p><h1 style="text-align: center;"><strong>CERTIFICAT DE REALISATION</strong></h1><p style="line-height: 1.3; margin-bottom: 4pt;"><strong>Je soussigné(e)</strong> <em>(prénom et nom)</em> <strong>{ecole_representant}</strong></p><p style="text-align: justify; line-height: 1.3; margin-bottom: 4pt;"><strong>représentant légal du dispensateur de l'action concourant au développement des compétences</strong> <em>(raison sociale du dispensateur de formation ou de l'employeur en cas de formation interne)</em>, <strong>{ecole_nom}</strong></p><p style="margin-bottom: 7pt;"><strong>atteste que :</strong></p><p style="line-height: 1.3; margin-bottom: 3pt;">Mme/M. <em>(nom et prénom du bénéficiaire)</em> <strong>{eleve_nom} {eleve_prenom}</strong></p><p style="line-height: 1.3; margin-bottom: 3pt;">salarié(e) de l'entreprise <em>(raison sociale)</em> <strong>{entreprise_nom}</strong></p><p style="line-height: 1.3; margin-bottom: 6pt;">a suivi l'action <em>(intitulé)</em> <strong>{formation_nom}</strong></p><p style="margin-bottom: 2pt;"><em>Nature de l'action concourant au développement des compétences :</em></p><p style="line-height: 1.3;">☒ action de formation <sup>1</sup></p><p style="line-height: 1.3;">☐ bilan de compétences</p><p style="line-height: 1.3;">☐ action de VAE</p><p style="line-height: 1.3; margin-bottom: 6pt;">☐ action de formation par apprentissage</p><p style="line-height: 1.3; margin-bottom: 3pt;">qui s'est déroulée du <strong>{session_debut}</strong> au <strong>{session_fin}</strong> <em>(dates)</em></p><p style="line-height: 1.3; margin-bottom: 8pt;">pour une durée de <strong>{formation_duree}</strong> <em>(nombre d'heures réalisées ou, s'agissant d'une formation par apprentissage, nombre de mois réalisés)</em>.<sup>2</sup></p><p style="text-align: justify; line-height: 1.3; margin-bottom: 10pt;">Sans préjudice des délais imposés par les règles fiscales, comptables ou commerciales, je m'engage à conserver l'ensemble des pièces justificatives qui ont permis d'établir le présent certificat pendant une durée de 3 ans à compter de la fin de l'année du dernier paiement. En cas de cofinancement des fonds européens la durée de conservation est étendue conformément aux obligations conventionnelles spécifiques.</p><table class="tiptap-table" style="min-width: 50px;"><colgroup><col style="min-width: 25px;"><col style="min-width: 25px;"></colgroup><tbody><tr><td colspan="1" rowspan="1" data-padding="0px" style="padding: 0px;"><p>Fait à : <strong>{ecole_ville}</strong><br>Le : <strong>{date_jour}</strong></p></td><td colspan="1" rowspan="1" data-border-top="1px solid rgb(0, 0, 0)" data-border-bottom="1px solid rgb(0, 0, 0)" data-border-left="1px solid rgb(0, 0, 0)" data-border-right="1px solid rgb(0, 0, 0)" data-padding="8px" style="border-width: 1px; border-style: solid; border-color: rgb(0, 0, 0); padding: 8px;"><p>Cachet et signature<br>du responsable du dispensateur de formation<br><em>(nom, prénom, qualité du signataire)</em><br><strong>{ecole_representant}</strong><br><br><br><br></p></td></tr></tbody></table><p style="line-height: 1.3; margin-top: 4pt;"><sup>1</sup> Lorsque l'action est mise en œuvre dans le cadre d'un projet de transition professionnelle, le certificat de réalisation doit être transmis mensuellement.</p><p style="line-height: 1.3; margin-top: 2pt;"><sup>2</sup> Dans le cadre des formations à distance prendre en compte la réalisation des activités pédagogiques et le temps estimé pour les réaliser.</p>`,
     footerContent: premiumFooter,
   },
 
