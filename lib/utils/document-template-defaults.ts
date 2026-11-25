@@ -1801,93 +1801,81 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
   },
 
   // ==========================================
-  // CERTIFICAT DE RÉALISATION
+  // CERTIFICAT DE RÉALISATION — modèle officiel du Ministère du Travail
+  // (« à établir sur papier en-tête du dispensateur de formation »)
   // ==========================================
   certificat_realisation: {
     type: 'certificat_realisation',
     name: 'Certificat de réalisation',
     headerContent: premiumHeader,
     bodyContent: `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
-          CERTIFICAT DE RÉALISATION
-        </h1>
-        <p style="font-size: 9pt; color: #666; margin-top: 8px; font-style: italic;">
-          (Article L.6353-1 du Code du travail)
-        </p>
+      <div style="margin-bottom: 20px;">
+        <p style="font-size: 11pt; font-weight: bold; line-height: 1.2; margin: 0;">MINISTÈRE<br>DU TRAVAIL</p>
+        <p style="font-size: 7pt; font-style: italic; line-height: 1.2; margin: 4px 0 0 0;">Liberté<br>Égalité<br>Fraternité</p>
       </div>
 
-      <div style="margin-bottom: 25px;">
-        <p style="text-align: justify; font-size: 11pt; line-height: 1.8;">
-          Je soussigné(e), <strong>{ecole_representant}</strong>, représentant(e) légal(e) de l'organisme de formation
-          <strong>{ecole_nom}</strong>, atteste que :
-        </p>
-      </div>
+      <h1 style="text-align: center; font-size: 16pt; font-weight: bold; margin: 30px 0 35px 0;">CERTIFICAT DE REALISATION</h1>
 
-      <div style="margin: 30px 0; padding: 20px; background-color: #f9fafb; border-left: 4px solid #335ACF;">
-        <p style="font-size: 12pt; font-weight: bold; margin-bottom: 15px; color: #1A1A1A;">
-          {eleve_prenom} {eleve_nom}
-        </p>
-        <p style="font-size: 10pt; margin-bottom: 5px;">Né(e) le : {eleve_date_naissance}</p>
-        <p style="font-size: 10pt;">Adresse : {eleve_adresse}</p>
-      </div>
+      <p style="font-size: 11pt; line-height: 1.6; margin: 0 0 10px 0;">
+        <strong>Je soussigné(e)</strong> <em style="font-size: 9pt;">(prénom et nom)</em> <strong>{ecole_representant}</strong>
+      </p>
+      <p style="font-size: 11pt; line-height: 1.6; text-align: justify; margin: 0 0 10px 0;">
+        <strong>représentant légal du dispensateur de l'action concourant au développement des compétences</strong>
+        <em style="font-size: 9pt;">(raison sociale du dispensateur de formation ou de l'employeur en cas de formation interne)</em>,
+        <strong>{ecole_nom}</strong>
+      </p>
+      <p style="font-size: 11pt; font-weight: bold; margin: 0 0 20px 0;">atteste que :</p>
 
-      <div style="margin-bottom: 25px;">
-        <p style="text-align: justify; font-size: 11pt; line-height: 1.8;">
-          a suivi l'action de formation suivante :
-        </p>
-      </div>
+      <p style="font-size: 11pt; line-height: 1.6; margin: 0 0 8px 0;">
+        Mme/M. <em style="font-size: 9pt;">(nom et prénom du bénéficiaire)</em> <strong>{eleve_nom} {eleve_prenom}</strong>
+      </p>
+      <p style="font-size: 11pt; line-height: 1.6; margin: 0 0 8px 0;">
+        salarié(e) de l'entreprise <em style="font-size: 9pt;">(raison sociale)</em> <strong>{entreprise_nom}</strong>
+      </p>
+      <p style="font-size: 11pt; line-height: 1.6; margin: 0 0 18px 0;">
+        a suivi l'action <em style="font-size: 9pt;">(intitulé)</em> <strong>{formation_nom}</strong>
+      </p>
 
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <p style="font-size: 10pt; font-style: italic; margin: 0 0 6px 0;">Nature de l'action concourant au développement des compétences :</p>
+      <p style="font-size: 11pt; line-height: 1.5; margin: 0 0 0 12px;">☒ action de formation <sup>1</sup></p>
+      <p style="font-size: 11pt; line-height: 1.5; margin: 0 0 0 12px;">☐ bilan de compétences</p>
+      <p style="font-size: 11pt; line-height: 1.5; margin: 0 0 0 12px;">☐ action de VAE</p>
+      <p style="font-size: 11pt; line-height: 1.5; margin: 0 0 18px 12px;">☐ action de formation par apprentissage</p>
+
+      <p style="font-size: 11pt; line-height: 1.6; margin: 0 0 8px 0;">
+        qui s'est déroulée du <strong>{session_debut}</strong> au <strong>{session_fin}</strong> <em style="font-size: 9pt;">(dates)</em>
+      </p>
+      <p style="font-size: 11pt; line-height: 1.6; margin: 0 0 22px 0;">
+        pour une durée de <strong>{formation_duree}</strong>
+        <em style="font-size: 9pt;">(nombre d'heures réalisées ou, s'agissant d'une formation par apprentissage, nombre de mois réalisés)</em>.<sup>2</sup>
+      </p>
+
+      <p style="font-size: 11pt; line-height: 1.5; text-align: justify; margin: 0 0 28px 0;">
+        Sans préjudice des délais imposés par les règles fiscales, comptables ou commerciales, je m'engage à conserver l'ensemble des pièces justificatives qui ont permis d'établir le présent certificat pendant une durée de 3 ans à compter de la fin de l'année du dernier paiement. En cas de cofinancement des fonds européens la durée de conservation est étendue conformément aux obligations conventionnelles spécifiques.
+      </p>
+
+      <table style="width: 100%; border-collapse: collapse;">
         <tr>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; width: 40%; background-color: #f2f2f2; font-size: 10pt;">Intitulé de la formation</td>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{formation_nom}</td>
-        </tr>
-        <tr>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Objectifs de la formation</td>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{formation_objectifs}</td>
-        </tr>
-        <tr>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Nature de l'action</td>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">Action de formation</td>
-        </tr>
-        <tr>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Durée totale</td>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{formation_duree}</td>
-        </tr>
-        <tr>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Dates de réalisation</td>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">Du {session_debut} au {session_fin}</td>
-        </tr>
-        <tr>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Lieu de formation</td>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{session_lieu}</td>
-        </tr>
-        <tr>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Modalité</td>
-          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{session_modalite}</td>
+          <td style="width: 45%; vertical-align: top; font-size: 11pt; line-height: 1.8; padding: 0;">
+            Fait à : <strong>{ecole_ville}</strong><br>
+            Le : <strong>{date_jour}</strong>
+          </td>
+          <td style="width: 55%; vertical-align: top; border: 1px solid #000; padding: 8px; height: 140px; text-align: center; font-size: 10pt;">
+            Cachet et signature<br>
+            du responsable du dispensateur de formation<br>
+            <em>(nom, prénom, qualité du signataire)</em><br>
+            <strong>{ecole_representant}</strong>
+          </td>
         </tr>
       </table>
 
-      <div style="margin-top: 30px; padding: 15px; border: 1px solid #e5e7eb; background-color: #fff;">
-        <p style="font-size: 10pt; line-height: 1.6;">
-          <strong>Attestation :</strong> Le bénéficiaire a bien réalisé l'intégralité du parcours de formation défini
-          dans le programme de formation et les conditions d'exécution ont été conformes aux dispositions prévues.
-        </p>
-      </div>
-
-      <div style="margin-top: 40px;">
-        <p style="text-align: right; margin-bottom: 30px; font-size: 10pt;">
-          Fait à {ecole_ville}, le {date_jour}
-        </p>
-        <div style="text-align: right;">
-          <p style="font-weight: bold; font-size: 10pt;">Pour l'organisme de formation</p>
-          <p style="font-size: 10pt; margin-top: 5px;">{ecole_nom}</p>
-          <p style="margin-top: 50px; font-size: 10pt;">________________________</p>
-          <p style="font-size: 10pt;">{ecole_representant}</p>
-          <p style="font-size: 9pt; color: #666;">Cachet et signature</p>
-        </div>
-      </div>
+      <div style="margin-top: 30px; border-top: 1px solid #000; width: 35%;"></div>
+      <p style="font-size: 8pt; line-height: 1.4; margin: 4px 0 0 0;">
+        <sup>1</sup> Lorsque l'action est mise en œuvre dans le cadre d'un projet de transition professionnelle, le certificat de réalisation doit être transmis mensuellement.
+      </p>
+      <p style="font-size: 8pt; line-height: 1.4; margin: 2px 0 0 0;">
+        <sup>2</sup> Dans le cadre des formations à distance prendre en compte la réalisation des activités pédagogiques et le temps estimé pour les réaliser.
+      </p>
     `,
     footerContent: premiumFooter,
   },
