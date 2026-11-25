@@ -11,6 +11,8 @@ export const PREVIOUS_DEFAULT_BODY_HASHES = new Set([
   '7e6a02c6e6f2f99d61481f706ae91559876fef474c207f232c44cbbe24f00c7a',
   'd12aa41caee80841376d6e6731f09b6facf4ee9616e616368f8f356785ce7ff9',
   'ef732a202c1527200a8b9a808e08b578ecf8b6e02785a20438038f496dec2555',
+  // Modèle officiel, première mise en page (sur 2 pages)
+  'd279b41f3f8fa545c7b63abc25894bc3dd5670a5c4117e1c0b5aecceeaf27977',
 ])
 
 export function bodyHash(html: string): string {
