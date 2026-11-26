@@ -1,3 +1,4 @@
+import { OUTILS } from '@/lib/outils/tools'
 import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 
@@ -15,6 +16,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/blog`, lastModified: currentDate, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/formations`, lastModified: currentDate, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/a-propos`, lastModified: currentDate, changeFrequency: 'monthly', priority: 0.7 },
+    // Outils gratuits (lead magnets)
+    { url: `${baseUrl}/outils`, lastModified: currentDate, changeFrequency: 'monthly', priority: 0.85 },
+    ...Object.values(OUTILS).map((o) => ({ url: `${baseUrl}/outils/${o.slug}`, lastModified: currentDate, changeFrequency: 'monthly' as const, priority: 0.8 })),
     { url: `${baseUrl}/affiliation`, lastModified: currentDate, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/auth/register`, lastModified: currentDate, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${baseUrl}/auth/login`, lastModified: currentDate, changeFrequency: 'monthly', priority: 0.6 },

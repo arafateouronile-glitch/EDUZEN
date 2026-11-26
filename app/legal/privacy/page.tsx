@@ -162,6 +162,24 @@ export default function PrivacyPage() {
               <li>Information sur les nouveautés</li>
               <li>Offres promotionnelles</li>
             </ul>
+
+            <h3 className="text-xl font-semibold text-gray-900 mb-3 mt-4">
+              4.6 Outils gratuits (eduzen.io/outils)
+            </h3>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>
+                Données collectées : vos nom, prénom et email professionnel, ainsi que les informations saisies pour
+                personnaliser le document (organisme, formation, apprenants).
+              </li>
+              <li>
+                Finalités : vous envoyer le document généré, puis quelques emails de conseils et de présentation
+                d&apos;EduZen destinés aux professionnels de la formation (intérêt légitime, prospection B2B).
+              </li>
+              <li>
+                Vous pouvez vous désabonner à tout moment grâce au lien présent dans chaque email ; vos données sont
+                conservées 3 ans à compter du dernier contact.
+              </li>
+            </ul>
           </section>
 
           <section className="mb-8">

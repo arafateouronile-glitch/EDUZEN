@@ -10,12 +10,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { OrganizationHealthCard } from '@/components/super-admin/crm/organization-health-card'
-import { getCrmOrganizations, getDemoLeads, getVslLeads, getContactSubmissions, updateContactStatus, getAffiliateApplications, updateAffiliateApplicationStatus } from '@/lib/actions/crm-actions'
+import { getCrmOrganizations, getDemoLeads, getLeadMagnetLeads, getVslLeads, getContactSubmissions, updateContactStatus, getAffiliateApplications, updateAffiliateApplicationStatus } from '@/lib/actions/crm-actions'
 import type { OrganizationCrmSummary, HealthStatus } from '@/types/crm.types'
-import type { DemoLead, VslLead, ContactSubmission, AffiliateApplication } from '@/lib/actions/crm-actions'
+import type { DemoLead, LeadMagnetLead, VslLead, ContactSubmission, AffiliateApplication } from '@/lib/actions/crm-actions'
+import { OUTILS, isOutilKey } from '@/lib/outils/tools'
+import { NURTURE_STEPS } from '@/lib/outils/nurture-schedule'
 import { cn } from '@/lib/utils'
 
-type Tab = 'organisations' | 'leads' | 'vsl' | 'contact' | 'affiliation'
+type Tab = 'organisations' | 'leads' | 'outils' | 'vsl' | 'contact' | 'affiliation'
 type Filter = 'all' | HealthStatus
 
 const FILTER_CONFIG: { value: Filter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -38,6 +40,7 @@ export default function CrmPage() {
   const [tab, setTab] = useState<Tab>('organisations')
   const [orgs, setOrgs] = useState<OrganizationCrmSummary[]>([])
   const [leads, setLeads] = useState<DemoLead[]>([])
+  const [toolLeads, setToolLeads] = useState<LeadMagnetLead[]>([])
   const [vslLeads, setVslLeads] = useState<VslLead[]>([])
   const [contacts, setContacts] = useState<ContactSubmission[]>([])
   const [affiliateApps, setAffiliateApps] = useState<AffiliateApplication[]>([])
@@ -53,12 +56,13 @@ export default function CrmPage() {
 
   const load = () => {
     startTransition(async () => {
-      const [orgsResult, leadsResult, vslResult, contactResult, affiliateResult] = await Promise.all([
+      const [orgsResult, leadsResult, vslResult, contactResult, affiliateResult, toolLeadsResult] = await Promise.all([
         getCrmOrganizations(),
         getDemoLeads(),
         getVslLeads(),
         getContactSubmissions(),
         getAffiliateApplications(),
+        getLeadMagnetLeads(),
       ])
       if (orgsResult.success && orgsResult.data) {
         setOrgs(orgsResult.data)
@@ -67,6 +71,7 @@ export default function CrmPage() {
         setError(orgsResult.error ?? 'Erreur inconnue')
       }
       if (leadsResult.success && leadsResult.data) setLeads(leadsResult.data)
+      if (toolLeadsResult.success && toolLeadsResult.data) setToolLeads(toolLeadsResult.data)
       if (vslResult.success && vslResult.data) setVslLeads(vslResult.data)
       if (contactResult.success && contactResult.data) setContacts(contactResult.data)
       if (affiliateResult.success && affiliateResult.data) setAffiliateApps(affiliateResult.data)
@@ -228,6 +233,18 @@ export default function CrmPage() {
         >
           Leads / Formulaires
           <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{leads.length}</span>
+        </button>
+        <button
+          onClick={() => setTab('outils')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+            tab === 'outils'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Outils gratuits
+          <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{toolLeads.length}</span>
         </button>
         <button
           onClick={() => setTab('vsl')}
@@ -507,6 +524,61 @@ export default function CrmPage() {
                     )}
                   </div>
                 ))}
+              </div>
+            </Card>
+          )}
+        </motion.div>
+      )}
+      {tab === 'outils' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {Object.values(OUTILS).map((o) => (
+              <Badge key={o.key} variant="outline">
+                {o.documentName} : {toolLeads.filter((l) => l.tools.includes(o.key)).length}
+              </Badge>
+            ))}
+          </div>
+          {toolLeads.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <UserRound className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Aucun lead pour le moment</p>
+            </div>
+          ) : (
+            <Card>
+              <div className="divide-y divide-border">
+                {toolLeads.map((lead) => {
+                  const status = lead.converted_at
+                    ? 'Client'
+                    : lead.unsubscribed_at
+                      ? 'Désabonné'
+                      : lead.bounced_at
+                        ? 'Email invalide'
+                        : lead.nurture_step >= NURTURE_STEPS
+                          ? 'Séquence terminée'
+                          : `Séquence ${lead.nurture_step}/${NURTURE_STEPS}`
+                  return (
+                    <div key={lead.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm">
+                          {[lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.email}
+                          {lead.organization_name && <span className="font-normal text-muted-foreground"> · {lead.organization_name}</span>}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                          <a href={`mailto:${lead.email}`} className="flex items-center gap-1 hover:text-foreground">
+                            <Mail className="h-3 w-3" />{lead.email}
+                          </a>
+                          {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{lead.phone}</span>}
+                          <span>{lead.tools.map((t) => (isOutilKey(t) ? OUTILS[t].documentName : t)).join(', ')}</span>
+                          {lead.qualiopi_score != null && <span>Qualiopi : {lead.qualiopi_score}%</span>}
+                          <span className="text-muted-foreground/60">
+                            {new Date(lead.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                      <Badge variant={lead.converted_at ? 'default' : 'secondary'}>{status}</Badge>
+                    </div>
+                  )
+                })}
               </div>
             </Card>
           )}

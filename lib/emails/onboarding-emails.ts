@@ -5,14 +5,15 @@ const SIGNATURE = `
     <span style="font-size:14px;color:#555;"><a href="tel:+33610441324" style="color:#555;text-decoration:none;">06 10 44 13 24</a> · <a href="https://www.eduzen.io" style="color:#555;text-decoration:none;">eduzen.io</a></span>
   </p>`
 
-const CALENDLY = 'https://calendly.com/airtonenile/30min'
+export const CALENDLY = 'https://calendly.com/airtonenile/30min'
 
-const BOOK_BTN = `
+export const BOOK_BTN = `
   <p style="margin:0 0 28px;text-align:center;">
     <a href="${CALENDLY}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">📅 Réserver 30 minutes →</a>
   </p>`
 
-function wrap(body: string): string {
+/** Lettre du fondateur ; `footerHtml` s'ajoute sous la signature (ex. lien de désabonnement) */
+export function wrap(body: string, footerHtml = ''): string {
   return `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -24,6 +25,7 @@ function wrap(body: string): string {
           <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
             ${body}
             ${SIGNATURE}
+            ${footerHtml}
           </td>
         </tr>
       </table>

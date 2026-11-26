@@ -46,6 +46,7 @@ export function Footer() {
                   { label: "Fonctionnalités", href: "/#features" },
                   { label: "Tarifs", href: "/pricing" },
                   { label: "Demo", href: "/demo" },
+                  { label: "Outils gratuits", href: "/outils" },
                   { label: "Contact", href: "/contact" },
                 ]
               },

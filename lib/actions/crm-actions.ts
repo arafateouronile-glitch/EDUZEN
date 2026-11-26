@@ -168,6 +168,44 @@ export async function getDemoLeads(): Promise<{
   }
 }
 
+export interface LeadMagnetLead {
+  id: string
+  email: string
+  first_name: string | null
+  last_name: string | null
+  organization_name: string | null
+  phone: string | null
+  first_tool: string
+  tools: string[]
+  qualiopi_score: number | null
+  nurture_step: number
+  unsubscribed_at: string | null
+  bounced_at: string | null
+  converted_at: string | null
+  created_at: string
+}
+
+/** Leads des outils gratuits (/outils) */
+export async function getLeadMagnetLeads(): Promise<{
+  success: boolean
+  data?: LeadMagnetLead[]
+  error?: string
+}> {
+  try {
+    const supabase = await ensureSuperAdmin()
+    const { data, error } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+      .from('lead_magnet_leads')
+      .select('id, email, first_name, last_name, organization_name, phone, first_tool, tools, qualiopi_score, nurture_step, unsubscribed_at, bounced_at, converted_at, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1000)
+    if (error) throw error
+    return { success: true, data: (data ?? []) as LeadMagnetLead[] }
+  } catch (err) {
+    logger.error('[crm-actions] getLeadMagnetLeads', err)
+    return { success: false, error: 'Impossible de charger les leads des outils gratuits' }
+  }
+}
+
 export async function getVslLeads(): Promise<{
   success: boolean
   data?: VslLead[]

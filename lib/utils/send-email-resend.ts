@@ -28,6 +28,8 @@ export interface SendEmailViaResendOptions {
   scheduledAt?: string
   /** Pièces jointes (ex. PDF généré côté serveur) */
   attachments?: Array<{ filename: string; content: Buffer }>
+  /** En-têtes supplémentaires (ex. List-Unsubscribe des emails marketing) */
+  headers?: Record<string, string>
 }
 
 /** Adresse email seule de l'expéditeur vérifié (« Nom <adresse> » → adresse) */
@@ -69,6 +71,7 @@ export async function sendEmailViaResend(
       replyTo: options.replyTo ?? undefined,
       ...(options.scheduledAt ? { scheduledAt: options.scheduledAt } : {}),
       ...(options.attachments?.length ? { attachments: options.attachments } : {}),
+      ...(options.headers ? { headers: options.headers } : {}),
     } as Parameters<typeof resend.emails.send>[0]
 
     let { data, error } = await resend.emails.send(emailPayload)

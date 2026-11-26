@@ -144,6 +144,22 @@ export async function POST(req: NextRequest) {
     } else {
       logger.info('Webhook Resend - Statut mis à jour', { emailId, newStatus })
     }
+
+    // Leads des outils gratuits : un rebond ou une plainte arrête la séquence marketing
+    if (newStatus === 'bounced' || newStatus === 'complained') {
+      const recipients = ([] as unknown[]).concat(payload.data?.to ?? [])
+        .filter((r): r is string => typeof r === 'string')
+        .map((r) => r.trim().toLowerCase())
+      if (recipients.length > 0) {
+        const now = new Date().toISOString()
+        await (supabase as any)
+          .from('lead_magnet_leads')
+          .update(newStatus === 'bounced'
+            ? { bounced_at: now, next_email_at: null, updated_at: now }
+            : { unsubscribed_at: now, next_email_at: null, updated_at: now })
+          .in('email', recipients)
+      }
+    }
   } catch (err) {
     logger.error('Webhook Resend - Exception', err as Error)
   }

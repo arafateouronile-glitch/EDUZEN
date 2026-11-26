@@ -53,7 +53,9 @@ function fmtDateShort(iso: string): string {
 
 // Max colonnes par page (A4 paysage ~10 slots, portrait ~6)
 const SLOTS_PER_PAGE = 10
-const STUDENTS_PER_PAGE = 20
+// 12 lignes (avec entreprise) tiennent sous l'en-tête en A4 paysage ; au-delà, elles
+// débordaient sur une page sans les dates des créneaux
+const STUDENTS_PER_PAGE = 12
 
 export function generateAttendanceSheetHtml(data: AttendanceSheetData): string {
   const { organization, session, formation, teacher, students, slots } = data
@@ -242,8 +244,9 @@ export function generateAttendanceSheetHtml(data: AttendanceSheetData): string {
     body { font-family: Arial, Helvetica, sans-serif; background: white; }
     .page {
       position: relative;
-      width: 277mm;
-      min-height: 190mm;
+      width: 297mm;
+      height: 210mm;
+      overflow: hidden;
       padding: 14mm 14mm 20mm;
       page-break-after: always;
       background: white;
