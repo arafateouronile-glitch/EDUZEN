@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { formatDate } from '@/lib/utils/format'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,6 +13,8 @@ import { ShareButton } from '@/components/blog/share-button'
 import { ReadingProgress } from '@/components/blog/reading-progress'
 import { logger } from '@/lib/utils/logger'
 import { sanitizeBlogContent } from '@/lib/utils/sanitize-html'
+import { blogCoverUrl } from '@/lib/blog/cover'
+import { blogRedirectTarget } from '@/lib/blog/internal-links'
 
 const BLOG_STATIC_PARAMS_LIMIT = 20
 
@@ -42,6 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
+    .or(`published_at.is.null,published_at.lte.${new Date().toISOString()}`)
     .maybeSingle()
 
   if (!post) return { title: 'Article non trouvé | EduZen' }
@@ -49,22 +52,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.eduzen.io'
   const postTitle = post.meta_title || post.title
   const postDesc = post.meta_description || post.excerpt || ''
+  const cover = blogCoverUrl(post, { absolute: true })
 
   return {
-    title: `${postTitle} | EduZen Blog`,
+    // absolute : sans le suffixe du layout, pour rester sous ~60 caractères dans Google
+    title: { absolute: postTitle.includes('EduZen') ? postTitle : `${postTitle} | EduZen` },
     description: postDesc,
     alternates: { canonical: `${baseUrl}/blog/${slug}` },
     openGraph: {
       title: postTitle,
       description: postDesc,
       type: 'article',
-      images: post.featured_image_url ? [{ url: post.featured_image_url, width: 1200, height: 630 }] : [],
+      images: cover ? [{ url: cover, width: 1200, height: 630, alt: postTitle }] : [],
     },
     twitter: {
       card: 'summary_large_image',
       title: postTitle,
       description: postDesc,
-      images: post.featured_image_url ? [post.featured_image_url] : [],
+      images: cover ? [cover] : [],
     },
   }
 }
@@ -179,7 +184,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     throw err
   })
 
-  if (!post) notFound()
+  if (!post) {
+    // Ancienne URL (article renommé ou fusionné) : redirection permanente
+    const target = blogRedirectTarget(slug)
+    if (target) permanentRedirect(`/blog/${target}`)
+    notFound()
+  }
 
   const relatedPosts = await getRelatedPosts(post.id, post.category_id || null).catch((err: unknown) => {
     logger.error('[BlogPostPage] getRelatedPosts threw', err, { slug })
@@ -201,7 +211,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.meta_description || post.excerpt || '',
-    image: post.featured_image_url || `${baseUrl}/og-image.png`,
+    image: blogCoverUrl(post, { absolute: true }) || `${baseUrl}/og-image.png`,
     datePublished: post.published_at || post.created_at,
     dateModified: post.updated_at,
     url: `${baseUrl}/blog/${post.slug}`,
@@ -333,10 +343,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               {relatedPosts.map((related) => (
                 <Link key={related.id} href={`/blog/${related.slug}`}>
                   <Card className="h-full hover:shadow-lg transition-all duration-300 cursor-pointer group border hover:border-brand-blue/20 overflow-hidden bg-white">
-                    {related.featured_image_url && (
+                    {blogCoverUrl(related) && (
                       <div className="relative h-44 w-full overflow-hidden">
                         <img
-                          src={related.featured_image_url}
+                          src={blogCoverUrl(related)!}
                           alt={related.title || ''}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />

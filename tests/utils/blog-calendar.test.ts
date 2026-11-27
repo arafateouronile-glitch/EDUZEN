@@ -78,3 +78,24 @@ describe('correction des liens internes cassés', () => {
     expect(res.unresolved).toEqual(['/blog/inconnu'])
   })
 })
+
+describe('redirections, couvertures et nettoyage', () => {
+  it('suit la chaîne de redirection jusqu’à l’article principal', async () => {
+    const { blogRedirectTarget } = await import('@/lib/blog/internal-links')
+    expect(blogRedirectTarget('logiciel-gestion-organisme-de-formation')).toBe('logiciel-pour-organisme-de-formation-guide-complet-2026')
+    expect(blogRedirectTarget('logiciel-formation-2026-guide-complet-pour-choisir')).toBe('logiciel-pour-organisme-de-formation-guide-complet-2026')
+    expect(blogRedirectTarget('article-inconnu')).toBeNull()
+  })
+
+  it('utilise la couverture générée sans image choisie', async () => {
+    const { blogCoverUrl } = await import('@/lib/blog/cover')
+    expect(blogCoverUrl({ slug: 'abc', featured_image_url: null })).toBe('/blog/cover/abc')
+    expect(blogCoverUrl({ slug: 'abc', featured_image_url: 'https://x/img.png' })).toBe('https://x/img.png')
+  })
+
+  it('retire le h1 de tête, même précédé de paragraphes vides', async () => {
+    const { stripLeadingH1 } = await import('../../scripts/blog/seo-cleanup')
+    expect(stripLeadingH1('\n  <article><p></p><h1>Titre</h1><p>Texte</p></article>')).toBe('\n  <article><p>Texte</p></article>')
+    expect(stripLeadingH1('<p>Intro</p><h1>Pas en tête</h1>')).toBe('<p>Intro</p><h1>Pas en tête</h1>')
+  })
+})

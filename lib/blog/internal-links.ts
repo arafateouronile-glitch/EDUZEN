@@ -58,8 +58,33 @@ export const BLOG_SLUG_REDIRECTS: Record<string, string[]> = {
   ],
   'meilleur-logiciel-centre-de-formation-le-comparatif-complet-pour-choisir-en-2025-2026': [
     'meilleur-logiciel-centre-de-formation-2025-2026',
-    'logiciel-formation-2026-guide-complet-pour-choisir',
+    'logiciel-pour-organisme-de-formation-guide-complet-2026',
   ],
+  // Articles fusionnés dans le guide principal (même mot-clé, ils se concurrençaient)
+  'logiciel-formation-2026-guide-complet-pour-choisir': ['logiciel-pour-organisme-de-formation-guide-complet-2026'],
+  'logiciel-de-gestion-des-organismes-de-formation-le-guide-complet-pour-optimiser-votre-structure': [
+    'logiciel-pour-organisme-de-formation-guide-complet-2026',
+  ],
+}
+
+/** Articles archivés parce que fusionnés : leur URL redirige vers l'article principal */
+export const MERGED_BLOG_SLUGS = [
+  'logiciel-formation-2026-guide-complet-pour-choisir',
+  'logiciel-de-gestion-des-organismes-de-formation-le-guide-complet-pour-optimiser-votre-structure',
+]
+
+/** Article vers lequel rediriger une URL de blog qui n'existe plus (ou null) */
+export function blogRedirectTarget(slug: string): string | null {
+  let target: string | null = null
+  let current = slug
+  // Suit les chaînes (ancien slug → article lui-même fusionné → article principal)
+  for (let i = 0; i < 5; i++) {
+    const next = BLOG_SLUG_REDIRECTS[current]?.[0]
+    if (!next || next === slug) break
+    target = next
+    current = next
+  }
+  return target
 }
 
 const SITE_HOST = /^https?:\/\/(www\.)?eduzen\.io/i

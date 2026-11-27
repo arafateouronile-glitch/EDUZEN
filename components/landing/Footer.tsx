@@ -10,9 +10,10 @@ export function Footer() {
       
       {/* Massive Background Text */}
       <div className="absolute inset-0 flex items-end justify-center pointer-events-none overflow-hidden select-none">
-        <h1 className="text-[15vw] md:text-[22vw] font-black text-white/[0.03] leading-none tracking-tighter font-display translate-y-[20%]">
+        {/* Décoratif : pas un titre (un seul h1 par page pour le référencement) */}
+        <div aria-hidden="true" className="text-[15vw] md:text-[22vw] font-black text-white/[0.03] leading-none tracking-tighter font-display translate-y-[20%]">
           EDUZEN
-        </h1>
+        </div>
       </div>
 
       <div className="container mx-auto px-4 md:px-6 relative z-10">

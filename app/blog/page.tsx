@@ -11,9 +11,10 @@ import { Footer } from '@/components/landing/Footer'
 import { BlogSearch } from '@/components/blog/blog-search'
 import { BlogSidebar } from '@/components/blog/blog-sidebar'
 import { logger } from '@/lib/utils/logger'
+import { blogCoverUrl } from '@/lib/blog/cover'
 
 export const metadata = {
-  title: 'Blog formation professionnelle — Qualiopi, LMS, gestion OF | EduZen',
+  title: { absolute: 'Blog formation professionnelle — Qualiopi, LMS, gestion OF | EduZen' },
   description: "Conseils et guides sur la gestion d'organisme de formation, Qualiopi, e-learning et LMS. Actualités de la formation professionnelle.",
 }
 
@@ -250,10 +251,10 @@ export default async function BlogPage({
               {featuredPosts.map((post) => (
                 <Link key={post.id} href={`/blog/${post.slug}`}>
                   <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:border-brand-blue/30 overflow-hidden">
-                    {post.featured_image_url && (
+                    {blogCoverUrl(post) && (
                       <div className="relative h-56 w-full overflow-hidden">
                         <img
-                          src={post.featured_image_url}
+                          src={blogCoverUrl(post)!}
                           alt={post.title}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
@@ -414,10 +415,10 @@ export default async function BlogPage({
                   {posts.map((post) => (
                     <Link key={post.id} href={`/blog/${post.slug}`}>
                       <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:border-brand-blue/20 overflow-hidden">
-                        {post.featured_image_url && (
+                        {blogCoverUrl(post) && (
                           <div className="relative h-48 w-full overflow-hidden">
                             <img
-                              src={post.featured_image_url}
+                              src={blogCoverUrl(post)!}
                               alt={post.title}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />

@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.eduzen.io'
   const currentDate = new Date()
 
   const comparatifDate = new Date('2025-01-01')
